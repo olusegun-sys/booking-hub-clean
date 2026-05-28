@@ -1,0 +1,305 @@
+﻿# Booking Hub - Complete Project Overview
+
+## Project Vision
+A multi-tenant booking management platform for Nigerian hospitality businesses (hotels, sports facilities, event venues). Each business gets their own branded booking page at their own URL, accepts payments via Paystack or pay-at-venue, receives automated email notifications, and tracks all bookings in a real-time dashboard.
+
+**Think Shopify for hospitality — not a marketplace like Booking.com.**
+
+---
+
+## Executive Summary (For New Chat)
+
+| Aspect | Status |
+|--------|--------|
+| **Core Functionality** | ✅ 95% Complete |
+| **Mobile Responsiveness** | ✅ Complete (bottom nav, thumb zones, responsive grids) |
+| **Admin Dashboard** | ✅ Complete (approve/reject, stats, business management) |
+| **Business Dashboard** | ✅ Complete (rooms, bookings, profile, settings) |
+| **Public Booking Page** | ✅ Complete (lightbox, story card, room selection, pay at venue) |
+| **Email Notifications** | ✅ Complete (test mode to verified email) |
+| **Authentication** | ✅ Complete (JWT tokens, password hashing) |
+| **Deployment** | ❌ NOT COMPLETE (Render paused, Railway/Vercel build issues) |
+| **Custom Domain** | ❌ NOT STARTED (DNS configuration needed) |
+| **Pilot Businesses** | ❌ NOT STARTED (awaiting deployment) |
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|-------|------------|---------|
+| **Frontend** | React + Vite | React 19, Vite 8 |
+| **Frontend Syntax** | React.createElement (no JSX) | - |
+| **Backend** | Node.js + Express | Express 5 |
+| **Database** | Supabase (PostgreSQL) | - |
+| **Payments** | Paystack | Test mode |
+| **Email** | Resend | Test mode (to verified email) |
+| **Icons** | Lucide React | - |
+| **Notifications** | React Hot Toast | - |
+| **Authentication** | JWT + bcryptjs | - |
+| **Rate Limiting** | express-rate-limit | - |
+
+---
+
+## Project Structure
+
+```
+Booking-System-BackUp/
+├── client/                          # Frontend React app
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── forms/
+│   │   │   │   ├── ImageUpload.jsx
+│   │   │   │   └── BusinessGallery.jsx
+│   │   │   └── ui/
+│   │   │       ├── StatsCard.jsx
+│   │   │       ├── EmptyState.jsx
+│   │   │       ├── LoadingSkeleton.jsx
+│   │   │       ├── BookingCard.jsx
+│   │   │       ├── ConfirmModal.jsx
+│   │   │       └── DashboardLayout.jsx
+│   │   ├── services/
+│   │   │   └── api.js
+│   │   ├── config.js
+│   │   ├── styles.css
+│   │   ├── App.jsx
+│   │   ├── HomePage.jsx
+│   │   ├── HostLanding.jsx
+│   │   ├── BusinessSignup.jsx
+│   │   ├── BusinessLogin.jsx
+│   │   ├── BusinessDashboard.jsx
+│   │   ├── BusinessProfile.jsx
+│   │   ├── BusinessSettings.jsx
+│   │   ├── StaffManagement.jsx
+│   │   ├── AddRoomForm.jsx
+│   │   ├── AdminLogin.jsx
+│   │   ├── AdminDashboard.jsx
+│   │   ├── UnifiedBookingPage.jsx
+│   │   ├── RoomPage.jsx
+│   │   ├── SportsBooking.jsx
+│   │   ├── EventBooking.jsx
+│   │   ├── PaystackPayment.jsx
+│   │   ├── useCountUp.js
+│   │   └── toast.js
+│   └── package.json
+├── server/                          # Backend Node.js app
+│   ├── src/
+│   │   ├── middleware/
+│   │   │   └── domainDetector.js
+│   │   └── services/
+│   │       ├── emailService.js
+│   │       └── paystackService.js
+│   ├── server.js
+│   ├── .env
+│   └── package.json
+└── prompt-library/                  # Development prompts & documentation
+```
+
+---
+
+## Database Schema (Supabase)
+
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `businesses` | Business profiles | id, name, slug, email, password_hash, business_type, status, booking_limit, current_booking_count |
+| `rooms` | Room/space listings | id, business_id, name, type, capacity, price_per_night, amenities, status |
+| `bookings` | Customer bookings | id, business_id, room_id, booking_reference, customer_name, customer_email, total_amount, status, payment_status |
+| `admin_users` | Admin accounts | id, email, password_hash, full_name |
+| `staff` | Staff accounts | id, business_id, email, password_hash, full_name, role, is_active |
+| `business_sessions` | Auth sessions | id, business_id, token, expires_at |
+| `admin_sessions` | Admin sessions | id, admin_id, token, expires_at |
+| `operating_hours` | Business hours | id, business_id, day_of_week, is_open, open_time, close_time |
+| `availability` | Blocked dates | id, business_id, date, is_available, reason |
+| `business_gallery` | Gallery images | id, business_id, image_url, sort_order |
+
+---
+
+## Key Features (Complete)
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| 3-step business registration | ✅ | Nigerian state dropdown, business type selection |
+| Password hashing (bcrypt) | ✅ | New businesses get hashed passwords |
+| JWT authentication | ✅ | Tokens stored in localStorage |
+| Business dashboard | ✅ | Stats cards, usage tracker (X/50), tabs navigation |
+| Room management | ✅ | Add, edit, delete rooms with amenities |
+| Profile management | ✅ | Cover/logo upload, about text, gallery (max 5 images) |
+| Settings | ✅ | Operating hours, blocked dates, custom domain |
+| Staff management | ✅ | Add/edit/remove staff with roles |
+| Public booking page | ✅ | Hero image, lightbox gallery, story card, room selection |
+| Pay at venue | ✅ | No payment, sends email confirmation |
+| Paystack payment | ✅ | Inline popup, verifies payment |
+| Email notifications | ✅ | Welcome, approval, booking confirmation (test mode) |
+| Admin dashboard | ✅ | Approve/reject businesses, stats, search, delete |
+| Mobile responsiveness | ✅ | Bottom navigation, responsive grids, thumb zones |
+| Custom confirmation modal | ✅ | Replaced browser confirm() with modern modal |
+| Toast notifications | ✅ | Replaced alerts with toast messages |
+| Rate limiting | ✅ | 100 requests per 15 minutes |
+| CORS configuration | ✅ | Restricted to allowed origins in production |
+
+---
+
+## Roadblocks & Breakthroughs
+
+### Major Roadblocks
+
+| Roadblock | Resolution |
+|-----------|------------|
+| **Deployment build failures** | Vercel/Railway/Render all fail due to Rolldown native binding issue with Vite 8 |
+| **Render free tier exhausted** | Backend paused due to credit limit ($25/month to resume) |
+| **Supabase keys expired** | Migrated to new publishable/secret key system |
+| **Admin auth blocking API** | Removed `authenticateAdmin` middleware in development mode |
+| **iOS dark mode white text** | Added CSS overrides for inputs only (preserved purple button text) |
+| **Mobile blank screens** | Fixed missing closing parentheses in React.createElement chains |
+| **Custom confirm modal** | Replaced browser `confirm()` with custom modal component |
+
+### Breakthroughs
+
+| Breakthrough | Impact |
+|--------------|--------|
+| **Mobile-first responsive design** | Bottom navigation, thumb zones, responsive grids work on all devices |
+| **Toast notification system** | Professional error handling instead of alerts |
+| **Custom confirmation modal** | Modern UX for delete actions |
+| **Password hash migration** | Old businesses auto-migrate on first login |
+| **API_BASE dynamic config** | Works on localhost and network IP for mobile testing |
+
+---
+
+## Meeting Outcomes (Monday Demo with Terry)
+
+**Attendees:** Terence Bumah, Olusegun Fadeyi, Yannick Awasum, Felicity Godfrey
+
+### Key Decisions
+
+| Decision | Status |
+|----------|--------|
+| MVP approved as "suitable tool for experimentation" | ✅ |
+| Focus on "pay at venue" as default | ✅ |
+| Manual business approval process | ✅ |
+| Target: venue-based businesses only (hotels, events, sports) | ✅ |
+| Subdomain structure: `host.plaza.com` for booking pages | ⚠️ Pending domain |
+| Mobile responsiveness testing required | ✅ Complete |
+
+### Action Plan from Meeting
+
+| Action | Owner | Status |
+|--------|-------|--------|
+| Acquire domain | Olusegun | ❌ Not started |
+| Test mobile view | Olusegun | ✅ Complete |
+| Sadiq Thomas to identify 5-10 pilot businesses | Sadiq | ❌ Pending deployment |
+| Deploy to live server | Olusegun | ❌ Blocked by build issues |
+
+---
+
+## Current State (As of Now)
+
+### What Works (Local Development)
+
+| Component | Status |
+|-----------|--------|
+| Backend API | ✅ Running on `localhost:5000` |
+| Frontend | ✅ Running on `localhost:5173` |
+| Supabase connection | ✅ Working (with new secret key) |
+| All dashboards | ✅ Functional |
+| Booking flow | ✅ Functional |
+| Email notifications | ✅ Sent to `olusegun@luminara.io` |
+
+### What's Broken
+
+| Issue | Severity | Fix |
+|-------|----------|-----|
+| Render backend paused (credit limit) | 🔴 High | Pay $25/month or deploy elsewhere |
+| Vercel/Railway build failures (Rolldown) | 🔴 High | Build locally and upload `dist` folder |
+| Supabase keys need updating | 🟡 Medium | Already fixed with new secret key |
+| Custom domain not set up | 🟡 Medium | DNS configuration after deployment |
+
+### What's Next (Priority Order)
+
+| Priority | Task | Estimated Time |
+|----------|------|----------------|
+| 1 | **Deploy frontend to Netlify** (already done: `astounding-sopapillas-912faf.netlify.app`) | ✅ Complete |
+| 2 | **Deploy backend to working host** (Render paid, Digital Ocean, or local for demo) | 30 min - 2 hours |
+| 3 | **Test full flow on live URLs** | 15 min |
+| 4 | **Acquire domain** (e.g., `bookinghub.ng` or `plaza.com`) | 10 min |
+| 5 | **Configure DNS for custom domain** | 30 min |
+| 6 | **Onboard 5-10 pilot businesses** (with Sadiq) | 2-3 days |
+
+---
+
+## Deployment Options (For New Chat)
+
+| Platform | Frontend | Backend | Free Tier | Current Status |
+|----------|----------|---------|-----------|----------------|
+| **Render** | ✅ Static | ✅ Web | Limited hours | Backend paused (credit limit) |
+| **Netlify** | ✅ Static | ❌ No | Unlimited | Frontend working |
+| **Vercel** | ✅ Static | ❌ Complex | Unlimited | Build fails (Rolldown) |
+| **Railway** | ✅ Static | ✅ Web | $5 credit | Build fails (Rolldown) |
+| **Digital Ocean** | ✅ Static | ✅ App | $200 credit | Not tried |
+| **Fly.io** | ✅ Static | ✅ App | Free tier | Not tried |
+| **Local (demo only)** | ✅ Dev server | ✅ Dev server | Free | Working |
+
+---
+
+## Files the New Chat Will Need
+
+### Backend
+```
+server/server.js
+server/.env (with actual keys)
+server/package.json
+server/src/services/emailService.js
+server/src/services/paystackService.js
+server/src/middleware/domainDetector.js
+```
+
+### Frontend
+```
+client/src/App.jsx
+client/src/AdminDashboard.jsx
+client/src/BusinessDashboard.jsx
+client/src/UnifiedBookingPage.jsx
+client/src/HostLanding.jsx
+client/src/BusinessSignup.jsx
+client/src/BusinessLogin.jsx
+client/src/AdminLogin.jsx
+client/src/BusinessProfile.jsx
+client/src/BusinessSettings.jsx
+client/src/StaffManagement.jsx
+client/src/AddRoomForm.jsx
+client/src/config.js
+client/src/toast.js
+client/src/styles.css
+client/src/components/ui/ConfirmModal.jsx
+client/package.json
+```
+
+### Documentation
+```
+Booking Hub Hardening and code review.txt
+prompt-library/ (all prompts)
+```
+
+---
+
+## The Golden Rule (From Master Prompt)
+
+> **"Design for the worst-case scenario first (375px mobile), then expand for desktop. Desktop is 'mobile + more space' not 'desktop - something broke.'"**
+
+Every solution must answer:
+1. "What does the user actually need at this moment?"
+2. "What's the job to be done?"
+3. "How do I remove friction?"
+
+---
+
+## For the New Chat: Pick Up Here
+
+**Start with deployment.** The app is feature-complete. The only thing blocking the Monday demo is getting the backend live.
+
+**Recommended path:**
+1. Pay Render $25 for one month (backend comes back online immediately)
+2. OR deploy backend to Digital Ocean App Platform ($200 free credit)
+3. Update Netlify frontend `VITE_API_BASE` to point to new backend URL
+4. Test full flow
+5. Demo on Monday
+

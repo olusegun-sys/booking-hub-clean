@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>Booking Hub</title>
+    <style>
+      /* Force light mode on iOS */
+      html {
+        color-scheme: light !important;
+        forced-color-adjust: none !important;
+      }
+      body {
+        background-color: #f8fafc !important;
+        color: #1e293b !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+  </body>
+</html>

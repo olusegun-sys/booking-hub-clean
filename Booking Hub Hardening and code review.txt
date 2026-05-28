@@ -1,0 +1,121 @@
+﻿Here's a clean, detailed prompt you can hand to any developer (or use yourself later) to productionize the codebase:
+
+---
+
+## Production Hardening Prompt
+
+```
+I need to harden a booking platform MVP for production. The codebase is a React + Vite frontend with a Node.js/Express backend, Supabase PostgreSQL, Paystack payments, and Resend emails. All core features work end-to-end. I need the following done in order:
+
+---
+
+### PHASE 1: Authentication & Security (Priority: Critical)
+
+1. Replace the current plain-text login with bcrypt password hashing and JWT token-based authentication
+2. Add a registration endpoint that hashes passwords before storing
+3. Add a login endpoint that verifies hashed passwords and returns a JWT
+4. Create an auth middleware that validates JWT on all protected routes
+5. Protect all business-specific routes (dashboard, settings, profile, rooms, bookings) — only the business owner or their staff can access
+6. Move sensitive keys (JWT secret, Supabase service role) to environment variables
+7. Add input sanitization on all API routes to prevent XSS
+8. Add CORS restrictions — only allow the frontend domain
+9. Add rate limiting on auth routes (max 10 login attempts per minute)
+
+---
+
+### PHASE 2: Server Architecture (Priority: High)
+
+The current `server.js` is 800+ lines with all routes in one file. Split it into:
+
+```
+server/
+├── src/
+│   ├── config/
+│   │   └── supabase.js          # Supabase client init
+│   ├── middleware/
+│   │   ├── auth.js              # JWT verification middleware
+│   │   ├── domainDetector.js    # Custom domain detection (already exists)
+│   │   └── rateLimiter.js       # Rate limiting
+│   ├── routes/
+│   │   ├── auth.js              # Login, register, staff login
+│   │   ├── businesses.js        # Business CRUD, search, domain
+│   │   ├── rooms.js             # Room CRUD
+│   │   ├── bookings.js          # Booking CRUD, payment updates
+│   │   ├── payments.js          # Paystack initialize + verify
+│   │   ├── admin.js             # Admin approve/reject/delete/stats
+│   │   ├── gallery.js           # Gallery CRUD + upload
+│   │   └── settings.js          # Operating hours, blocked dates, staff
+│   ├── services/
+│   │   ├── emailService.js      # Resend email templates (already exists)
+│   │   └── paystackService.js   # Paystack helpers (already exists)
+│   └── utils/
+│       └── validators.js        # Input validation helpers
+├── server.js                    # Entry point — just imports and app.listen
+└── .env                         # All environment variables
+```
+
+Maintain all existing API response formats `{ success: true, data }` and `{ success: false, error: 'message' }`.
+
+---
+
+### PHASE 3: Frontend Hardening (Priority: Medium)
+
+1. Add React Error Boundaries to prevent white-screen crashes
+2. Create an auth context/provider that stores JWT and user data
+3. Add an Axios or fetch interceptor that attaches JWT to all API requests
+4. Redirect to login if API returns 401
+5. Store JWT in httpOnly cookie or secure localStorage
+6. Add loading states for all async operations
+7. Add proper form validation with error messages on all inputs
+
+---
+
+### PHASE 4: Environment & Deployment (Priority: Medium)
+
+1. Create `.env.example` files for both client and server
+2. Add environment-specific config (development, staging, production)
+3. Replace all hardcoded `localhost:5000` with environment variables
+4. Add a health check endpoint `GET /api/health`
+5. Configure PM2 or similar process manager for the server
+6. Add basic logging (request method, path, status code, response time)
+
+---
+
+### PHASE 5: Testing (Priority: Medium)
+
+1. Write integration tests for the booking flow (create booking → verify in database → check email)
+2. Write unit tests for the auth middleware
+3. Write tests for input validation
+4. Test the custom domain flow end-to-end
+5. Add API tests for all protected routes (should return 401 without JWT)
+
+---
+
+### PHASE 6: Production Checklist (Priority: High Before Launch)
+
+1. Verify a sending domain on Resend (not `onboarding@resend.dev`)
+2. Switch Paystack from test keys to live keys
+3. Enable HTTPS on the server
+4. Set up automated database backups on Supabase
+5. Add a proper CORS policy (not wildcard `*`)
+6. Set up monitoring (Supabase logs + server logs)
+7. Create a database migration system (don't run SQL manually in production)
+
+---
+
+### CONSTRAINTS:
+
+- Do NOT change any API endpoint URL paths — the frontend relies on them
+- Do NOT change the response format `{ success: boolean, ... }` 
+- Do NOT change the database schema without providing migration scripts
+- All business logic must remain identical — only refactor structure, not behavior
+- The booking payload structure must stay the same
+- Toast notifications, not browser alerts
+- Lucide React icons only — no emojis
+- CSS animations preferred over Framer Motion
+- Save all files as UTF-8 encoding
+```
+
+---
+
+That prompt covers everything. Hand it to any senior engineer and they'll know exactly what to do without asking questions. Save it for when you're ready to harden the platform.

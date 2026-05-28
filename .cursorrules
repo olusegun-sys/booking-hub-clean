@@ -1,0 +1,63 @@
+# Booking Hub Project Rules
+# These rules apply to every code suggestion in this project
+
+## 1. FILE CHANGES
+- Always provide FULL file contents — never just snippets
+- Show exactly what to REMOVE and what to ADD
+- Regenerate the entire file when changes are needed
+
+## 2. PACKAGE SAFETY
+- Before suggesting ANY npm package, confirm:
+  - No critical vulnerabilities in the last 6 months
+  - More than 100,000 weekly downloads on npm
+  - Actively maintained (last commit within 30 days)
+- Approved packages: express, cors, helmet, morgan, dotenv, nodemon, supabase, axios, react-router-dom
+- Avoid: any package with <10k weekly downloads or known security issues
+
+## 3. USER INPUT VALIDATION
+- Every function that accepts user input MUST have:
+  - Validation check before processing
+  - A friendly error message showing what went wrong
+  - Example: "Please enter a valid email address" instead of "Invalid input"
+
+## 4. NETWORK REQUEST ERROR HANDLING
+- Every network request (fetch, axios, API calls) MUST have:
+  - A .catch() block or try/catch wrapper
+  - Error message: "Something went wrong. Please try again."
+  - Console.error for debugging
+
+## 5. BOOKING PAYLOAD CONTRACT
+- The booking payload structure is LOCKED:
+  {
+    date: "YYYY-MM-DD",
+    email: "user@example.com",
+    service: "hotel" | "sports" | "event"
+  }
+- Do NOT add, remove, or rename these fields without explicit permission
+
+## 6. API ENDPOINT STRUCTURE
+- All API endpoints MUST start with /api/
+- Examples: /api/bookings, /api/businesses, /api/admin
+- Do NOT create endpoints without the /api/ prefix
+
+## 7. COMMUNICATION STYLE
+- Explain concepts like I'm a business analyst learning to code
+- No jargon without explanation
+- One plain-English sentence explaining the root cause first
+- Then provide the solution
+
+## 8. EXISTING FUNCTIONALITY PROTECTION
+- Never break existing features when adding new ones
+- Test mentally that old flows still work before suggesting changes
+- If a change might affect something else, warn me first
+
+## 9. FILE ORGANIZATION
+- Frontend: client/src/
+- Backend: server/src/
+- New components go in appropriate folders
+- Reusable utilities go in a utils/ or services/ folder
+
+## 10. DEMO CREDENTIALS (Never Change These)
+- Admin: admin@booking.com / admin123
+- Business Owner: test@hotel.com / any password
+- Staff: manager@testhotel.com / manager123
