@@ -1,7 +1,0 @@
-﻿{
-  "name": "client",
-  "version": "0.0.0",
-  "dependencies": {
-    "vite": "^4.5.3"
-  }
-}
