@@ -10,9 +10,9 @@ const detectBusinessFromDomain = require('./src/middleware/domainDetector');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-if (!supabaseUrl || !supabaseKey) { 
-  console.error('Missing Supabase credentials'); 
-  process.exit(1); 
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase credentials');
+  process.exit(1);
 }
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -20,7 +20,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ============================================================
-// CORS CONFIGURATION - FIXED FOR PRODUCTION
+// CORS CONFIGURATION - PRODUCTION READY
 // ============================================================
 const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
   ? (process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['https://booking-frontend-clean.onrender.com'])
@@ -81,31 +81,31 @@ function getLocalIpAddress() {
 async function authenticateBusiness(req, res, next) {
   const requestedBusinessId = req.params.businessId || req.params.id;
   const authHeader = req.headers.authorization;
-  
+
   // Development mode bypass
   if (process.env.NODE_ENV !== 'production' && !authHeader) {
     console.log('⚠️ Development mode: skipping auth for business route');
     req.businessId = requestedBusinessId;
     return next();
   }
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, error: 'Authentication required' });
   }
-  
+
   const token = authHeader.split(' ')[1];
-  
+
   try {
     const { data: session, error } = await supabase
       .from('business_sessions')
       .select('business_id, expires_at')
       .eq('token', token)
       .single();
-    
+
     if (error || !session || new Date(session.expires_at) < new Date()) {
       return res.status(401).json({ success: false, error: 'Invalid or expired session' });
     }
-    
+
     // Only check ID if a specific business was requested
     if (requestedBusinessId && session.business_id !== requestedBusinessId) {
       console.log({
@@ -114,7 +114,7 @@ async function authenticateBusiness(req, res, next) {
       });
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
-    
+
     req.businessId = session.business_id;
     next();
   } catch (err) {
@@ -125,29 +125,29 @@ async function authenticateBusiness(req, res, next) {
 
 async function authenticateAdmin(req, res, next) {
   const authHeader = req.headers.authorization;
-  
+
   if (process.env.NODE_ENV !== 'production' && !authHeader) {
     console.log('⚠️ Development mode: skipping auth for admin route');
     return next();
   }
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, error: 'Authentication required' });
   }
-  
+
   const token = authHeader.split(' ')[1];
-  
+
   try {
     const { data: session, error } = await supabase
       .from('admin_sessions')
       .select('admin_id, expires_at')
       .eq('token', token)
       .single();
-    
+
     if (error || !session || new Date(session.expires_at) < new Date()) {
       return res.status(401).json({ success: false, error: 'Invalid or expired session' });
     }
-    
+
     req.adminId = session.admin_id;
     next();
   } catch (err) {
@@ -164,8 +164,8 @@ app.get('/api/test', (req, res) => res.json({ message: 'Backend is connected!', 
 
 // HEALTH CHECK ENDPOINT
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: Date.now(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development'
@@ -225,20 +225,20 @@ app.get('/api/businesses/slug/:slug', async (req, res) => {
 app.post('/api/businesses/register', async (req, res) => {
   try {
     const { businessName, businessType, email, password, phone, address, city, state, customDomain } = req.body;
-    
+
     if (!businessName || businessName.trim().length < 2) return res.status(400).json({ success: false, error: 'Business name is required.' });
     if (!email || !email.includes('@')) return res.status(400).json({ success: false, error: 'A valid email address is required.' });
     if (!password || password.length < 6) return res.status(400).json({ success: false, error: 'Password must be at least 6 characters.' });
     if (!phone || phone.length < 10) return res.status(400).json({ success: false, error: 'A valid phone number is required.' });
     if (!city || city.trim().length < 2) return res.status(400).json({ success: false, error: 'City is required.' });
-    
+
     const slug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
     const { data: existingEmail } = await supabase.from('businesses').select('id').eq('email', email).single();
     if (existingEmail) return res.status(400).json({ success: false, error: 'A business with this email already exists.' });
-    
+
     const { data: existingSlug } = await supabase.from('businesses').select('id').eq('slug', slug).single();
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     const { data, error } = await supabase.from('businesses').insert({
       name: businessName,
       slug: existingSlug ? slug + '-' + Date.now().toString(36) : slug,
@@ -255,7 +255,7 @@ app.post('/api/businesses/register', async (req, res) => {
       booking_limit: 50,
       current_booking_count: 0
     }).select().single();
-    
+
     if (error) return res.status(500).json({ success: false, error: 'Registration failed: ' + error.message });
     if (data) { sendWelcomeEmail(data).catch(err => console.error('Welcome email failed:', err)); }
     res.json({ success: true, business: data, message: 'Business registered! A confirmation email has been sent.' });
@@ -272,31 +272,31 @@ app.post('/api/businesses/register', async (req, res) => {
 app.post('/api/businesses/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password required.' });
     }
-    
+
     const { data: business, error } = await supabase
       .from('businesses')
       .select('*')
       .eq('email', email)
       .single();
-    
+
     if (error || !business) {
       return res.status(401).json({ success: false, error: 'Invalid credentials.' });
     }
-    
+
     if (business.status !== 'approved') {
       return res.status(401).json({ success: false, error: 'Your account is pending approval. Please wait for admin approval.' });
     }
-    
+
     let isValidPassword = false;
-    
+
     if (business.password_hash) {
       isValidPassword = await bcrypt.compare(password, business.password_hash);
     }
-    
+
     if (!isValidPassword && business.password) {
       isValidPassword = (business.password === password);
       if (isValidPassword) {
@@ -304,23 +304,23 @@ app.post('/api/businesses/login', async (req, res) => {
         await supabase.from('businesses').update({ password_hash: hashedPassword }).eq('id', business.id);
       }
     }
-    
+
     if (!isValidPassword) {
       return res.status(401).json({ success: false, error: 'Invalid credentials.' });
     }
-    
+
     const token = generateToken();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
-    
+
     await supabase.from('business_sessions').upsert({
       business_id: business.id,
       token: token,
       expires_at: expiresAt.toISOString()
     });
-    
+
     const { password_hash, password: plainPassword, ...safeBusiness } = business;
-    
+
     res.json({
       success: true,
       business: safeBusiness,
@@ -339,27 +339,27 @@ app.post('/api/businesses/login', async (req, res) => {
 app.post('/api/admin/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password required.' });
     }
-    
+
     const { data: admin, error } = await supabase
       .from('admin_users')
       .select('*')
       .eq('email', email)
       .single();
-    
+
     if (error || !admin) {
       return res.status(401).json({ success: false, error: 'Invalid credentials.' });
     }
-    
+
     let isValidPassword = false;
-    
+
     if (admin.password_hash) {
       isValidPassword = await bcrypt.compare(password, admin.password_hash);
     }
-    
+
     if (!isValidPassword && admin.password) {
       isValidPassword = (admin.password === password);
       if (isValidPassword) {
@@ -367,23 +367,23 @@ app.post('/api/admin/login', async (req, res) => {
         await supabase.from('admin_users').update({ password_hash: hashedPassword }).eq('id', admin.id);
       }
     }
-    
+
     if (!isValidPassword) {
       return res.status(401).json({ success: false, error: 'Invalid credentials.' });
     }
-    
+
     const token = generateToken();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 1);
-    
+
     await supabase.from('admin_sessions').upsert({
       admin_id: admin.id,
       token: token,
       expires_at: expiresAt.toISOString()
     });
-    
+
     const { password_hash, password: plainPassword, ...safeAdmin } = admin;
-    
+
     res.json({
       success: true,
       admin: safeAdmin,
@@ -427,14 +427,14 @@ app.delete('/api/admin/businesses/:id', async (req, res) => {
     const { id } = req.params;
     const { data: business, error: findError } = await supabase.from('businesses').select('id, name').eq('id', id).single();
     if (findError || !business) return res.status(404).json({ success: false, error: 'Business not found.' });
-    
+
     await supabase.from('business_gallery').delete().eq('business_id', id);
     await supabase.from('availability').delete().eq('business_id', id);
     await supabase.from('operating_hours').delete().eq('business_id', id);
     await supabase.from('staff').delete().eq('business_id', id);
     await supabase.from('bookings').delete().eq('business_id', id);
     await supabase.from('rooms').delete().eq('business_id', id);
-    
+
     const { error } = await supabase.from('businesses').delete().eq('id', id);
     if (error) throw error;
     res.json({ success: true, message: business.name + ' has been permanently deleted.' });
@@ -466,21 +466,21 @@ app.get('/api/businesses/profile', authenticateBusiness, async (req, res) => {
   console.log('📞 Profile request - Business ID from session:', req.businessId);
   try {
     const businessId = req.businessId;
-    
+
     if (!businessId) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
-    
+
     const { data, error } = await supabase
       .from('businesses')
       .select('id, name, email, phone, city, state, logo_url, cover_image, business_type, slug, description, about_text, website, status, booking_limit, current_booking_count')
       .eq('id', businessId)
       .single();
-    
+
     if (error || !data) {
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
-    
+
     console.log('✅ Profile found:', data.name);
     res.json({ success: true, business: data });
   } catch (error) {
@@ -548,18 +548,18 @@ app.put('/api/businesses/:id', authenticateBusiness, async (req, res) => {
 // PUBLIC READ-ONLY ENDPOINTS (No Authentication Required)
 // ============================================================
 
-// GET ROOMS - Public (FIXED: removed authenticateBusiness)
+// GET ROOMS - Public
 app.get('/api/businesses/:businessId/rooms', async (req, res) => {
   try {
     const { data, error } = await supabase.from('rooms').select('*').eq('business_id', req.params.businessId);
     if (error) throw error;
     res.json({ success: true, rooms: data });
-  } catch (error) { 
-    res.status(500).json({ error: 'Failed to fetch rooms' }); 
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch rooms' });
   }
 });
 
-// GET GALLERY - Public (FIXED: removed authenticateBusiness)
+// GET GALLERY - Public
 app.get('/api/businesses/:businessId/gallery', async (req, res) => {
   try {
     const { businessId } = req.params;
@@ -604,17 +604,210 @@ app.post('/api/bookings', async (req, res) => {
 });
 
 // ============================================================
-// REMAINING ROUTES (Staff, Availability, Payment)
+// STAFF MANAGEMENT ENDPOINTS
+// ============================================================
+
+// GET staff for a business (only active staff)
+app.get('/api/businesses/:businessId/staff', authenticateBusiness, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('staff')
+      .select('id, email, full_name, role, is_active, created_at')
+      .eq('business_id', req.params.businessId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, staff: data });
+  } catch (error) {
+    console.error('Fetch staff error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch staff' });
+  }
+});
+
+// CREATE staff member (FIXED: removed non-existent 'password' column)
+app.post('/api/businesses/:businessId/staff', authenticateBusiness, async (req, res) => {
+  try {
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    const { data, error } = await supabase.from('staff').insert({
+      business_id: req.params.businessId,
+      email: req.body.email,
+      password_hash: hashedPassword,
+      full_name: req.body.full_name,
+      role: req.body.role || 'staff',
+      is_active: true
+    }).select().single();
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(400).json({ success: false, error: 'Email already exists' });
+      }
+      console.error('Staff creation error:', error);
+      throw error;
+    }
+    const { password_hash, ...staff } = data;
+    res.json({ success: true, staff });
+  } catch (error) {
+    console.error('Staff creation error:', error);
+    res.status(500).json({ success: false, error: 'Failed to add staff member' });
+  }
+});
+
+// UPDATE staff member
+app.put('/api/staff/:staffId', authenticateBusiness, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('staff').update({
+      full_name: req.body.full_name,
+      role: req.body.role,
+      is_active: req.body.is_active
+    }).eq('id', req.params.staffId).select().single();
+    if (error) throw error;
+    const { password_hash, ...staff } = data;
+    res.json({ success: true, staff });
+  } catch (error) {
+    console.error('Staff update error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update staff' });
+  }
+});
+
+// DELETE staff member (soft delete by setting is_active to false)
+app.delete('/api/staff/:staffId', authenticateBusiness, async (req, res) => {
+  try {
+    // Soft delete - set is_active to false instead of hard delete
+    const { error } = await supabase.from('staff').update({ is_active: false }).eq('id', req.params.staffId);
+    if (error) throw error;
+    res.json({ success: true, message: 'Staff removed' });
+  } catch (error) {
+    console.error('Staff delete error:', error);
+    res.status(500).json({ success: false, error: 'Failed to remove staff' });
+  }
+});
+
+// STAFF LOGIN
+app.post('/api/staff/login', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('email', req.body.email)
+      .eq('business_id', req.body.businessId)
+      .eq('is_active', true)
+      .single();
+    if (error || !data) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    let valid = false;
+    if (data.password_hash) {
+      valid = await bcrypt.compare(req.body.password, data.password_hash);
+    } else if (data.password === req.body.password) {
+      valid = true;
+    }
+    if (!valid) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    const { password_hash, password: plainPassword, ...staff } = data;
+    res.json({ success: true, staff });
+  } catch (error) {
+    console.error('Staff login error:', error);
+    res.status(500).json({ success: false, error: 'Login failed' });
+  }
+});
+
+// ============================================================
+// OPERATING HOURS ENDPOINTS
+// ============================================================
+
+app.get('/api/businesses/:businessId/operating-hours', authenticateBusiness, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('operating_hours').select('*').eq('business_id', req.params.businessId).order('day_of_week');
+    if (error) throw error;
+    res.json({ success: true, operatingHours: data });
+  } catch (error) {
+    console.error('Fetch hours error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch operating hours' });
+  }
+});
+
+app.put('/api/businesses/:businessId/operating-hours', authenticateBusiness, async (req, res) => {
+  try {
+    await supabase.from('operating_hours').delete().eq('business_id', req.params.businessId);
+    if (req.body.operatingHours && req.body.operatingHours.length) {
+      const { data, error } = await supabase.from('operating_hours').insert(
+        req.body.operatingHours.map(h => ({ ...h, business_id: req.params.businessId }))
+      ).select();
+      if (error) throw error;
+      res.json({ success: true, operatingHours: data });
+    } else {
+      res.json({ success: true, operatingHours: [] });
+    }
+  } catch (error) {
+    console.error('Update hours error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update operating hours' });
+  }
+});
+
+// ============================================================
+// BLOCKED DATES ENDPOINTS
+// ============================================================
+
+app.get('/api/businesses/:businessId/blocked-dates', authenticateBusiness, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('availability').select('*').eq('business_id', req.params.businessId).eq('is_available', false).order('date');
+    if (error) throw error;
+    res.json({ success: true, blockedDates: data });
+  } catch (error) {
+    console.error('Fetch blocked dates error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch blocked dates' });
+  }
+});
+
+app.post('/api/businesses/:businessId/block-date', authenticateBusiness, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('availability').upsert({
+      business_id: req.params.businessId,
+      date: req.body.date,
+      is_available: false,
+      reason: req.body.reason || 'Blocked'
+    }).select().single();
+    if (error) throw error;
+    res.json({ success: true, blockedDate: data });
+  } catch (error) {
+    console.error('Block date error:', error);
+    res.status(500).json({ success: false, error: 'Failed to block date' });
+  }
+});
+
+app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness, async (req, res) => {
+  try {
+    await supabase.from('availability').delete().eq('business_id', req.params.businessId).eq('date', req.params.date);
+    res.json({ success: true, message: 'Date unblocked' });
+  } catch (error) {
+    console.error('Unblock date error:', error);
+    res.status(500).json({ success: false, error: 'Failed to unblock date' });
+  }
+});
+
+// ============================================================
+// BOOKING REFERENCE & PAYMENT ROUTES
 // ============================================================
 
 app.get('/api/bookings/reference/:reference', async (req, res) => {
-  try { const { data, error } = await supabase.from('bookings').select('*').eq('booking_reference', req.params.reference).single(); if (error) throw error; res.json({ success: true, booking: data }); }
-  catch (error) { res.status(404).json({ error: 'Booking not found' }); }
+  try {
+    const { data, error } = await supabase.from('bookings').select('*').eq('booking_reference', req.params.reference).single();
+    if (error) throw error;
+    res.json({ success: true, booking: data });
+  } catch (error) {
+    res.status(404).json({ error: 'Booking not found' });
+  }
 });
 
 app.post('/api/bookings/:reference/cancel', async (req, res) => {
-  try { const { data, error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('booking_reference', req.params.reference).select().single(); if (error) throw error; res.json({ success: true, booking: data }); }
-  catch (error) { res.status(500).json({ error: 'Failed to cancel booking' }); }
+  try {
+    const { data, error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('booking_reference', req.params.reference).select().single();
+    if (error) throw error;
+    res.json({ success: true, booking: data });
+  } catch (error) {
+    console.error('Cancel booking error:', error);
+    res.status(500).json({ error: 'Failed to cancel booking' });
+  }
 });
 
 app.patch('/api/bookings/:id', async (req, res) => {
@@ -628,7 +821,10 @@ app.patch('/api/bookings/:id', async (req, res) => {
     const { data, error } = await supabase.from('bookings').update(updateData).eq('id', id).select().single();
     if (error) throw error;
     res.json({ success: true, booking: data });
-  } catch (error) { console.error('PATCH booking error:', error); res.status(500).json({ success: false, error: 'Failed to update booking' }); }
+  } catch (error) {
+    console.error('PATCH booking error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update booking' });
+  }
 });
 
 app.post('/api/create-payment', async (req, res) => {
@@ -639,133 +835,91 @@ app.post('/api/create-payment', async (req, res) => {
     if (!amount || isNaN(amount) || amount <= 0) return res.status(400).json({ success: false, error: 'Valid amount required.' });
     const { data: booking, error: bookingError } = await supabase.from('bookings').select('*').eq('booking_reference', bookingReference).single();
     if (bookingError || !booking) return res.status(404).json({ success: false, error: 'Booking not found.' });
-    if (booking.payment_status === 'paid') { return res.status(400).json({ success: false, error: 'Booking already paid. Please contact support.' }); }
+    if (booking.payment_status === 'paid') {
+      return res.status(400).json({ success: false, error: 'Booking already paid. Please contact support.' });
+    }
     const result = await initializePayment({ email, amount: amount, bookingReference });
     res.json({ success: true, authorization_url: result.authorization_url, reference: result.reference });
-  } catch (error) { console.error('Create payment error:', error); res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' }); }
+  } catch (error) {
+    console.error('Create payment error:', error);
+    res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' });
+  }
 });
 
 app.post('/api/verify-payment', async (req, res) => {
   try {
-    const { reference, bookingReference } = req.body; if (!reference) return res.status(400).json({ success: false, error: 'Payment reference is required.' });
+    const { reference, bookingReference } = req.body;
+    if (!reference) return res.status(400).json({ success: false, error: 'Payment reference is required.' });
     const verification = await verifyPayment(reference);
-    if (verification.success) { await supabase.from('bookings').update({ payment_reference: reference, payment_status: 'paid', amount_paid: verification.amount / 100 }).eq('booking_reference', bookingReference); res.json({ success: true, message: 'Payment successful!', amountPaid: verification.amount / 100 }); }
-    else { res.json({ success: false, message: 'Payment verification failed.' }); }
-  } catch (error) { res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' }); }
-});
-
-app.post('/api/staff/login', async (req, res) => {
-  try { const { data, error } = await supabase.from('staff').select('*').eq('email', req.body.email).eq('business_id', req.body.businessId).eq('is_active', true).single(); if (error || !data) return res.status(401).json({ success: false, error: 'Invalid credentials' }); 
-  let valid = false;
-  if (data.password_hash) valid = await bcrypt.compare(req.body.password, data.password_hash);
-  else if (data.password === req.body.password) valid = true;
-  if (!valid) return res.status(401).json({ success: false, error: 'Invalid credentials' });
-  const { password_hash, password: plainPassword, ...staff } = data; res.json({ success: true, staff }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Login failed' }); }
-});
-
-app.get('/api/businesses/:businessId/staff', authenticateBusiness, async (req, res) => {
-  try { const { data, error } = await supabase.from('staff').select('id, email, full_name, role, is_active, created_at').eq('business_id', req.params.businessId).order('created_at', { ascending: false }); if (error) throw error; res.json({ success: true, staff: data }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Failed to fetch' }); }
-});
-
-app.post('/api/businesses/:businessId/staff', authenticateBusiness, async (req, res) => {
-  try { 
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    const { data, error } = await supabase.from('staff').insert({ business_id: req.params.businessId, email: req.body.email, password_hash: hashedPassword, password: req.body.password, full_name: req.body.full_name, role: req.body.role || 'staff' }).select().single(); 
-    if (error) { if (error.code === '23505') return res.status(400).json({ success: false, error: 'Email already exists' }); throw error; } 
-    const { password_hash, password: plainPassword, ...staff } = data; res.json({ success: true, staff }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Failed to add' }); }
-});
-
-app.put('/api/staff/:staffId', authenticateBusiness, async (req, res) => {
-  try { const { data, error } = await supabase.from('staff').update({ full_name: req.body.full_name, role: req.body.role, is_active: req.body.is_active }).eq('id', req.params.staffId).select().single(); if (error) throw error; const { password_hash, ...staff } = data; res.json({ success: true, staff }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Failed to update' }); }
-});
-
-app.delete('/api/staff/:staffId', authenticateBusiness, async (req, res) => {
-  try { await supabase.from('staff').delete().eq('id', req.params.staffId); res.json({ success: true, message: 'Staff removed' }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Failed to remove' }); }
-});
-
-app.get('/api/businesses/:businessId/operating-hours', authenticateBusiness, async (req, res) => {
-  try { const { data, error } = await supabase.from('operating_hours').select('*').eq('business_id', req.params.businessId).order('day_of_week'); if (error) throw error; res.json({ success: true, operatingHours: data }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Failed to fetch' }); }
-});
-
-app.put('/api/businesses/:businessId/operating-hours', authenticateBusiness, async (req, res) => {
-  try { await supabase.from('operating_hours').delete().eq('business_id', req.params.businessId); const { data, error } = await supabase.from('operating_hours').insert(req.body.operatingHours.map(h => ({ ...h, business_id: req.params.businessId }))).select(); if (error) throw error; res.json({ success: true, operatingHours: data }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Failed to update' }); }
-});
-
-app.get('/api/businesses/:businessId/blocked-dates', authenticateBusiness, async (req, res) => {
-  try { const { data, error } = await supabase.from('availability').select('*').eq('business_id', req.params.businessId).eq('is_available', false).order('date'); if (error) throw error; res.json({ success: true, blockedDates: data }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Failed to fetch' }); }
-});
-
-app.post('/api/businesses/:businessId/block-date', authenticateBusiness, async (req, res) => {
-  try { const { data, error } = await supabase.from('availability').upsert({ business_id: req.params.businessId, date: req.body.date, is_available: false, reason: req.body.reason || 'Blocked' }).select().single(); if (error) throw error; res.json({ success: true, blockedDate: data }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Failed to block' }); }
-});
-
-app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness, async (req, res) => {
-  try { await supabase.from('availability').delete().eq('business_id', req.params.businessId).eq('date', req.params.date); res.json({ success: true, message: 'Date unblocked' }); }
-  catch (error) { res.status(500).json({ success: false, error: 'Failed to unblock' }); }
+    if (verification.success) {
+      await supabase.from('bookings').update({
+        payment_reference: reference,
+        payment_status: 'paid',
+        amount_paid: verification.amount / 100
+      }).eq('booking_reference', bookingReference);
+      res.json({ success: true, message: 'Payment successful!', amountPaid: verification.amount / 100 });
+    } else {
+      res.json({ success: false, message: 'Payment verification failed.' });
+    }
+  } catch (error) {
+    console.error('Verify payment error:', error);
+    res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' });
+  }
 });
 
 // ============================================================
-// GALLERY UPLOAD ENDPOINT (Requires Auth - for business dashboard)
+// GALLERY UPLOAD ENDPOINT
 // ============================================================
 
 app.post('/api/upload-gallery-image', async (req, res) => {
   try {
     const { businessId, fileName, fileType, fileData } = req.body;
-    
+
     console.log('📸 Upload request received:', { businessId, fileName, fileType, dataLength: fileData?.length });
-    
+
     if (!businessId || !fileName || !fileData) {
       return res.status(400).json({ error: 'Business ID, file name, and file data are required' });
     }
-    
+
     const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
       return res.status(400).json({ error: 'Invalid image data format' });
     }
-    
+
     const fileBuffer = Buffer.from(matches[2], 'base64');
     const mimeType = matches[1];
-    
+
     if (fileBuffer.length > 5 * 1024 * 1024) {
       return res.status(400).json({ error: 'File size must be under 5MB' });
     }
-    
+
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
     if (!allowedTypes.includes(mimeType)) {
       return res.status(400).json({ error: 'Only JPEG, PNG, and WEBP images are allowed' });
     }
-    
+
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2, 10);
     const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = `business-images/${businessId}/${timestamp}-${randomStr}-${safeName}`;
-    
+
     console.log('📁 Uploading to storage path:', filePath);
-    
-    const { data, error } = await supabase.storage.from('business-images').upload(filePath, fileBuffer, { 
-      contentType: mimeType, 
-      cacheControl: '3600', 
-      upsert: false 
+
+    const { data, error } = await supabase.storage.from('business-images').upload(filePath, fileBuffer, {
+      contentType: mimeType,
+      cacheControl: '3600',
+      upsert: false
     });
-    
+
     if (error) {
       console.error('❌ Storage upload error:', error);
       return res.status(500).json({ error: 'Failed to upload image to storage: ' + error.message });
     }
-    
+
     const { data: urlData } = supabase.storage.from('business-images').getPublicUrl(filePath);
-    
+
     console.log('✅ Upload successful:', urlData.publicUrl);
-    
+
     res.json({ success: true, imageUrl: urlData.publicUrl, filePath: filePath });
   } catch (err) {
     console.error('❌ Upload error:', err);
@@ -778,24 +932,26 @@ app.post('/api/businesses/:businessId/gallery', authenticateBusiness, async (req
   try {
     const { businessId } = req.params;
     const { imageUrl, fileName } = req.body;
-    
+
     if (!imageUrl) return res.status(400).json({ error: 'Image URL is required' });
-    
+
     const { count } = await supabase.from('business_gallery').select('*', { count: 'exact', head: true }).eq('business_id', businessId);
-    if ((count || 0) >= 5) return res.status(400).json({ error: 'Gallery is full. Maximum 5 images allowed.' });
-    
+    if ((count || 0) >= 5) {
+      return res.status(400).json({ error: 'Gallery is full. Maximum 5 images allowed.' });
+    }
+
     const { data: lastImage } = await supabase.from('business_gallery').select('sort_order').eq('business_id', businessId).order('sort_order', { ascending: false }).limit(1);
     const nextSortOrder = (lastImage && lastImage.length > 0) ? lastImage[0].sort_order + 1 : 0;
-    
-    const { data, error } = await supabase.from('business_gallery').insert({ 
-      business_id: businessId, 
-      image_url: imageUrl, 
-      file_name: fileName || 'gallery-image', 
-      sort_order: nextSortOrder 
+
+    const { data, error } = await supabase.from('business_gallery').insert({
+      business_id: businessId,
+      image_url: imageUrl,
+      file_name: fileName || 'gallery-image',
+      sort_order: nextSortOrder
     }).select().single();
-    
+
     if (error) return res.status(500).json({ error: 'Failed to save gallery image: ' + error.message });
-    
+
     res.json({ success: true, image: data });
   } catch (err) {
     console.error('Gallery save error:', err);
@@ -806,10 +962,10 @@ app.post('/api/businesses/:businessId/gallery', authenticateBusiness, async (req
 app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness, async (req, res) => {
   try {
     const { businessId, imageId } = req.params;
-    
+
     const { data: image } = await supabase.from('business_gallery').select('id, image_url').eq('id', imageId).eq('business_id', businessId).single();
     if (!image) return res.status(404).json({ error: 'Image not found' });
-    
+
     try {
       const parts = image.image_url.split('/business-images/');
       if (parts.length === 2) {
@@ -820,16 +976,16 @@ app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness,
     } catch (e) {
       console.log('Storage delete skipped:', e.message);
     }
-    
+
     await supabase.from('business_gallery').delete().eq('id', imageId).eq('business_id', businessId);
-    
+
     const { data: remaining } = await supabase.from('business_gallery').select('id').eq('business_id', businessId).order('sort_order', { ascending: true });
     if (remaining) {
       for (let i = 0; i < remaining.length; i++) {
         await supabase.from('business_gallery').update({ sort_order: i }).eq('id', remaining[i].id);
       }
     }
-    
+
     res.json({ success: true, message: 'Image deleted' });
   } catch (err) {
     console.error('Delete error:', err);
@@ -852,8 +1008,8 @@ app.put('/api/businesses/:businessId/gallery/reorder', authenticateBusiness, asy
   }
 });
 
-app.get('/api/rooms/:id/availability', async (req, res) => { 
-  res.json({ success: true, available: true, roomId: req.params.id }); 
+app.get('/api/rooms/:id/availability', async (req, res) => {
+  res.json({ success: true, available: true, roomId: req.params.id });
 });
 
 app.get('/', (req, res) => res.send('Booking System API is running!'));
@@ -868,7 +1024,7 @@ async function ensureAdminUser() {
       .select('id')
       .eq('email', 'admin@bookinghub.com')
       .single();
-    
+
     if (!existingAdmin) {
       console.log('📝 Creating default admin user...');
       const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -908,7 +1064,7 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.log('⚠️ DEVELOPMENT MODE: Auth bypassed, CORS open');
   }
   console.log('========================================\n');
-  
+
   // Create admin user on startup
   await ensureAdminUser();
 });
