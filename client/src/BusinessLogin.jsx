@@ -1,5 +1,6 @@
 ﻿﻿import React from 'react';
 import { Building2, X, LogIn, Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
+import API_BASE from './config';
 
 var BusinessLogin = function (props) {
   var _useState = React.useState('owner');
@@ -20,11 +21,6 @@ var BusinessLogin = function (props) {
   var _useState6 = React.useState('');
   var error = _useState6[0];
   var setError = _useState6[1];
-
-  // Get the backend URL dynamically
-  var API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:5000'
-    : 'http://' + window.location.hostname + ':5000';
 
   function closeModal(e) {
     if (e) {
@@ -67,7 +63,6 @@ var BusinessLogin = function (props) {
       .then(function (response) { return response.json(); })
       .then(function (data) {
         if (data.success && data.business) {
-          // Store auth token if present (for authenticated API calls)
           if (data.token) {
             localStorage.setItem('auth_token', data.token);
           }
@@ -109,7 +104,6 @@ var BusinessLogin = function (props) {
         animation: 'modalSlideIn 0.3s ease'
       }
     },
-      // Close button
       React.createElement('button', {
         type: 'button',
         onClick: closeModal,
@@ -131,7 +125,6 @@ var BusinessLogin = function (props) {
         }
       }, React.createElement(X, { size: 16 })),
 
-      // Header
       React.createElement('div', { style: { padding: '2rem 2rem 0 2rem', textAlign: 'center' } },
         React.createElement('div', { style: { width: '48px', height: '48px', background: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' } },
           React.createElement(Building2, { size: 24, color: '#4f46e5' })
@@ -140,9 +133,7 @@ var BusinessLogin = function (props) {
         React.createElement('p', { style: { fontSize: '0.875rem', color: '#64748b' } }, 'Sign in to manage your bookings')
       ),
 
-      // Body
       React.createElement('div', { style: { padding: '1.5rem 2rem 2rem 2rem' } },
-        // Tabs
         React.createElement('div', { style: { display: 'flex', background: '#f1f5f9', borderRadius: '12px', padding: '4px', marginBottom: '1.5rem' } },
           React.createElement('button', {
             type: 'button',
@@ -180,10 +171,8 @@ var BusinessLogin = function (props) {
           }, 'Staff')
         ),
 
-        // Error message
         error && React.createElement('div', { style: { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.75rem', color: '#dc2626', textAlign: 'center' } }, error),
 
-        // Email
         React.createElement('div', { style: { marginBottom: '1rem' } },
           React.createElement('label', { style: { display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '0.375rem' } }, 'Email'),
           React.createElement('div', { style: { position: 'relative' } },
@@ -209,7 +198,6 @@ var BusinessLogin = function (props) {
           )
         ),
 
-        // Password
         React.createElement('div', { style: { marginBottom: '1rem' } },
           React.createElement('label', { style: { display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '0.375rem' } }, 'Password'),
           React.createElement('div', { style: { position: 'relative' } },
@@ -244,12 +232,10 @@ var BusinessLogin = function (props) {
           )
         ),
 
-        // Demo hint
         React.createElement('p', { style: { fontSize: '0.7rem', color: '#94a3b8', marginBottom: '1.5rem', textAlign: 'center' } }, 
           'Demo: test@hotel.com / any password'
         ),
 
-        // Login button
         React.createElement('button', {
           type: 'button',
           onClick: handleLogin,
@@ -272,7 +258,6 @@ var BusinessLogin = function (props) {
           }
         }, loading ? 'Signing in...' : [React.createElement(LogIn, { key: 'icon', size: 16 }), ' Login as ' + (loginType === 'owner' ? 'Owner' : 'Staff')]),
 
-        // Footer
         React.createElement('p', { style: { textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', color: '#94a3b8' } }, 
           "Don't have an account? ", 
           React.createElement('a', { 

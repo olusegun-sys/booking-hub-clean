@@ -5,6 +5,7 @@ import {
   Loader, CheckCircle, Hotel, Dumbbell, CalendarDays,
   Building2, Sparkles
 } from 'lucide-react';
+import API_BASE from './config';
 
 var nigerianStates = [
   'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
@@ -99,17 +100,13 @@ function BusinessSignup() {
     setLoading(true); 
     setError('');
     
-    var API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'http://localhost:5000'
-      : 'http://' + window.location.hostname + ':5000';
-    
     fetch(API_BASE + '/api/businesses/register', {
       method: 'POST', 
       headers: { 'Content-Type': 'application/json' }, 
       body: JSON.stringify(formData)
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (data.success) {
-        setSuccessMsg('Account created! Redirecting to your dashboard...');
+        setSuccessMsg('Account created! Redirecting to login...');
         if (data.business) {
           localStorage.setItem('businessEmail', formData.email);
           localStorage.setItem('pendingBusiness', JSON.stringify(data.business));
@@ -162,22 +159,13 @@ function BusinessSignup() {
         React.createElement('p', { style: { color: '#64748b', fontSize: '0.875rem' } }, 'Already using Booking Hub to grow their revenue')
       ),
 
-      // Form Card with Premium Shadow
+      // Form Card
       React.createElement('div', { 
         style: { 
           background: 'white', 
           borderRadius: '24px', 
           padding: '2rem',
-          boxShadow: '0 20px 35px -10px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05)',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-        },
-        onMouseEnter: function(e) { 
-          e.currentTarget.style.transform = 'translateY(-2px)'; 
-          e.currentTarget.style.boxShadow = '0 25px 40px -12px rgba(0,0,0,0.15)';
-        },
-        onMouseLeave: function(e) { 
-          e.currentTarget.style.transform = 'translateY(0)'; 
-          e.currentTarget.style.boxShadow = '0 20px 35px -10px rgba(0,0,0,0.1)';
+          boxShadow: '0 20px 35px -10px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05)'
         }
       },
         
@@ -216,9 +204,7 @@ function BusinessSignup() {
             React.createElement('label', { style: { display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '0.375rem' } }, 'Business Name', React.createElement('span', { style: { color: '#ef4444' } }, '*')),
             React.createElement('input', { 
               type: 'text', 
-              style: { width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e2e8f0', borderRadius: '12px', fontSize: '0.875rem', outline: 'none', transition: 'all 0.2s' },
-              onFocus: function(e) { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.1)'; },
-              onBlur: function(e) { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; },
+              style: { width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e2e8f0', borderRadius: '12px', fontSize: '0.875rem', outline: 'none' },
               placeholder: 'e.g., Rangers Club', 
               value: formData.businessName, 
               onChange: function (e) { updateField('businessName', e.target.value); } 
@@ -240,8 +226,7 @@ function BusinessSignup() {
                     border: '1.5px solid ' + (isSelected ? bt.color : '#e2e8f0'),
                     borderRadius: '12px', 
                     cursor: 'pointer', 
-                    textAlign: 'center',
-                    transition: 'all 0.2s'
+                    textAlign: 'center'
                   }
                 },
                   React.createElement(Icon, { size: 20, color: bt.color, style: { marginBottom: '0.5rem' } }),
@@ -363,17 +348,17 @@ function BusinessSignup() {
         React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e2e8f0' } },
           step > 1 && React.createElement('button', { 
             onClick: handleBack, 
-            style: { padding: '0.625rem 1.25rem', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', fontWeight: '500', fontSize: '0.875rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' } 
+            style: { padding: '0.625rem 1.25rem', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', fontWeight: '500', fontSize: '0.875rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' } 
           }, React.createElement(ChevronLeft, { size: 16 }), 'Back'),
           step < 3
             ? React.createElement('button', { 
                 onClick: handleNext, 
-                style: { padding: '0.625rem 1.25rem', background: '#4f46e5', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '500', fontSize: '0.875rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' } 
+                style: { padding: '0.625rem 1.25rem', background: '#4f46e5', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '500', fontSize: '0.875rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' } 
               }, 'Continue', React.createElement(ChevronRight, { size: 16 }))
             : React.createElement('button', { 
                 onClick: handleSubmit, 
                 disabled: loading, 
-                style: { padding: '0.625rem 1.25rem', background: loading ? '#94a3b8' : '#10b981', border: 'none', borderRadius: '10px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '0.875rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' } 
+                style: { padding: '0.625rem 1.25rem', background: loading ? '#94a3b8' : '#10b981', border: 'none', borderRadius: '10px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '0.875rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' } 
               }, loading ? React.createElement(Loader, { size: 16 }) : React.createElement(CheckCircle, { size: 16 }), loading ? 'Creating...' : 'Complete Registration')
         )
       )
