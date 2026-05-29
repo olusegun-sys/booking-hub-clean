@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 5000;
 // CORS CONFIGURATION - FIXED FOR PRODUCTION
 // ============================================================
 const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
-  ? (process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['https://booking-frontend-5e1e.onrender.com'])
+  ? (process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['https://booking-frontend-clean.onrender.com'])
   : ['http://localhost:5173', 'http://localhost:3000', 'http://192.168.1.122:5173'];
 
 app.use(cors({
@@ -76,7 +76,7 @@ function getLocalIpAddress() {
 }
 
 // ============================================================
-// AUTHENTICATION MIDDLEWARE - FIXED (Issue #3)
+// AUTHENTICATION MIDDLEWARE
 // ============================================================
 async function authenticateBusiness(req, res, next) {
   const requestedBusinessId = req.params.businessId || req.params.id;
@@ -106,8 +106,7 @@ async function authenticateBusiness(req, res, next) {
       return res.status(401).json({ success: false, error: 'Invalid or expired session' });
     }
     
-    // FIXED: Only check ID if a specific business was requested
-    // For /api/businesses/profile (no ID), skip the ID check
+    // Only check ID if a specific business was requested
     if (requestedBusinessId && session.business_id !== requestedBusinessId) {
       console.log({
         session_business_id: session.business_id,
@@ -163,7 +162,7 @@ async function authenticateAdmin(req, res, next) {
 
 app.get('/api/test', (req, res) => res.json({ message: 'Backend is connected!', timestamp: new Date().toISOString() }));
 
-// HEALTH CHECK ENDPOINT - ADDED
+// HEALTH CHECK ENDPOINT
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -460,11 +459,7 @@ app.get('/api/admin/stats', async (req, res) => {
 });
 
 // ============================================================
-// AUTHENTICATED BUSINESS ROUTES
-// ============================================================
-
-// ============================================================
-// GET BUSINESS PROFILE - ADDED (Issue #2 - Missing Endpoint)
+// AUTHENTICATED BUSINESS ROUTES (Require Login)
 // ============================================================
 
 app.get('/api/businesses/profile', authenticateBusiness, async (req, res) => {
@@ -492,14 +487,6 @@ app.get('/api/businesses/profile', authenticateBusiness, async (req, res) => {
     console.error('Profile fetch error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch profile' });
   }
-});
-
-app.get('/api/businesses/:businessId/rooms', authenticateBusiness, async (req, res) => {
-  try {
-    const { data, error } = await supabase.from('rooms').select('*').eq('business_id', req.params.businessId);
-    if (error) throw error;
-    res.json({ success: true, rooms: data });
-  } catch (error) { res.status(500).json({ error: 'Failed to fetch rooms' }); }
 });
 
 app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async (req, res) => {
@@ -558,6 +545,41 @@ app.put('/api/businesses/:id', authenticateBusiness, async (req, res) => {
 });
 
 // ============================================================
+// PUBLIC READ-ONLY ENDPOINTS (No Authentication Required)
+// ============================================================
+
+// GET ROOMS - Public (FIXED: removed authenticateBusiness)
+app.get('/api/businesses/:businessId/rooms', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('rooms').select('*').eq('business_id', req.params.businessId);
+    if (error) throw error;
+    res.json({ success: true, rooms: data });
+  } catch (error) { 
+    res.status(500).json({ error: 'Failed to fetch rooms' }); 
+  }
+});
+
+// GET GALLERY - Public (FIXED: removed authenticateBusiness)
+app.get('/api/businesses/:businessId/gallery', async (req, res) => {
+  try {
+    const { businessId } = req.params;
+    const { data, error } = await supabase.from('business_gallery').select('*').eq('business_id', businessId).order('sort_order', { ascending: true });
+    if (error) return res.status(500).json({ error: 'Failed to fetch gallery' });
+    const total = data ? data.length : 0;
+    res.json({
+      success: true,
+      images: data || [],
+      total: total,
+      maxAllowed: 5,
+      remainingSlots: Math.max(0, 5 - total)
+    });
+  } catch (err) {
+    console.error('Gallery fetch error:', err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
+// ============================================================
 // PUBLIC BOOKING ROUTES
 // ============================================================
 
@@ -582,7 +604,7 @@ app.post('/api/bookings', async (req, res) => {
 });
 
 // ============================================================
-// REMAINING ROUTES (Staff, Availability, Gallery, Payment)
+// REMAINING ROUTES (Staff, Availability, Payment)
 // ============================================================
 
 app.get('/api/bookings/reference/:reference', async (req, res) => {
@@ -692,7 +714,7 @@ app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness,
 });
 
 // ============================================================
-// GALLERY UPLOAD ENDPOINT
+// GALLERY UPLOAD ENDPOINT (Requires Auth - for business dashboard)
 // ============================================================
 
 app.post('/api/upload-gallery-image', async (req, res) => {
@@ -751,23 +773,7 @@ app.post('/api/upload-gallery-image', async (req, res) => {
   }
 });
 
-// ============================================================
-// GALLERY ROUTES
-// ============================================================
-
-app.get('/api/businesses/:businessId/gallery', authenticateBusiness, async (req, res) => {
-  try {
-    const { businessId } = req.params;
-    const { data, error } = await supabase.from('business_gallery').select('*').eq('business_id', businessId).order('sort_order', { ascending: true });
-    if (error) return res.status(500).json({ error: 'Failed to fetch gallery' });
-    const total = data ? data.length : 0;
-    res.json({ success: true, images: data || [], total: total, maxAllowed: 5, remainingSlots: Math.max(0, 5 - total) });
-  } catch (err) {
-    console.error('Gallery fetch error:', err);
-    res.status(500).json({ error: 'Something went wrong. Please try again.' });
-  }
-});
-
+// Gallery POST and DELETE require authentication
 app.post('/api/businesses/:businessId/gallery', authenticateBusiness, async (req, res) => {
   try {
     const { businessId } = req.params;
@@ -853,7 +859,7 @@ app.get('/api/rooms/:id/availability', async (req, res) => {
 app.get('/', (req, res) => res.send('Booking System API is running!'));
 
 // ============================================================
-// CREATE ADMIN USER IF NOT EXISTS (Issue #4 - Admin User)
+// CREATE ADMIN USER IF NOT EXISTS
 // ============================================================
 async function ensureAdminUser() {
   try {
