@@ -10,11 +10,7 @@ import {
 import RoomPage from './RoomPage';
 import SportsBooking from './SportsBooking';
 import EventBooking from './EventBooking';
-
-// Dynamic API base - works on desktop and mobile
-var API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:5000'
-  : 'http://' + window.location.hostname + ':5000';
+import API_BASE from './config';
 
 var sportsImages = [
   'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=1200&h=400&fit=crop',
