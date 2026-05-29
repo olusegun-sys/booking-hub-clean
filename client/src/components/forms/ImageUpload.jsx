@@ -1,5 +1,6 @@
 ﻿import React from 'react';
 import { Upload, X, Image, Loader2 } from 'lucide-react';
+import API_BASE from '../../config';
 
 var uniqueIdCounter = 0;
 
@@ -61,18 +62,17 @@ function ImageUpload(props) {
     reader.onloadend = function() {
       var base64String = reader.result;
       
-      var API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:5000'
-        : 'http://' + window.location.hostname + ':5000';
-      
       var token = localStorage.getItem('auth_token');
       
       console.log('Uploading:', { type, businessId, fileName: file.name });
       
-      // Step 1: Upload to Supabase storage
+      // Step 1: Upload to backend (which uploads to Supabase)
       fetch(API_BASE + '/api/upload-gallery-image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
         body: JSON.stringify({
           businessId: businessId,
           fileName: file.name,
@@ -103,7 +103,8 @@ function ImageUpload(props) {
               fetch(API_BASE + '/api/businesses/' + businessId, {
                 method: 'PUT',
                 headers: {
-                  'Content-Type': 'application/json'
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ' + token
                 },
                 body: JSON.stringify(updateData)
               })
@@ -129,7 +130,8 @@ function ImageUpload(props) {
               fetch(API_BASE + '/api/businesses/' + businessId + '/gallery', {
                 method: 'POST',
                 headers: {
-                  'Content-Type': 'application/json'
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ' + token
                 },
                 body: JSON.stringify({
                   imageUrl: data.imageUrl,
