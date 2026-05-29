@@ -64,6 +64,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     });
   }
 
+  // FIXED: Added authentication token to the PUT request
   function handleSave() {
     if (!business || !business.id) {
       showMessage('error', 'Business data not available');
@@ -71,6 +72,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     }
     
     setSaving(true);
+    const token = localStorage.getItem('auth_token');
     
     var updateData = {
       cover_image: formData.cover_image,
@@ -83,7 +85,10 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     
     fetch(API_BASE + '/api/businesses/' + business.id, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
       body: JSON.stringify(updateData)
     })
       .then(function(r) { return r.json(); })
@@ -465,7 +470,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       )
     ),
 
-    // Brand Images Section - NO duplicate previews (ImageUpload handles its own preview)
+    // Brand Images Section
     React.createElement('div', { style: { ...cardStyle, marginTop: '24px' } },
       React.createElement('div', { style: cardHeaderStyle },
         React.createElement('div', { style: cardHeaderIconStyle },
@@ -475,7 +480,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       ),
       React.createElement('div', { style: cardBodyStyle },
         React.createElement('div', { style: imageRowStyle },
-          // Logo Upload - NO extra preview div (ImageUpload shows its own preview)
           React.createElement('div', { style: imageCardStyle },
             React.createElement('h4', { style: imageTitleStyle }, 'Business Logo'),
             React.createElement('p', { style: imageHintStyle }, 'Square format recommended'),
@@ -486,7 +490,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               onUpload: handleLogoUpload
             })
           ),
-          // Cover Upload - NO extra preview div (ImageUpload shows its own preview)
           React.createElement('div', { style: imageCardStyle },
             React.createElement('h4', { style: imageTitleStyle }, 'Cover Photo'),
             React.createElement('p', { style: imageHintStyle }, '1200x400px recommended'),
