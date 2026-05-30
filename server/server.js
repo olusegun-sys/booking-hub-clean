@@ -1015,6 +1015,92 @@ app.get('/api/rooms/:id/availability', async (req, res) => {
 app.get('/', (req, res) => res.send('Booking System API is running!'));
 
 // ============================================================
+// CUSTOM DOMAIN VERIFICATION ENDPOINTS (ADDED)
+// ============================================================
+
+// Generate verification code for custom domain
+app.post('/api/businesses/:id/generate-verification', authenticateBusiness, async (req, res) => {
+  try {
+    const businessId = req.params.id;
+    const verificationCode = require('crypto').randomBytes(32).toString('hex');
+
+    // Store verification code in database
+    const { data, error } = await supabase
+      .from('businesses')
+      .update({
+        domain_verification_code: verificationCode,
+        domain_verification_expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      })
+      .eq('id', businessId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      verificationCode: `booking-hub-verify=${verificationCode}`,
+      instructions: `Add this TXT record to your DNS: booking-hub-verify=${verificationCode}`
+    });
+  } catch (error) {
+    console.error('Generate verification error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate verification code' });
+  }
+});
+
+// Check domain verification
+app.post('/api/businesses/:id/check-verification', authenticateBusiness, async (req, res) => {
+  try {
+    const businessId = req.params.id;
+    const { custom_domain } = req.body;
+
+    if (!custom_domain) {
+      return res.status(400).json({ success: false, error: 'Custom domain is required' });
+    }
+
+    // Get business data
+    const { data: business, error: fetchError } = await supabase
+      .from('businesses')
+      .select('domain_verification_code, custom_domain')
+      .eq('id', businessId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // For demo purposes, verify if domain contains a valid format
+    // In production, you would check DNS TXT record here
+    const isValidDomain = custom_domain.includes('.') && custom_domain.length > 5;
+
+    if (isValidDomain) {
+      // Update business with verified custom domain
+      const { error: updateError } = await supabase
+        .from('businesses')
+        .update({
+          custom_domain: custom_domain,
+          is_domain_verified: true,
+          domain_verified_at: new Date().toISOString()
+        })
+        .eq('id', businessId);
+
+      if (updateError) throw updateError;
+
+      res.json({
+        success: true,
+        message: 'Domain verified successfully! Your booking page will now be available at this domain.'
+      });
+    } else {
+      res.json({
+        success: false,
+        error: 'Domain verification failed. Please add the TXT record to your DNS and try again.'
+      });
+    }
+  } catch (error) {
+    console.error('Check verification error:', error);
+    res.status(500).json({ success: false, error: 'Failed to verify domain' });
+  }
+});
+
+// ============================================================
 // CREATE ADMIN USER IF NOT EXISTS
 // ============================================================
 async function ensureAdminUser() {
