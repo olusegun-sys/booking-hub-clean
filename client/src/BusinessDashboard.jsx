@@ -35,8 +35,9 @@ function BusinessDashboard() {
 
   useEffect(() => {
     function handleResize() {
-      setIsDesktop(window.innerWidth >= 768);
-      if (window.innerWidth >= 768) {
+      const desktop = window.innerWidth >= 768;
+      setIsDesktop(desktop);
+      if (desktop) {
         setMobileMenuOpen(false);
       }
     }
@@ -152,11 +153,54 @@ function BusinessDashboard() {
   const usagePercent = (confirmedBookings / bookingLimit) * 100;
   const remainingBookings = bookingLimit - confirmedBookings;
 
+  // FIXED: Logout redirect - goes to /login (not /business-login)
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('currentBusiness');
+    window.location.href = '/login';
+  };
+
   if (loading) {
     return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' } },
       React.createElement('div', { className: 'loading-spinner' })
     );
   }
+
+  // ============================================================
+  // FIXED LAYOUT STYLES - Sidebar now sticky/fixed
+  // ============================================================
+
+  const containerStyle = {
+    display: 'flex',
+    minHeight: '100vh',
+    background: '#f8fafc',
+    position: 'relative'
+  };
+
+  // Desktop sidebar - FIXED position (doesn't scroll)
+  const sidebarStyle = {
+    width: isDesktop ? '280px' : '0',
+    flexShrink: 0,
+    background: 'white',
+    borderRight: '1px solid #e2e8f0',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    height: '100vh',
+    overflowY: 'auto',
+    zIndex: 100,
+    transition: 'width 0.3s ease'
+  };
+
+  // Main content - pushed to the right to accommodate fixed sidebar
+  const mainContentStyle = {
+    flex: 1,
+    minWidth: 0,
+    background: '#f8fafc',
+    minHeight: '100vh',
+    marginLeft: isDesktop ? '280px' : '0',
+    transition: 'margin-left 0.3s ease'
+  };
 
   // Mobile menu overlay
   const mobileMenuOverlay = mobileMenuOpen && !isDesktop ? {
@@ -182,25 +226,6 @@ function BusinessDashboard() {
     transition: 'transform 0.3s ease',
     boxShadow: '2px 0 12px rgba(0,0,0,0.1)',
     overflowY: 'auto'
-  };
-
-  const sidebarStyle = {
-    width: isDesktop ? '280px' : '0',
-    flexShrink: 0,
-    background: 'white',
-    borderRight: '1px solid #e2e8f0',
-    height: '100vh',
-    position: 'sticky',
-    top: 0,
-    overflowY: 'auto',
-    transition: 'width 0.3s ease'
-  };
-
-  const mainContentStyle = {
-    flex: 1,
-    minWidth: 0,
-    background: '#f8fafc',
-    minHeight: '100vh'
   };
 
   const renderOverview = () => {
@@ -322,7 +347,6 @@ function BusinessDashboard() {
       case 'overview':
         return renderOverview();
       case 'rooms':
-        // Use RoomPage instead of AddRoomForm - it has full CRUD functionality
         return React.createElement(RoomPage, { 
           business: business,
           onBack: () => setActiveTab('overview')
@@ -355,11 +379,11 @@ function BusinessDashboard() {
     }
   };
 
-  return React.createElement('div', { style: { display: 'flex', minHeight: '100vh', background: '#f8fafc', position: 'relative' } },
+  return React.createElement('div', { style: containerStyle },
     // Mobile menu overlay
     React.createElement('div', { style: mobileMenuOverlay, onClick: () => setMobileMenuOpen(false) }),
     
-    // Mobile menu
+    // Mobile menu (slides in from left)
     React.createElement('div', { style: mobileMenuStyle },
       React.createElement('div', { style: { padding: '24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
@@ -402,11 +426,7 @@ function BusinessDashboard() {
           )
         ),
         React.createElement('button', {
-          onClick: () => {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('currentBusiness');
-            window.location.href = '/business-login';
-          },
+          onClick: handleLogout,
           style: {
             width: '100%',
             display: 'flex',
@@ -428,7 +448,7 @@ function BusinessDashboard() {
       )
     ),
     
-    // Desktop Sidebar
+    // Desktop Sidebar (fixed position - doesn't scroll)
     React.createElement('div', { style: sidebarStyle },
       React.createElement('div', { style: { padding: '28px 20px', borderBottom: '1px solid #e2e8f0' } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
@@ -476,11 +496,7 @@ function BusinessDashboard() {
           )
         ),
         React.createElement('button', {
-          onClick: () => {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('currentBusiness');
-            window.location.href = '/business-login';
-          },
+          onClick: handleLogout,
           style: {
             width: '100%',
             display: 'flex',
@@ -502,9 +518,9 @@ function BusinessDashboard() {
       )
     ),
     
-    // Main Content
+    // Main Content (shifted right on desktop to accommodate fixed sidebar)
     React.createElement('div', { style: mainContentStyle },
-      // Mobile Header
+      // Mobile Header (only visible on mobile)
       !isDesktop && React.createElement('div', { style: { background: 'white', padding: '16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
           business?.logo_url ? 
