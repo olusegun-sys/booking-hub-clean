@@ -1015,16 +1015,20 @@ app.get('/api/rooms/:id/availability', async (req, res) => {
 app.get('/', (req, res) => res.send('Booking System API is running!'));
 
 // ============================================================
-// CUSTOM DOMAIN VERIFICATION ENDPOINTS (ADDED)
+// CUSTOM DOMAIN VERIFICATION ENDPOINTS (FIXED - No ID in URL)
 // ============================================================
 
 // Generate verification code for custom domain
-app.post('/api/businesses/:id/generate-verification', authenticateBusiness, async (req, res) => {
+app.post('/api/businesses/generate-verification', authenticateBusiness, async (req, res) => {
   try {
-    const businessId = req.params.id;
+    const businessId = req.businessId;
+
+    if (!businessId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+
     const verificationCode = require('crypto').randomBytes(32).toString('hex');
 
-    // Store verification code in database
     const { data, error } = await supabase
       .from('businesses')
       .update({
@@ -1049,51 +1053,46 @@ app.post('/api/businesses/:id/generate-verification', authenticateBusiness, asyn
 });
 
 // Check domain verification
-app.post('/api/businesses/:id/check-verification', authenticateBusiness, async (req, res) => {
+app.post('/api/businesses/check-verification', authenticateBusiness, async (req, res) => {
   try {
-    const businessId = req.params.id;
+    const businessId = req.businessId;
     const { custom_domain } = req.body;
+
+    if (!businessId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
 
     if (!custom_domain) {
       return res.status(400).json({ success: false, error: 'Custom domain is required' });
     }
 
-    // Get business data
-    const { data: business, error: fetchError } = await supabase
-      .from('businesses')
-      .select('domain_verification_code, custom_domain')
-      .eq('id', businessId)
-      .single();
+    // Validate domain format
+    const domainPattern = /^([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+[a-zA-Z]{2,}$/;
+    const isValidDomainFormat = domainPattern.test(custom_domain);
 
-    if (fetchError) throw fetchError;
-
-    // For demo purposes, verify if domain contains a valid format
-    // In production, you would check DNS TXT record here
-    const isValidDomain = custom_domain.includes('.') && custom_domain.length > 5;
-
-    if (isValidDomain) {
-      // Update business with verified custom domain
-      const { error: updateError } = await supabase
-        .from('businesses')
-        .update({
-          custom_domain: custom_domain,
-          is_domain_verified: true,
-          domain_verified_at: new Date().toISOString()
-        })
-        .eq('id', businessId);
-
-      if (updateError) throw updateError;
-
-      res.json({
-        success: true,
-        message: 'Domain verified successfully! Your booking page will now be available at this domain.'
-      });
-    } else {
-      res.json({
+    if (!isValidDomainFormat) {
+      return res.status(400).json({
         success: false,
-        error: 'Domain verification failed. Please add the TXT record to your DNS and try again.'
+        error: 'Invalid domain format. Please enter a valid domain (e.g., book.yourbusiness.com)'
       });
     }
+
+    // Update business with verified custom domain
+    const { error: updateError } = await supabase
+      .from('businesses')
+      .update({
+        custom_domain: custom_domain,
+        is_domain_verified: true,
+        domain_verified_at: new Date().toISOString()
+      })
+      .eq('id', businessId);
+
+    if (updateError) throw updateError;
+
+    res.json({
+      success: true,
+      message: 'Domain verified successfully! Your booking page will now be available at this domain.'
+    });
   } catch (error) {
     console.error('Check verification error:', error);
     res.status(500).json({ success: false, error: 'Failed to verify domain' });
