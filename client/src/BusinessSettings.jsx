@@ -18,6 +18,8 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
   const [verifyingDomain, setVerifyingDomain] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
 
+  const token = localStorage.getItem('auth_token');
+
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const timeSlots = ['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00'];
 
@@ -38,7 +40,9 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
   }
 
   function fetchOperatingHours() {
-    return fetch(API_BASE + '/api/businesses/' + business.id + '/operating-hours')
+    return fetch(API_BASE + '/api/businesses/' + business.id + '/operating-hours', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success && data.operatingHours && data.operatingHours.length > 0) {
@@ -54,7 +58,9 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
   }
 
   function fetchBlockedDates() {
-    return fetch(API_BASE + '/api/businesses/' + business.id + '/blocked-dates')
+    return fetch(API_BASE + '/api/businesses/' + business.id + '/blocked-dates', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success) setBlockedDates(data.blockedDates || []);
@@ -83,7 +89,10 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
     setSaving(true);
     fetch(API_BASE + '/api/businesses/' + business.id + '/operating-hours', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
       body: JSON.stringify({ operatingHours: operatingHours })
     })
       .then(function(r) { return r.json(); })
@@ -103,7 +112,10 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
     setSaving(true);
     fetch(API_BASE + '/api/businesses/' + business.id + '/block-date', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
       body: JSON.stringify({ date: newBlockedDate, reason: newBlockedReason || 'Blocked' })
     })
       .then(function(r) { return r.json(); })
@@ -121,7 +133,10 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
 
   function removeBlockedDate(date) {
     setSaving(true);
-    fetch(API_BASE + '/api/businesses/' + business.id + '/block-date/' + date, { method: 'DELETE' })
+    fetch(API_BASE + '/api/businesses/' + business.id + '/block-date/' + date, { 
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success) {
@@ -133,39 +148,52 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
       .finally(function() { setSaving(false); });
   }
 
+  // FIXED: Generate verification code - No business ID in URL, uses session token
   function generateVerificationCode() {
     setVerifyingDomain(true);
-    fetch(API_BASE + '/api/businesses/' + business.id + '/generate-verification', {
-      method: 'POST'
+    fetch(API_BASE + '/api/businesses/generate-verification', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      }
     })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success) {
           setVerificationCode(data.verificationCode);
           showMessage('success', 'Verification code generated. Add this TXT record to your DNS.');
-        } else showMessage('error', 'Failed to generate code');
+        } else {
+          showMessage('error', data.error || 'Failed to generate code');
+        }
       })
       .catch(function() { showMessage('error', 'Something went wrong'); })
       .finally(function() { setVerifyingDomain(false); });
   }
 
+  // FIXED: Verify domain - No business ID in URL, uses session token
   function verifyDomain() {
     if (!customDomain) {
       showMessage('error', 'Please enter a domain');
       return;
     }
     setVerifyingDomain(true);
-    fetch(API_BASE + '/api/businesses/' + business.id + '/check-verification', {
+    fetch(API_BASE + '/api/businesses/check-verification', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
       body: JSON.stringify({ custom_domain: customDomain })
     })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success) {
-          showMessage('success', 'Domain verified!');
+          showMessage('success', 'Domain verified successfully!');
           if (onBusinessUpdate) onBusinessUpdate();
-        } else showMessage('error', data.error || 'Verification failed. Make sure DNS is configured.');
+        } else {
+          showMessage('error', data.error || 'Verification failed. Please add the TXT record to your DNS and try again.');
+        }
       })
       .catch(function() { showMessage('error', 'Something went wrong'); })
       .finally(function() { setVerifyingDomain(false); });
@@ -380,7 +408,7 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
         )
       ),
 
-      // Domain Settings Card
+      // Custom Domain Settings Card
       React.createElement('div', { style: cardStyle },
         React.createElement('div', { style: cardHeaderStyle },
           React.createElement(Globe, { size: isDesktop ? 20 : 18, color: '#4f46e5' }),
@@ -388,7 +416,7 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
         ),
         React.createElement('div', { style: cardBodyStyle },
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } }, 
-            'Connect your own domain (e.g., book.yourbusiness.com)'
+            'Connect your own domain (e.g., book.yourbusiness.com). Once verified, your booking page will be available at your custom domain.'
           ),
           React.createElement('div', { style: { marginBottom: '20px' } },
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#475569' } }, 'Custom Domain'),
