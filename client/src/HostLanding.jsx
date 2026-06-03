@@ -381,7 +381,7 @@ function HostLanding() {
       )
     ),
 
-    // Testimonials - UPDATED with Nigerian/African images
+    // Testimonials - With working Nigerian/African images
     React.createElement('section', { id: 'testimonials', style: { padding: isDesktop ? '80px 0' : '60px 0', backgroundColor: '#f8fafc' } },
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: { textAlign: 'center', marginBottom: '48px' } },
@@ -403,7 +403,7 @@ function HostLanding() {
             ),
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
               React.createElement('img', {
-                src: 'https://images.pexels.com/photos/3769021/pexels-photo-3769021.jpeg?w=80&h=80&fit=crop',
+                src: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?w=80&h=80&fit=crop',
                 alt: 'Amaka O.',
                 style: { width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' }
               }),
@@ -413,7 +413,7 @@ function HostLanding() {
               )
             )
           ),
-          // Chidi N. - Nigerian man
+          // Chidi N. - Nigerian man (FIXED - working image)
           React.createElement('div', { style: { backgroundColor: 'white', borderRadius: '24px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
             React.createElement('div', { style: { display: 'flex', gap: '4px', marginBottom: '20px' } },
               React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
@@ -427,7 +427,7 @@ function HostLanding() {
             ),
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
               React.createElement('img', {
-                src: 'https://images.pexels.com/photos/2103433/pexels-photo-2103433.jpeg?w=80&h=80&fit=crop',
+                src: 'https://images.pexels.com/photos/2380794/pexels-photo-2380794.jpeg?w=80&h=80&fit=crop',
                 alt: 'Chidi N.',
                 style: { width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' }
               }),
@@ -487,7 +487,7 @@ function HostLanding() {
       )
     ),
 
-    // Footer - UPDATED copyright year to 2026
+    // Footer
     React.createElement('footer', { style: { backgroundColor: '#0f172a', padding: isDesktop ? '60px 0 40px' : '40px 0 30px' } },
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr', gap: isDesktop ? '40px' : '32px', marginBottom: '40px' } },
