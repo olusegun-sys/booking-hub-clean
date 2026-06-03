@@ -86,7 +86,7 @@ function SimpleAdminLogin({ onLogin }) {
         React.createElement('span', { style: { fontSize: '28px' } }, '🔐')
       ),
       React.createElement('h2', { style: { marginBottom: '8px', fontSize: '24px', fontWeight: '700', color: '#1e293b' } }, 'Admin Login'),
-      React.createElement('p', { style: { marginBottom: '24px', color: '#64748b', fontSize: '14px' } }, 'admin@bookinghub.com / admin123'),
+      React.createElement('p', { style: { marginBottom: '24px', color: '#64748b', fontSize: '14px' } }, 'Secure portal for platform administrators'),
       
       error && React.createElement('div', { style: { background: '#fef2f2', color: '#dc2626', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '13px' } }, error),
       
@@ -270,7 +270,6 @@ function DashboardPage() {
 }
 
 function App() {
-  // NO WRAPPER DIV - let components control their own text colors
   return React.createElement(Router, null,
     React.createElement(Toaster, null),
     React.createElement(Routes, null,
