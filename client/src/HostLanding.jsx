@@ -3,10 +3,12 @@ import {
   Building2, ArrowRight, CheckCircle, Star, Users, Calendar, 
   DollarSign, Shield, Clock, Smartphone, Globe, Zap, 
   Menu, X, TrendingUp, Wallet, Headphones, Sparkles,
-  Mail, Phone, MapPin, ChevronLeft, ChevronRight
+  Mail, Phone, MapPin, ChevronLeft, ChevronRight, ArrowLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 function HostLandingPage() {
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -35,6 +37,11 @@ function HostLandingPage() {
       alt: 'Luxury apartment rooftop with swimming pool'
     }
   ];
+
+  // Navigate back to homepage
+  const goBackToHome = () => {
+    navigate('/');
+  };
 
   useEffect(function() {
     function handleResize() {
@@ -107,7 +114,23 @@ function HostLandingPage() {
     background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text'
+    backgroundClip: 'text',
+    cursor: 'pointer'
+  };
+
+  var backButtonStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 16px',
+    backgroundColor: 'white',
+    border: '1px solid #e2e8f0',
+    borderRadius: '40px',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#475569',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease'
   };
 
   var desktopNavStyle = {
@@ -166,13 +189,25 @@ function HostLandingPage() {
   };
 
   return React.createElement('div', { style: { minHeight: '100vh', backgroundColor: '#ffffff' } },
-    // Header
+    // Header with Back Button
     React.createElement('header', { style: headerStyle },
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: navStyle },
-          React.createElement('div', { style: logoStyle },
-            React.createElement(Building2, { size: isDesktop ? 28 : 24, color: '#4f46e5' }),
-            React.createElement('span', null, 'BookingHub')
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
+            // Back Button
+            React.createElement('button', { 
+              onClick: goBackToHome, 
+              style: backButtonStyle,
+              onMouseEnter: function(e) { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#4f46e5'; },
+              onMouseLeave: function(e) { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.borderColor = '#e2e8f0'; }
+            },
+              React.createElement(ArrowLeft, { size: 16 }),
+              'Back to Home'
+            ),
+            React.createElement('div', { style: logoStyle, onClick: goBackToHome },
+              React.createElement(Building2, { size: isDesktop ? 28 : 24, color: '#4f46e5' }),
+              React.createElement('span', null, 'BookingHub')
+            )
           ),
           React.createElement('div', { style: desktopNavStyle },
             React.createElement('button', { onClick: function() { scrollToSection('features'); }, style: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', fontWeight: '500', color: '#475569' } }, 'Features'),
@@ -195,7 +230,7 @@ function HostLandingPage() {
       )
     ),
 
-    // Hero Section with Clean Slideshow
+    // Hero Section with Clean Slideshow (same as before)
     React.createElement('section', { style: { backgroundColor: '#f8fafc', paddingTop: isDesktop ? '60px' : '40px', paddingBottom: isDesktop ? '60px' : '40px' } },
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: { textAlign: 'center', maxWidth: '800px', margin: '0 auto' } },
@@ -240,7 +275,7 @@ function HostLandingPage() {
           )
         ),
 
-        // Clean Slideshow - No pause/play, no text overlay
+        // Clean Slideshow
         React.createElement('div', { 
           style: { 
             marginTop: '48px',
@@ -252,7 +287,6 @@ function HostLandingPage() {
           onMouseEnter: function() { setShowArrows(true); },
           onMouseLeave: function() { setShowArrows(false); }
         },
-          // Image Container - Perfect 16:9 aspect ratio
           React.createElement('div', { style: { 
             position: 'relative',
             width: '100%',
@@ -278,8 +312,6 @@ function HostLandingPage() {
               });
             })
           ),
-
-          // Navigation Arrows - Appear on hover only
           showArrows && React.createElement('button', {
             onClick: prevSlide,
             style: {
@@ -301,7 +333,6 @@ function HostLandingPage() {
               transition: 'all 0.2s'
             }
           }, React.createElement(ChevronLeft, { size: 20, color: '#1e293b' })),
-
           showArrows && React.createElement('button', {
             onClick: nextSlide,
             style: {
@@ -323,8 +354,6 @@ function HostLandingPage() {
               transition: 'all 0.2s'
             }
           }, React.createElement(ChevronRight, { size: 20, color: '#1e293b' })),
-
-          // Dot Indicators
           React.createElement('div', { style: {
             position: 'absolute',
             bottom: '16px',
@@ -356,6 +385,7 @@ function HostLandingPage() {
       )
     ),
 
+    // Rest of the sections remain exactly the same...
     // Stats Section
     React.createElement('section', { style: { padding: isDesktop ? '60px 0' : '40px 0', backgroundColor: 'white' } },
       React.createElement('div', { style: containerStyle },
