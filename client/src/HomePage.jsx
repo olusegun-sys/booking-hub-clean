@@ -69,7 +69,6 @@ function HomePage() {
   const [selectedBusiness, setSelectedBusiness] = useState(null);
   const [showDirectBooking, setShowDirectBooking] = useState(false);
   const [showBusinessLogin, setShowBusinessLogin] = useState(false);
-  const [showHostLanding, setShowHostLanding] = useState(false);
   const [heroKey, setHeroKey] = useState(0);
   const [isDesktop, setIsDesktop] = useState(true);
 
@@ -159,7 +158,9 @@ function HomePage() {
     else navigate('/admin');
   };
 
-  if (showHostLanding) return React.createElement(HostLanding, { onBack: () => setShowHostLanding(false) });
+  // REMOVED: if (showHostLanding) return React.createElement(HostLanding, { onBack: () => setShowHostLanding(false) });
+  // Now using React Router for navigation instead
+  
   if (businessUser) {
     if (businessUser.staffUser) return React.createElement(StaffDashboard, { staff: businessUser.staffUser, business: businessUser, onLogout: () => { setBusinessUser(null); localStorage.removeItem('businessUser'); } });
     return React.createElement(BusinessDashboard, { business: businessUser, onLogout: () => { setBusinessUser(null); localStorage.removeItem('businessUser'); } });
@@ -237,7 +238,7 @@ function HomePage() {
     border: '1px solid #e5e5e5'
   };
 
-  // Hero Section - ONLY CHANGE: mobile height from 280 to 320
+  // Hero Section
   const heroSectionStyle = {
     width: '100%',
     height: isDesktop ? '420px' : '320px',
@@ -530,7 +531,8 @@ function HomePage() {
         React.createElement('button', { onClick: goToAdmin, style: secondaryButtonStyle, onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; }, onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; } },
           React.createElement(Shield, { size: 14 }), ' Admin'
         ),
-        React.createElement('button', { onClick: () => setShowHostLanding(true), style: secondaryButtonStyle, onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; }, onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; } },
+        // FIXED: Use navigate instead of setShowHostLanding
+        React.createElement('button', { onClick: () => navigate('/become-host'), style: secondaryButtonStyle, onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; }, onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; } },
           'Become a Host'
         ),
         React.createElement('button', { onClick: () => setShowBusinessLogin(true), style: primaryButtonStyle, onMouseEnter: (e) => { e.currentTarget.style.background = brandIndigoDark; }, onMouseLeave: (e) => { e.currentTarget.style.background = brandIndigo; } },
