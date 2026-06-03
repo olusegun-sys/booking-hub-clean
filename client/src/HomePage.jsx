@@ -9,6 +9,7 @@ import BusinessLogin from './BusinessLogin';
 import BusinessDashboard from './BusinessDashboard';
 import StaffDashboard from './StaffDashboard';
 import HostLanding from './HostLanding';
+import API_BASE from './config';  // <-- ADD THIS LINE
 
 const brandIndigo = '#4F46E5';
 const brandIndigoLight = '#6366F1';
@@ -91,9 +92,7 @@ function HomePage() {
       try {
         if (window.location.pathname !== '/') return;
         const currentDomain = window.location.hostname;
-        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-          ? 'http://localhost:5000'
-          : 'http://' + window.location.hostname + ':5000';
+        // FIXED: Use imported API_BASE
         const response = await fetch(`${API_BASE}/api/domain-info?domain=${currentDomain}`);
         const data = await response.json();
         if (data.success && data.source === 'custom-domain-verified') navigate(`/book/${data.business.slug}`);
@@ -117,9 +116,7 @@ function HomePage() {
     }
     setLoading(true);
     try {
-      const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:5000'
-        : 'http://' + window.location.hostname + ':5000';
+      // FIXED: Use imported API_BASE
       let searchParams = { location };
       if (selectedCategory === 'hotel') {
         searchParams.checkIn = checkIn;
@@ -142,6 +139,7 @@ function HomePage() {
         }, 100);
       }
     } catch (error) {
+      console.error('Search error:', error);
       showError('Something went wrong.');
     }
     setLoading(false);
@@ -158,9 +156,6 @@ function HomePage() {
     else navigate('/admin');
   };
 
-  // REMOVED: if (showHostLanding) return React.createElement(HostLanding, { onBack: () => setShowHostLanding(false) });
-  // Now using React Router for navigation instead
-  
   if (businessUser) {
     if (businessUser.staffUser) return React.createElement(StaffDashboard, { staff: businessUser.staffUser, business: businessUser, onLogout: () => { setBusinessUser(null); localStorage.removeItem('businessUser'); } });
     return React.createElement(BusinessDashboard, { business: businessUser, onLogout: () => { setBusinessUser(null); localStorage.removeItem('businessUser'); } });
@@ -531,7 +526,6 @@ function HomePage() {
         React.createElement('button', { onClick: goToAdmin, style: secondaryButtonStyle, onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; }, onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; } },
           React.createElement(Shield, { size: 14 }), ' Admin'
         ),
-        // FIXED: Use navigate instead of setShowHostLanding
         React.createElement('button', { onClick: () => navigate('/become-host'), style: secondaryButtonStyle, onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; }, onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; } },
           'Become a Host'
         ),
