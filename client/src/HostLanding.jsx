@@ -23,9 +23,8 @@ function HostLanding() {
     { url: 'https://images.pexels.com/photos/1648776/pexels-photo-1648776.jpeg?w=1400&h=788&fit=crop', alt: 'Luxury apartment rooftop with swimming pool' }
   ];
 
-  // Navigate back to homepage - FIXED: more reliable approach
+  // Navigate back to homepage
   const goBackToHome = () => {
-    console.log('Navigating to home...'); // Debug log
     navigate('/', { replace: false });
   };
 
@@ -382,7 +381,7 @@ function HostLanding() {
       )
     ),
 
-    // Testimonials
+    // Testimonials - UPDATED with Nigerian/African images
     React.createElement('section', { id: 'testimonials', style: { padding: isDesktop ? '80px 0' : '60px 0', backgroundColor: '#f8fafc' } },
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: { textAlign: 'center', marginBottom: '48px' } },
@@ -390,24 +389,52 @@ function HostLanding() {
           React.createElement('p', { style: { fontSize: isDesktop ? '18px' : '16px', color: '#475569' } }, 'Join 200+ Nigerian businesses already using Booking Hub')
         ),
         React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr', gap: '32px' } },
+          // Amaka O. - Nigerian woman
           React.createElement('div', { style: { backgroundColor: 'white', borderRadius: '24px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
             React.createElement('div', { style: { display: 'flex', gap: '4px', marginBottom: '20px' } },
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' })
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' })
             ),
-            React.createElement('p', { style: { fontSize: '16px', lineHeight: '1.6', color: '#334155', marginBottom: '24px' } }, '"Booking Hub transformed our reservations. Customers book directly from our website. We\'ve seen a 40% increase in direct bookings."'),
+            React.createElement('p', { style: { fontSize: '16px', lineHeight: '1.6', color: '#334155', marginBottom: '24px' } }, 
+              '"Booking Hub transformed our reservations. Customers book directly from our website. We\'ve seen a 40% increase in direct bookings."'
+            ),
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
-              React.createElement('img', { src: 'https://images.pexels.com/photos/2380794/pexels-photo-2380794.jpeg?w=80&h=80&fit=crop', alt: 'Amaka O.', style: { width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' } }),
-              React.createElement('div', null, React.createElement('div', { style: { fontWeight: '700', color: '#0f172a' } }, 'Amaka O.'), React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, 'Preston Hotel, Lagos'))
+              React.createElement('img', {
+                src: 'https://images.pexels.com/photos/3769021/pexels-photo-3769021.jpeg?w=80&h=80&fit=crop',
+                alt: 'Amaka O.',
+                style: { width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' }
+              }),
+              React.createElement('div', null,
+                React.createElement('div', { style: { fontWeight: '700', color: '#0f172a' } }, 'Amaka O.'),
+                React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, 'Preston Hotel, Lagos')
+              )
             )
           ),
+          // Chidi N. - Nigerian man
           React.createElement('div', { style: { backgroundColor: 'white', borderRadius: '24px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
             React.createElement('div', { style: { display: 'flex', gap: '4px', marginBottom: '20px' } },
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' })
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' })
             ),
-            React.createElement('p', { style: { fontSize: '16px', lineHeight: '1.6', color: '#334155', marginBottom: '24px' } }, '"The Paystack integration is seamless. My customers can pay with card, transfer, or USSD. Revenue tracking is a game-changer."'),
+            React.createElement('p', { style: { fontSize: '16px', lineHeight: '1.6', color: '#334155', marginBottom: '24px' } }, 
+              '"The Paystack integration is seamless. My customers can pay with card, transfer, or USSD. Revenue tracking is a game-changer."'
+            ),
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
-              React.createElement('img', { src: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?w=80&h=80&fit=crop', alt: 'Chidi N.', style: { width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' } }),
-              React.createElement('div', null, React.createElement('div', { style: { fontWeight: '700', color: '#0f172a' } }, 'Chidi N.'), React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, 'Lagos Sports Complex'))
+              React.createElement('img', {
+                src: 'https://images.pexels.com/photos/2103433/pexels-photo-2103433.jpeg?w=80&h=80&fit=crop',
+                alt: 'Chidi N.',
+                style: { width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' }
+              }),
+              React.createElement('div', null,
+                React.createElement('div', { style: { fontWeight: '700', color: '#0f172a' } }, 'Chidi N.'),
+                React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, 'Lagos Sports Complex')
+              )
             )
           )
         )
@@ -460,12 +487,15 @@ function HostLanding() {
       )
     ),
 
-    // Footer
+    // Footer - UPDATED copyright year to 2026
     React.createElement('footer', { style: { backgroundColor: '#0f172a', padding: isDesktop ? '60px 0 40px' : '40px 0 30px' } },
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr', gap: isDesktop ? '40px' : '32px', marginBottom: '40px' } },
           React.createElement('div', null,
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' } }, React.createElement(Building2, { size: 24, color: '#818cf8' }), React.createElement('span', { style: { fontSize: '18px', fontWeight: '800', color: 'white' } }, 'BookingHub')),
+            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' } },
+              React.createElement(Building2, { size: 24, color: '#818cf8' }),
+              React.createElement('span', { style: { fontSize: '18px', fontWeight: '800', color: 'white' } }, 'BookingHub')
+            ),
             React.createElement('p', { style: { fontSize: '13px', color: '#94a3b8', lineHeight: '1.6' } }, 'The booking platform built for Nigerian hospitality businesses.')
           ),
           React.createElement('div', null,
@@ -493,7 +523,7 @@ function HostLanding() {
           )
         ),
         React.createElement('div', { style: { borderTop: '1px solid #1e293b', paddingTop: '24px', textAlign: 'center', fontSize: '12px', color: '#64748b' } },
-          React.createElement('p', null, '© 2024 Booking Hub. All rights reserved. Built for Nigerian businesses.')
+          React.createElement('p', null, '© 2026 Booking Hub. All rights reserved. Built for Nigerian businesses.')
         )
       )
     )
