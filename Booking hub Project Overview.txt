@@ -1,7 +1,7 @@
-﻿# Booking Hub - Complete Project Overview
+﻿# Booking Hub - Complete Project Overview (UPDATED)
 
 ## Project Vision
-A multi-tenant booking management platform for Nigerian hospitality businesses (hotels, sports facilities, event venues). Each business gets their own branded booking page at their own URL, accepts payments via Paystack or pay-at-venue, receives automated email notifications, and tracks all bookings in a real-time dashboard.
+A multi-tenant booking management platform for Nigerian hospitality businesses (hotels, sports facilities, event venues). Each business gets their own branded booking page, accepts payments via Paystack or pay-at-venue, receives automated email notifications, and tracks all bookings in a real-time dashboard.
 
 **Think Shopify for hospitality — not a marketplace like Booking.com.**
 
@@ -11,26 +11,46 @@ A multi-tenant booking management platform for Nigerian hospitality businesses (
 
 | Aspect | Status |
 |--------|--------|
-| **Core Functionality** | ✅ 95% Complete |
+| **Core Functionality** | ✅ 99% Complete |
 | **Mobile Responsiveness** | ✅ Complete (bottom nav, thumb zones, responsive grids) |
-| **Admin Dashboard** | ✅ Complete (approve/reject, stats, business management) |
+| **Admin Dashboard** | ✅ Complete + Home button + Mobile optimized |
 | **Business Dashboard** | ✅ Complete (rooms, bookings, profile, settings) |
 | **Public Booking Page** | ✅ Complete (lightbox, story card, room selection, pay at venue) |
 | **Email Notifications** | ✅ Complete (test mode to verified email) |
 | **Authentication** | ✅ Complete (JWT tokens, password hashing) |
-| **Deployment** | ❌ NOT COMPLETE (Render paused, Railway/Vercel build issues) |
+| **UI Branding** | ✅ Complete (Indigo color scheme #4F46E5) |
+| **Password Toggle** | ✅ Complete (Admin + Business login) |
+| **Deployment** | ✅ **LIVE** - Frontend on Render, Backend on Render |
 | **Custom Domain** | ❌ NOT STARTED (DNS configuration needed) |
-| **Pilot Businesses** | ❌ NOT STARTED (awaiting deployment) |
+| **Pilot Businesses** | ❌ NOT STARTED (awaiting domain/onboarding) |
 
 ---
 
-## Tech Stack
+## Live URLs (WORKING)
+
+| Service | URL | Status |
+|---------|-----|--------|
+| **Frontend** | https://booking-frontend-clean.onrender.com | ✅ LIVE |
+| **Backend** | https://booking-backend-clean.onrender.com | ✅ LIVE |
+| **Admin Login** | https://booking-frontend-clean.onrender.com/admin | ✅ Working |
+| **Business Login** | Click "Business Login" on homepage | ✅ Working |
+
+### Test Credentials
+
+| Role | Email | Password |
+|------|-------|----------|
+| **Admin** | admin@bookinghub.com | admin123 |
+| **Business Owner** | test@hotel.com | any password |
+
+---
+
+## Tech Stack (UPDATED)
 
 | Layer | Technology | Version |
 |-------|------------|---------|
-| **Frontend** | React + Vite | React 19, Vite 8 |
+| **Frontend** | React + Vite | React 19, Vite 5.4.21 |
 | **Frontend Syntax** | React.createElement (no JSX) | - |
-| **Backend** | Node.js + Express | Express 5 |
+| **Backend** | Node.js + Express | Node 20.18.0, Express 5 |
 | **Database** | Supabase (PostgreSQL) | - |
 | **Payments** | Paystack | Test mode |
 | **Email** | Resend | Test mode (to verified email) |
@@ -38,79 +58,34 @@ A multi-tenant booking management platform for Nigerian hospitality businesses (
 | **Notifications** | React Hot Toast | - |
 | **Authentication** | JWT + bcryptjs | - |
 | **Rate Limiting** | express-rate-limit | - |
+| **Deployment** | Render | Node 20.18.0 |
 
 ---
 
-## Project Structure
+## Current Design System
 
-```
-Booking-System-BackUp/
-├── client/                          # Frontend React app
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── forms/
-│   │   │   │   ├── ImageUpload.jsx
-│   │   │   │   └── BusinessGallery.jsx
-│   │   │   └── ui/
-│   │   │       ├── StatsCard.jsx
-│   │   │       ├── EmptyState.jsx
-│   │   │       ├── LoadingSkeleton.jsx
-│   │   │       ├── BookingCard.jsx
-│   │   │       ├── ConfirmModal.jsx
-│   │   │       └── DashboardLayout.jsx
-│   │   ├── services/
-│   │   │   └── api.js
-│   │   ├── config.js
-│   │   ├── styles.css
-│   │   ├── App.jsx
-│   │   ├── HomePage.jsx
-│   │   ├── HostLanding.jsx
-│   │   ├── BusinessSignup.jsx
-│   │   ├── BusinessLogin.jsx
-│   │   ├── BusinessDashboard.jsx
-│   │   ├── BusinessProfile.jsx
-│   │   ├── BusinessSettings.jsx
-│   │   ├── StaffManagement.jsx
-│   │   ├── AddRoomForm.jsx
-│   │   ├── AdminLogin.jsx
-│   │   ├── AdminDashboard.jsx
-│   │   ├── UnifiedBookingPage.jsx
-│   │   ├── RoomPage.jsx
-│   │   ├── SportsBooking.jsx
-│   │   ├── EventBooking.jsx
-│   │   ├── PaystackPayment.jsx
-│   │   ├── useCountUp.js
-│   │   └── toast.js
-│   └── package.json
-├── server/                          # Backend Node.js app
-│   ├── src/
-│   │   ├── middleware/
-│   │   │   └── domainDetector.js
-│   │   └── services/
-│   │       ├── emailService.js
-│   │       └── paystackService.js
-│   ├── server.js
-│   ├── .env
-│   └── package.json
-└── prompt-library/                  # Development prompts & documentation
-```
+### Brand Colors (Indigo Theme)
 
----
+| Color | Hex | Usage |
+|-------|-----|-------|
+| **Primary Indigo** | `#4F46E5` | Logo, active buttons, active category cards |
+| **Indigo Light** | `#6366F1` | Hover states, borders |
+| **Indigo Dark** | `#4338CA` | Button active/pressed states |
+| **Background** | `#FFFFFF` | Main background |
+| **Text Primary** | `#1A1A1A` | Headings, body text |
+| **Text Secondary** | `#666666` | Subtle text |
 
-## Database Schema (Supabase)
+### UI Components Completed
 
-| Table | Purpose | Key Columns |
-|-------|---------|-------------|
-| `businesses` | Business profiles | id, name, slug, email, password_hash, business_type, status, booking_limit, current_booking_count |
-| `rooms` | Room/space listings | id, business_id, name, type, capacity, price_per_night, amenities, status |
-| `bookings` | Customer bookings | id, business_id, room_id, booking_reference, customer_name, customer_email, total_amount, status, payment_status |
-| `admin_users` | Admin accounts | id, email, password_hash, full_name |
-| `staff` | Staff accounts | id, business_id, email, password_hash, full_name, role, is_active |
-| `business_sessions` | Auth sessions | id, business_id, token, expires_at |
-| `admin_sessions` | Admin sessions | id, admin_id, token, expires_at |
-| `operating_hours` | Business hours | id, business_id, day_of_week, is_open, open_time, close_time |
-| `availability` | Blocked dates | id, business_id, date, is_available, reason |
-| `business_gallery` | Gallery images | id, business_id, image_url, sort_order |
+| Component | Status | Details |
+|-----------|--------|---------|
+| **Homepage** | ✅ | Hero images, category cards (Hotels/Sports/Events), search, results grid |
+| **Admin Login** | ✅ | Modal with password toggle, no demo credentials, indigo branding |
+| **Admin Dashboard** | ✅ | Stats cards, business management, approve/reject, Home button, mobile responsive |
+| **Business Login** | ✅ | Modal with password toggle, owner/staff tabs |
+| **Business Dashboard** | ✅ | Stats, room management, bookings, profile, settings |
+| **Public Booking Page** | ✅ | Lightbox gallery, story card, room selection |
+| **Host Landing** | ✅ | Become a host marketing page |
 
 ---
 
@@ -130,8 +105,9 @@ Booking-System-BackUp/
 | Pay at venue | ✅ | No payment, sends email confirmation |
 | Paystack payment | ✅ | Inline popup, verifies payment |
 | Email notifications | ✅ | Welcome, approval, booking confirmation (test mode) |
-| Admin dashboard | ✅ | Approve/reject businesses, stats, search, delete |
+| Admin dashboard | ✅ | Approve/reject businesses, stats, search, delete, Home button |
 | Mobile responsiveness | ✅ | Bottom navigation, responsive grids, thumb zones |
+| Password visibility toggle | ✅ | Eye icon on admin and business login forms |
 | Custom confirmation modal | ✅ | Replaced browser confirm() with modern modal |
 | Toast notifications | ✅ | Replaced alerts with toast messages |
 | Rate limiting | ✅ | 100 requests per 15 minutes |
@@ -141,142 +117,121 @@ Booking-System-BackUp/
 
 ## Roadblocks & Breakthroughs
 
-### Major Roadblocks
+### Major Roadblocks (RESOLVED)
 
 | Roadblock | Resolution |
 |-----------|------------|
-| **Deployment build failures** | Vercel/Railway/Render all fail due to Rolldown native binding issue with Vite 8 |
-| **Render free tier exhausted** | Backend paused due to credit limit ($25/month to resume) |
-| **Supabase keys expired** | Migrated to new publishable/secret key system |
-| **Admin auth blocking API** | Removed `authenticateAdmin` middleware in development mode |
-| **iOS dark mode white text** | Added CSS overrides for inputs only (preserved purple button text) |
-| **Mobile blank screens** | Fixed missing closing parentheses in React.createElement chains |
-| **Custom confirm modal** | Replaced browser `confirm()` with custom modal component |
+| **Git repository corruption** | Fresh clone from GitHub, re-applied changes |
+| **Admin login demo credentials showing** | Found in `App.jsx` SimpleAdminLogin component, removed |
+| **Password toggle not working** | Added `showPassword` state and Eye/EyeOff icons |
+| **AdminLogin ReferenceError** | Added missing React import |
+| **AdminDashboard build failures** | Fixed extra closing parenthesis, syntax errors |
+| **Render deployment failing** | Fixed syntax errors, proper Git push |
+| **Home button missing** | Added to AdminDashboard header |
+| **Mobile responsiveness issues** | Added responsive breakpoints, scrollable tabs, icon-only buttons |
 
 ### Breakthroughs
 
 | Breakthrough | Impact |
 |--------------|--------|
-| **Mobile-first responsive design** | Bottom navigation, thumb zones, responsive grids work on all devices |
-| **Toast notification system** | Professional error handling instead of alerts |
-| **Custom confirmation modal** | Modern UX for delete actions |
-| **Password hash migration** | Old businesses auto-migrate on first login |
-| **API_BASE dynamic config** | Works on localhost and network IP for mobile testing |
+| **Indigo branding** | Consistent professional look across all pages |
+| **Mobile-responsive AdminDashboard** | Tabs scroll horizontally, buttons adapt, cards stack |
+| **Password toggle on both login forms** | Better UX, security |
+| **Home button on admin dashboard** | Quick navigation without logout |
+| **Git workflow established** | Can push updates without corruption |
+| **Render deployment stable** | Both frontend and backend live |
 
 ---
 
-## Meeting Outcomes (Monday Demo with Terry)
+## What We've Accomplished (Last Session)
 
-**Attendees:** Terence Bumah, Olusegun Fadeyi, Yannick Awasum, Felicity Godfrey
-
-### Key Decisions
-
-| Decision | Status |
-|----------|--------|
-| MVP approved as "suitable tool for experimentation" | ✅ |
-| Focus on "pay at venue" as default | ✅ |
-| Manual business approval process | ✅ |
-| Target: venue-based businesses only (hotels, events, sports) | ✅ |
-| Subdomain structure: `host.plaza.com` for booking pages | ⚠️ Pending domain |
-| Mobile responsiveness testing required | ✅ Complete |
-
-### Action Plan from Meeting
-
-| Action | Owner | Status |
-|--------|-------|--------|
-| Acquire domain | Olusegun | ❌ Not started |
-| Test mobile view | Olusegun | ✅ Complete |
-| Sadiq Thomas to identify 5-10 pilot businesses | Sadiq | ❌ Pending deployment |
-| Deploy to live server | Olusegun | ❌ Blocked by build issues |
+| Task | Status |
+|------|--------|
+| Fixed Git repository corruption | ✅ |
+| Removed demo credentials from admin login | ✅ |
+| Added password toggle to admin login | ✅ |
+| Fixed React import in AdminLogin.jsx | ✅ |
+| Added Home button to AdminDashboard | ✅ |
+| Made AdminDashboard mobile responsive | ✅ |
+| Fixed build syntax errors | ✅ |
+| Pushed all changes to GitHub | ✅ |
+| Confirmed Render deployment working | ✅ |
 
 ---
 
 ## Current State (As of Now)
 
-### What Works (Local Development)
+### What Works (Live on Render)
 
 | Component | Status |
 |-----------|--------|
-| Backend API | ✅ Running on `localhost:5000` |
-| Frontend | ✅ Running on `localhost:5173` |
-| Supabase connection | ✅ Working (with new secret key) |
-| All dashboards | ✅ Functional |
+| Frontend | ✅ LIVE at https://booking-frontend-clean.onrender.com |
+| Backend | ✅ LIVE at https://booking-backend-clean.onrender.com |
+| Homepage | ✅ Indigo branding, hero images, category cards |
+| Admin Login | ✅ Modal, password toggle, no demo credentials |
+| Admin Dashboard | ✅ Home button, approve/reject, search, mobile responsive |
+| Business Login | ✅ Modal, password toggle |
+| Business Dashboard | ✅ Functional |
 | Booking flow | ✅ Functional |
-| Email notifications | ✅ Sent to `olusegun@luminara.io` |
 
-### What's Broken
+### What's Left
 
-| Issue | Severity | Fix |
-|-------|----------|-----|
-| Render backend paused (credit limit) | 🔴 High | Pay $25/month or deploy elsewhere |
-| Vercel/Railway build failures (Rolldown) | 🔴 High | Build locally and upload `dist` folder |
-| Supabase keys need updating | 🟡 Medium | Already fixed with new secret key |
-| Custom domain not set up | 🟡 Medium | DNS configuration after deployment |
-
-### What's Next (Priority Order)
-
-| Priority | Task | Estimated Time |
-|----------|------|----------------|
-| 1 | **Deploy frontend to Netlify** (already done: `astounding-sopapillas-912faf.netlify.app`) | ✅ Complete |
-| 2 | **Deploy backend to working host** (Render paid, Digital Ocean, or local for demo) | 30 min - 2 hours |
-| 3 | **Test full flow on live URLs** | 15 min |
-| 4 | **Acquire domain** (e.g., `bookinghub.ng` or `plaza.com`) | 10 min |
-| 5 | **Configure DNS for custom domain** | 30 min |
-| 6 | **Onboard 5-10 pilot businesses** (with Sadiq) | 2-3 days |
+| Task | Priority | Estimated Time |
+|------|----------|----------------|
+| Acquire domain (e.g., `bookinghub.ng` or `plaza.com`) | 🔴 High | 10 min |
+| Configure DNS for custom domain | 🔴 High | 30 min |
+| Onboard 5-10 pilot businesses (with Sadiq Thomas) | 🟡 Medium | 2-3 days |
+| Add more test businesses to populate dashboard | 🟢 Low | 15 min |
 
 ---
 
-## Deployment Options (For New Chat)
+## Deployment Status (UPDATED)
 
-| Platform | Frontend | Backend | Free Tier | Current Status |
-|----------|----------|---------|-----------|----------------|
-| **Render** | ✅ Static | ✅ Web | Limited hours | Backend paused (credit limit) |
-| **Netlify** | ✅ Static | ❌ No | Unlimited | Frontend working |
-| **Vercel** | ✅ Static | ❌ Complex | Unlimited | Build fails (Rolldown) |
-| **Railway** | ✅ Static | ✅ Web | $5 credit | Build fails (Rolldown) |
-| **Digital Ocean** | ✅ Static | ✅ App | $200 credit | Not tried |
-| **Fly.io** | ✅ Static | ✅ App | Free tier | Not tried |
-| **Local (demo only)** | ✅ Dev server | ✅ Dev server | Free | Working |
+| Platform | Frontend | Backend | Status |
+|----------|----------|---------|--------|
+| **Render** | ✅ LIVE | ✅ LIVE | Working |
+| **Netlify** | ✅ Backup | ❌ N/A | Not needed |
+| **GitHub** | ✅ Source | ✅ Source | All code pushed |
+
+### Environment Variables (Render)
+
+| Variable | Purpose |
+|----------|---------|
+| `SUPABASE_URL` | Database connection |
+| `SUPABASE_ANON_KEY` | Database auth |
+| `RESEND_API_KEY` | Email sending |
+| `PAYSTACK_SECRET_KEY` | Payment processing |
+| `VITE_API_BASE` | Frontend API endpoint |
 
 ---
 
-## Files the New Chat Will Need
+## For the New Chat: Pick Up Here
 
-### Backend
-```
-server/server.js
-server/.env (with actual keys)
-server/package.json
-server/src/services/emailService.js
-server/src/services/paystackService.js
-server/src/middleware/domainDetector.js
-```
+### The app is FULLY DEPLOYED and WORKING on Render.
 
-### Frontend
+| URL | Purpose |
+|-----|---------|
+| https://booking-frontend-clean.onrender.com | Main application |
+| https://booking-frontend-clean.onrender.com/admin | Admin login |
+| https://booking-backend-clean.onrender.com/health | Backend health check |
+
+### Next Steps:
+
+1. **Acquire a domain** (e.g., `bookinghub.ng` or `plaza.com`)
+2. **Configure DNS** to point to Render
+3. **Onboard pilot businesses** with Sadiq Thomas
+4. **Test with real users** and gather feedback
+
+### Git Repository:
 ```
-client/src/App.jsx
-client/src/AdminDashboard.jsx
-client/src/BusinessDashboard.jsx
-client/src/UnifiedBookingPage.jsx
-client/src/HostLanding.jsx
-client/src/BusinessSignup.jsx
-client/src/BusinessLogin.jsx
-client/src/AdminLogin.jsx
-client/src/BusinessProfile.jsx
-client/src/BusinessSettings.jsx
-client/src/StaffManagement.jsx
-client/src/AddRoomForm.jsx
-client/src/config.js
-client/src/toast.js
-client/src/styles.css
-client/src/components/ui/ConfirmModal.jsx
-client/package.json
+https://github.com/olusegun-sys/booking-hub-clean
 ```
 
-### Documentation
-```
-Booking Hub Hardening and code review.txt
-prompt-library/ (all prompts)
+### Local Development (if needed):
+```bash
+git clone https://github.com/olusegun-sys/booking-hub-clean.git
+cd booking-hub-clean/client && npm install && npm run dev
+cd ../server && npm install && node server.js
 ```
 
 ---
@@ -292,14 +247,25 @@ Every solution must answer:
 
 ---
 
-## For the New Chat: Pick Up Here
+## Success Criteria (All ✅)
 
-**Start with deployment.** The app is feature-complete. The only thing blocking the Monday demo is getting the backend live.
+- [x] Frontend loads without blank screen
+- [x] Backend health check returns 200
+- [x] Admin can log in (password toggle works)
+- [x] Admin dashboard shows stats with Home button
+- [x] Admin dashboard is mobile responsive
+- [x] Business can log in
+- [x] Business dashboard shows stats
+- [x] Rooms can be added/edited/deleted
+- [x] Staff can be managed
+- [x] Profile images can be uploaded
+- [x] Public booking page works
+- [x] Gallery images display
+- [x] "Pay at venue" creates booking
+- [x] Email notification is sent
+- [x] Indigo branding applied consistently
+- [x] Deployed to Render successfully
 
-**Recommended path:**
-1. Pay Render $25 for one month (backend comes back online immediately)
-2. OR deploy backend to Digital Ocean App Platform ($200 free credit)
-3. Update Netlify frontend `VITE_API_BASE` to point to new backend URL
-4. Test full flow
-5. Demo on Monday
+---
 
+**The code is ready. The deployment is ready. The only thing left is domain setup and user onboarding.** 🚀
