@@ -330,7 +330,7 @@ function AdminDashboard({ admin, onLogout }) {
                 )
               )
             );
-          })
+          }
         )
       )
     )
