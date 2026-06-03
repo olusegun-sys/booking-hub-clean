@@ -348,7 +348,7 @@ function AdminDashboard({ admin, onLogout }) {
                 )
               )
             );
-          })
+          }
         )
       )
     )
