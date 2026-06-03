@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { X, LogIn, Eye, EyeOff, Mail, Lock, Shield } from 'lucide-react';
 import API_BASE from './config';
 
@@ -177,7 +177,24 @@ function AdminLogin({ onLogin }) {
             React.createElement('button', {
               type: 'button',
               onClick: () => setShowPassword(!showPassword),
-              style: { position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }
+              style: { 
+                position: 'absolute', 
+                right: '12px', 
+                top: '50%', 
+                transform: 'translateY(-50%)', 
+                background: 'none', 
+                border: 'none', 
+                cursor: 'pointer', 
+                color: '#94a3b8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '8px',
+                borderRadius: '8px',
+                transition: 'all 0.2s ease'
+              },
+              onMouseEnter: (e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; },
+              onMouseLeave: (e) => { e.currentTarget.style.backgroundColor = 'transparent'; }
             }, showPassword ? React.createElement(EyeOff, { size: 16 }) : React.createElement(Eye, { size: 16 }))
           )
         ),
