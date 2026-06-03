@@ -16,10 +16,9 @@ function AdminDashboard({ admin, onLogout }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleting, setDeleting] = useState(null);
   const [updating, setUpdating] = useState(null);
-  
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, business: null });
 
-  // Add this function - navigate to homepage
+  // Navigate to homepage
   const goToHomepage = () => {
     window.location.href = '/';
   };
@@ -148,26 +147,10 @@ function AdminDashboard({ admin, onLogout }) {
   });
 
   const statCards = [
-    { 
-      icon: Building2, label: 'Total Businesses', value: stats.totalBusinesses, 
-      color: '#4f46e5', bg: '#eef2ff', change: '+12%', changeUp: true,
-      subtitle: 'vs last month'
-    },
-    { 
-      icon: Clock, label: 'Pending Approval', value: stats.pendingBusinesses, 
-      color: '#f59e0b', bg: '#fef3c7', change: '0%', changeUp: false,
-      subtitle: 'awaiting review'
-    },
-    { 
-      icon: Calendar, label: 'Total Bookings', value: stats.totalBookings, 
-      color: '#10b981', bg: '#d1fae5', change: '+8%', changeUp: true,
-      subtitle: 'vs last month'
-    },
-    { 
-      icon: DollarSign, label: 'Total Revenue', value: formatPrice(stats.totalRevenue), 
-      color: '#8b5cf6', bg: '#f3e8ff', change: '+15%', changeUp: true,
-      subtitle: 'vs last month'
-    }
+    { icon: Building2, label: 'Total Businesses', value: stats.totalBusinesses, color: '#4f46e5', bg: '#eef2ff', change: '+12%', changeUp: true, subtitle: 'vs last month' },
+    { icon: Clock, label: 'Pending Approval', value: stats.pendingBusinesses, color: '#f59e0b', bg: '#fef3c7', change: '0%', changeUp: false, subtitle: 'awaiting review' },
+    { icon: Calendar, label: 'Total Bookings', value: stats.totalBookings, color: '#10b981', bg: '#d1fae5', change: '+8%', changeUp: true, subtitle: 'vs last month' },
+    { icon: DollarSign, label: 'Total Revenue', value: formatPrice(stats.totalRevenue), color: '#8b5cf6', bg: '#f3e8ff', change: '+15%', changeUp: true, subtitle: 'vs last month' }
   ];
 
   if (loading) {
@@ -178,54 +161,12 @@ function AdminDashboard({ admin, onLogout }) {
 
   return React.createElement('div', { style: { minHeight: '100vh', backgroundColor: '#f8fafc' } },
     deleteModal.isOpen && React.createElement('div', {
-      style: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '20px'
-      },
+      style: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' },
       onClick: (e) => { if (e.target === e.currentTarget) handleCancelDelete(); }
     },
-      React.createElement('div', {
-        style: {
-          backgroundColor: 'white',
-          borderRadius: '24px',
-          maxWidth: '420px',
-          width: '100%',
-          overflow: 'hidden',
-          animation: 'modalSlideIn 0.2s ease',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-        }
-      },
-        React.createElement('div', {
-          style: {
-            padding: '20px 24px',
-            backgroundColor: '#fef2f2',
-            borderBottom: '1px solid #fecaca',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }
-        },
-          React.createElement('div', {
-            style: {
-              width: '40px',
-              height: '40px',
-              backgroundColor: '#fee2e2',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }
-          },
+      React.createElement('div', { style: { backgroundColor: 'white', borderRadius: '24px', maxWidth: '420px', width: '100%', overflow: 'hidden', animation: 'modalSlideIn 0.2s ease', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' } },
+        React.createElement('div', { style: { padding: '20px 24px', backgroundColor: '#fef2f2', borderBottom: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: '12px' } },
+          React.createElement('div', { style: { width: '40px', height: '40px', backgroundColor: '#fee2e2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
             React.createElement(AlertTriangle, { size: 20, color: '#dc2626' })
           ),
           React.createElement('div', null,
@@ -240,52 +181,10 @@ function AdminDashboard({ admin, onLogout }) {
             '?'
           )
         ),
-        React.createElement('div', {
-          style: {
-            padding: '16px 24px',
-            borderTop: '1px solid #e2e8f0',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '12px',
-            backgroundColor: '#f8fafc'
-          }
-        },
-          React.createElement('button', {
-            onClick: handleCancelDelete,
-            disabled: deleting === deleteModal.business?.id,
-            style: {
-              padding: '10px 24px',
-              backgroundColor: 'white',
-              color: '#475569',
-              border: '1px solid #e2e8f0',
-              borderRadius: '10px',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }
-          }, 'Cancel'),
-          React.createElement('button', {
-            onClick: handleConfirmDelete,
-            disabled: deleting === deleteModal.business?.id,
-            style: {
-              padding: '10px 24px',
-              backgroundColor: '#dc2626',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s',
-              opacity: deleting === deleteModal.business?.id ? 0.6 : 1
-            }
-          },
-            deleting === deleteModal.business?.id ? React.createElement(Loader2, { size: 16, style: { animation: 'spin 1s linear infinite' } }) : React.createElement(Trash2, { size: 16 }),
-            deleting === deleteModal.business?.id ? 'Deleting...' : 'Delete Permanently'
+        React.createElement('div', { style: { padding: '16px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: '#f8fafc' } },
+          React.createElement('button', { onClick: handleCancelDelete, style: { padding: '10px 24px', backgroundColor: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' } }, 'Cancel'),
+          React.createElement('button', { onClick: handleConfirmDelete, style: { padding: '10px 24px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' } },
+            React.createElement(Trash2, { size: 16 }), 'Delete Permanently'
           )
         )
       )
@@ -303,40 +202,12 @@ function AdminDashboard({ admin, onLogout }) {
           )
         ),
         React.createElement('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } },
-          React.createElement('button', { 
-            onClick: goToHomepage, 
-            style: { 
-              padding: '8px 20px', 
-              backgroundColor: 'white', 
-              color: '#4f46e5', 
-              border: '1px solid #e2e8f0', 
-              borderRadius: '10px', 
-              fontSize: '13px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              transition: 'all 0.2s'
-            }
-          }, React.createElement(Home, { size: 16 }), 'Home'),
-          React.createElement('button', { 
-            onClick: onLogout, 
-            style: { 
-              padding: '8px 20px', 
-              backgroundColor: '#ef4444', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '10px', 
-              fontSize: '13px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              transition: 'all 0.2s'
-            }
-          }, React.createElement(LogOut, { size: 16 }), 'Logout')
+          React.createElement('button', { onClick: goToHomepage, style: { padding: '8px 20px', backgroundColor: 'white', color: '#4f46e5', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' } },
+            React.createElement(Home, { size: 16 }), 'Home'
+          ),
+          React.createElement('button', { onClick: onLogout, style: { padding: '8px 20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' } },
+            React.createElement(LogOut, { size: 16 }), 'Logout'
+          )
         )
       )
     ),
@@ -371,19 +242,7 @@ function AdminDashboard({ admin, onLogout }) {
             { id: 'rejected', label: 'Rejected', icon: XCircle, count: businesses.filter(b => b.status === 'rejected').length }
           ].map(tab => {
             const isActive = activeTab === tab.id;
-            return React.createElement('button', {
-              key: tab.id,
-              onClick: () => setActiveTab(tab.id),
-              style: {
-                display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px',
-                borderRadius: '40px', border: 'none', fontSize: '13px', fontWeight: '500',
-                cursor: 'pointer', transition: 'all 0.2s',
-                backgroundColor: isActive ? '#4f46e5' : 'white',
-                color: isActive ? 'white' : '#475569',
-                boxShadow: isActive ? '0 4px 12px rgba(79,70,229,0.3)' : '0 1px 2px rgba(0,0,0,0.05)',
-                border: isActive ? 'none' : '1px solid #e2e8f0'
-              }
-            },
+            return React.createElement('button', { key: tab.id, onClick: () => setActiveTab(tab.id), style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '40px', border: 'none', fontSize: '13px', fontWeight: '500', cursor: 'pointer', backgroundColor: isActive ? '#4f46e5' : 'white', color: isActive ? 'white' : '#475569', boxShadow: isActive ? '0 4px 12px rgba(79,70,229,0.3)' : '0 1px 2px rgba(0,0,0,0.05)', border: isActive ? 'none' : '1px solid #e2e8f0' } },
               React.createElement(tab.icon, { size: 14 }),
               tab.label,
               React.createElement('span', { style: { marginLeft: '4px', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : '#f1f5f9', color: isActive ? 'white' : '#64748b' } }, tab.count)
@@ -392,15 +251,8 @@ function AdminDashboard({ admin, onLogout }) {
         ),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'white', padding: '8px 16px', borderRadius: '40px', border: '1px solid #e2e8f0', minWidth: '260px' } },
           React.createElement(Search, { size: 18, color: '#94a3b8' }),
-          React.createElement('input', {
-            type: 'text', placeholder: 'Search by name, email or city...', value: searchTerm,
-            onChange: (e) => setSearchTerm(e.target.value),
-            style: { border: 'none', outline: 'none', fontSize: '14px', color: '#0f172a', background: 'transparent', width: '100%' }
-          }),
-          searchTerm && React.createElement('button', {
-            onClick: () => setSearchTerm(''),
-            style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }
-          }, '×')
+          React.createElement('input', { type: 'text', placeholder: 'Search by name, email or city...', value: searchTerm, onChange: (e) => setSearchTerm(e.target.value), style: { border: 'none', outline: 'none', fontSize: '14px', color: '#0f172a', background: 'transparent', width: '100%' } }),
+          searchTerm && React.createElement('button', { onClick: () => setSearchTerm(''), style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' } }, '×')
         )
       ),
 
