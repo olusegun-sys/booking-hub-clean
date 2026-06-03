@@ -7,40 +7,26 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-function HostLandingPage() {
+function HostLanding() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showArrows, setShowArrows] = useState(false);
 
-  // 5 high-quality hospitality images - ALL VERIFIED WORKING URLs
+  // 5 high-quality hospitality images
   const slides = [
-    {
-      url: 'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?w=1400&h=788&fit=crop',
-      alt: 'Luxury hotel suite with king bed and ocean view'
-    },
-    {
-      url: 'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg?w=1400&h=788&fit=crop',
-      alt: 'Modern apartment living room with city view'
-    },
-    {
-      url: 'https://images.pexels.com/photos/260922/pexels-photo-260922.jpeg?w=1400&h=788&fit=crop',
-      alt: 'Indoor sports facility with basketball court'
-    },
-    {
-      url: 'https://images.pexels.com/photos/2079246/pexels-photo-2079246.jpeg?w=1400&h=788&fit=crop',
-      alt: 'Elegant event venue with chandelier and stage'
-    },
-    {
-      url: 'https://images.pexels.com/photos/1648776/pexels-photo-1648776.jpeg?w=1400&h=788&fit=crop',
-      alt: 'Luxury apartment rooftop with swimming pool'
-    }
+    { url: 'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?w=1400&h=788&fit=crop', alt: 'Luxury hotel suite with king bed and ocean view' },
+    { url: 'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg?w=1400&h=788&fit=crop', alt: 'Modern apartment living room with city view' },
+    { url: 'https://images.pexels.com/photos/260922/pexels-photo-260922.jpeg?w=1400&h=788&fit=crop', alt: 'Indoor sports facility with basketball court' },
+    { url: 'https://images.pexels.com/photos/2079246/pexels-photo-2079246.jpeg?w=1400&h=788&fit=crop', alt: 'Elegant event venue with chandelier and stage' },
+    { url: 'https://images.pexels.com/photos/1648776/pexels-photo-1648776.jpeg?w=1400&h=788&fit=crop', alt: 'Luxury apartment rooftop with swimming pool' }
   ];
 
-  // Navigate back to homepage
+  // Navigate back to homepage - FIXED: more reliable approach
   const goBackToHome = () => {
-    navigate('/');
+    console.log('Navigating to home...'); // Debug log
+    navigate('/', { replace: false });
   };
 
   useEffect(function() {
@@ -82,8 +68,8 @@ function HostLandingPage() {
     setMobileMenuOpen(false);
   };
 
-  // Responsive styles
-  var headerStyle = {
+  // Styles
+  const headerStyle = {
     position: 'sticky',
     top: 0,
     zIndex: 100,
@@ -92,20 +78,20 @@ function HostLandingPage() {
     backgroundColor: 'rgba(255,255,255,0.95)'
   };
 
-  var containerStyle = {
+  const containerStyle = {
     maxWidth: '1280px',
     margin: '0 auto',
     padding: isDesktop ? '0 32px' : '0 20px'
   };
 
-  var navStyle = {
+  const navStyle = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: isDesktop ? '20px 0' : '16px 0'
   };
 
-  var logoStyle = {
+  const logoStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
@@ -118,7 +104,7 @@ function HostLandingPage() {
     cursor: 'pointer'
   };
 
-  var backButtonStyle = {
+  const backButtonStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
@@ -133,13 +119,13 @@ function HostLandingPage() {
     transition: 'all 0.2s ease'
   };
 
-  var desktopNavStyle = {
+  const desktopNavStyle = {
     display: isDesktop ? 'flex' : 'none',
     gap: '32px',
     alignItems: 'center'
   };
 
-  var mobileMenuButtonStyle = {
+  const mobileMenuButtonStyle = {
     display: isDesktop ? 'none' : 'flex',
     background: 'none',
     border: 'none',
@@ -147,7 +133,7 @@ function HostLandingPage() {
     padding: '8px'
   };
 
-  var mobileMenuStyle = {
+  const mobileMenuStyle = {
     display: mobileMenuOpen ? 'flex' : 'none',
     flexDirection: 'column',
     backgroundColor: 'white',
@@ -156,7 +142,7 @@ function HostLandingPage() {
     borderTop: '1px solid #e2e8f0'
   };
 
-  var ctaButtonStyle = {
+  const ctaButtonStyle = {
     padding: isDesktop ? '12px 28px' : '10px 20px',
     backgroundColor: '#4f46e5',
     color: 'white',
@@ -172,7 +158,7 @@ function HostLandingPage() {
     textDecoration: 'none'
   };
 
-  var secondaryButtonStyle = {
+  const secondaryButtonStyle = {
     padding: isDesktop ? '12px 28px' : '10px 20px',
     backgroundColor: 'white',
     color: '#4f46e5',
@@ -189,12 +175,11 @@ function HostLandingPage() {
   };
 
   return React.createElement('div', { style: { minHeight: '100vh', backgroundColor: '#ffffff' } },
-    // Header with Back Button
+    // Header
     React.createElement('header', { style: headerStyle },
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: navStyle },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
-            // Back Button
             React.createElement('button', { 
               onClick: goBackToHome, 
               style: backButtonStyle,
@@ -230,7 +215,7 @@ function HostLandingPage() {
       )
     ),
 
-    // Hero Section with Clean Slideshow (same as before)
+    // Hero Section
     React.createElement('section', { style: { backgroundColor: '#f8fafc', paddingTop: isDesktop ? '60px' : '40px', paddingBottom: isDesktop ? '60px' : '40px' } },
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: { textAlign: 'center', maxWidth: '800px', margin: '0 auto' } },
@@ -266,33 +251,16 @@ function HostLandingPage() {
             'Accept bookings, manage rooms, track revenue — all on your own domain. First 50 bookings free.'
           ),
           React.createElement('div', { style: { display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' } },
-            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, padding: isDesktop ? '14px 32px' : '12px 24px', fontSize: isDesktop ? '16px' : '14px' } }, 
-              'Start Free Trial →'
-            ),
-            React.createElement('a', { href: '#features', style: { ...secondaryButtonStyle, padding: isDesktop ? '14px 32px' : '12px 24px', fontSize: isDesktop ? '16px' : '14px' } }, 
-              'Learn More'
-            )
+            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, padding: isDesktop ? '14px 32px' : '12px 24px', fontSize: isDesktop ? '16px' : '14px' } }, 'Start Free Trial →'),
+            React.createElement('a', { href: '#features', style: { ...secondaryButtonStyle, padding: isDesktop ? '14px 32px' : '12px 24px', fontSize: isDesktop ? '16px' : '14px' } }, 'Learn More')
           )
         ),
-
-        // Clean Slideshow
         React.createElement('div', { 
-          style: { 
-            marginTop: '48px',
-            position: 'relative',
-            borderRadius: '20px',
-            overflow: 'hidden',
-            boxShadow: '0 20px 35px -10px rgba(0,0,0,0.15)'
-          },
+          style: { marginTop: '48px', position: 'relative', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 35px -10px rgba(0,0,0,0.15)' },
           onMouseEnter: function() { setShowArrows(true); },
           onMouseLeave: function() { setShowArrows(false); }
         },
-          React.createElement('div', { style: { 
-            position: 'relative',
-            width: '100%',
-            paddingBottom: '56.25%',
-            backgroundColor: '#e2e8f0'
-          } },
+          React.createElement('div', { style: { position: 'relative', width: '100%', paddingBottom: '56.25%', backgroundColor: '#e2e8f0' } },
             slides.map(function(slide, index) {
               var isActive = index === currentSlide;
               return React.createElement('img', {
@@ -314,70 +282,19 @@ function HostLandingPage() {
           ),
           showArrows && React.createElement('button', {
             onClick: prevSlide,
-            style: {
-              position: 'absolute',
-              left: '16px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-              zIndex: 10,
-              transition: 'all 0.2s'
-            }
+            style: { position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.15)', zIndex: 10 }
           }, React.createElement(ChevronLeft, { size: 20, color: '#1e293b' })),
           showArrows && React.createElement('button', {
             onClick: nextSlide,
-            style: {
-              position: 'absolute',
-              right: '16px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-              zIndex: 10,
-              transition: 'all 0.2s'
-            }
+            style: { position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.15)', zIndex: 10 }
           }, React.createElement(ChevronRight, { size: 20, color: '#1e293b' })),
-          React.createElement('div', { style: {
-            position: 'absolute',
-            bottom: '16px',
-            left: 0,
-            right: 0,
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '8px',
-            zIndex: 10
-          } },
+          React.createElement('div', { style: { position: 'absolute', bottom: '16px', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '8px', zIndex: 10 } },
             slides.map(function(_, index) {
               var isActive = index === currentSlide;
               return React.createElement('button', {
                 key: index,
                 onClick: function() { goToSlide(index); },
-                style: {
-                  width: isActive ? '24px' : '8px',
-                  height: '8px',
-                  borderRadius: '4px',
-                  backgroundColor: isActive ? '#4f46e5' : 'rgba(255,255,255,0.6)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }
+                style: { width: isActive ? '24px' : '8px', height: '8px', borderRadius: '4px', backgroundColor: isActive ? '#4f46e5' : 'rgba(255,255,255,0.6)', border: 'none', cursor: 'pointer', transition: 'all 0.3s ease' }
               });
             })
           )
@@ -385,28 +302,13 @@ function HostLandingPage() {
       )
     ),
 
-    // Rest of the sections remain exactly the same...
     // Stats Section
     React.createElement('section', { style: { padding: isDesktop ? '60px 0' : '40px 0', backgroundColor: 'white' } },
       React.createElement('div', { style: containerStyle },
-        React.createElement('div', { style: { 
-          display: 'grid', 
-          gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr',
-          gap: isDesktop ? '32px' : '24px',
-          textAlign: 'center'
-        } },
-          React.createElement('div', null,
-            React.createElement('div', { style: { fontSize: isDesktop ? '36px' : '32px', fontWeight: '800', color: '#4f46e5' } }, '200+'),
-            React.createElement('p', { style: { fontSize: '14px', color: '#64748b', marginTop: '8px' } }, 'Active Businesses')
-          ),
-          React.createElement('div', null,
-            React.createElement('div', { style: { fontSize: isDesktop ? '36px' : '32px', fontWeight: '800', color: '#4f46e5' } }, '5,000+'),
-            React.createElement('p', { style: { fontSize: '14px', color: '#64748b', marginTop: '8px' } }, 'Monthly Bookings')
-          ),
-          React.createElement('div', null,
-            React.createElement('div', { style: { fontSize: isDesktop ? '36px' : '32px', fontWeight: '800', color: '#4f46e5' } }, '₦250M+'),
-            React.createElement('p', { style: { fontSize: '14px', color: '#64748b', marginTop: '8px' } }, 'Revenue Tracked')
-          )
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr', gap: isDesktop ? '32px' : '24px', textAlign: 'center' } },
+          React.createElement('div', null, React.createElement('div', { style: { fontSize: isDesktop ? '36px' : '32px', fontWeight: '800', color: '#4f46e5' } }, '200+'), React.createElement('p', { style: { fontSize: '14px', color: '#64748b', marginTop: '8px' } }, 'Active Businesses')),
+          React.createElement('div', null, React.createElement('div', { style: { fontSize: isDesktop ? '36px' : '32px', fontWeight: '800', color: '#4f46e5' } }, '5,000+'), React.createElement('p', { style: { fontSize: '14px', color: '#64748b', marginTop: '8px' } }, 'Monthly Bookings')),
+          React.createElement('div', null, React.createElement('div', { style: { fontSize: isDesktop ? '36px' : '32px', fontWeight: '800', color: '#4f46e5' } }, '₦250M+'), React.createElement('p', { style: { fontSize: '14px', color: '#64748b', marginTop: '8px' } }, 'Revenue Tracked'))
         )
       )
     ),
@@ -418,50 +320,34 @@ function HostLandingPage() {
           React.createElement('h2', { style: { fontSize: isDesktop ? '36px' : '28px', fontWeight: '700', marginBottom: '16px', color: '#0f172a' } }, 'Everything you need to grow'),
           React.createElement('p', { style: { fontSize: isDesktop ? '18px' : '16px', color: '#475569', maxWidth: '600px', margin: '0 auto' } }, 'Built specifically for Nigerian hospitality businesses')
         ),
-        React.createElement('div', { style: { 
-          display: 'grid', 
-          gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr',
-          gap: isDesktop ? '32px' : '24px'
-        } },
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr', gap: isDesktop ? '32px' : '24px' } },
           React.createElement('div', { style: { textAlign: 'center', padding: '24px', backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
-            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } },
-              React.createElement(Globe, { size: 28, color: '#4f46e5' })
-            ),
+            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } }, React.createElement(Globe, { size: 28, color: '#4f46e5' })),
             React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', marginBottom: '8px' } }, 'Your own domain'),
             React.createElement('p', { style: { fontSize: '14px', color: '#64748b', lineHeight: '1.6' } }, 'book.yourbusiness.com — professional booking page with your brand')
           ),
           React.createElement('div', { style: { textAlign: 'center', padding: '24px', backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
-            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } },
-              React.createElement(Wallet, { size: 28, color: '#4f46e5' })
-            ),
+            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } }, React.createElement(Wallet, { size: 28, color: '#4f46e5' })),
             React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', marginBottom: '8px' } }, 'Paystack payments'),
             React.createElement('p', { style: { fontSize: '14px', color: '#64748b', lineHeight: '1.6' } }, 'Cards, bank transfer, USSD — accept any payment method')
           ),
           React.createElement('div', { style: { textAlign: 'center', padding: '24px', backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
-            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } },
-              React.createElement(Users, { size: 28, color: '#4f46e5' })
-            ),
+            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } }, React.createElement(Users, { size: 28, color: '#4f46e5' })),
             React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', marginBottom: '8px' } }, 'Staff management'),
             React.createElement('p', { style: { fontSize: '14px', color: '#64748b', lineHeight: '1.6' } }, 'Add team members, control access, track performance')
           ),
           React.createElement('div', { style: { textAlign: 'center', padding: '24px', backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
-            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } },
-              React.createElement(Calendar, { size: 28, color: '#4f46e5' })
-            ),
+            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } }, React.createElement(Calendar, { size: 28, color: '#4f46e5' })),
             React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', marginBottom: '8px' } }, 'Real-time dashboard'),
             React.createElement('p', { style: { fontSize: '14px', color: '#64748b', lineHeight: '1.6' } }, 'Track bookings, revenue, and availability at a glance')
           ),
           React.createElement('div', { style: { textAlign: 'center', padding: '24px', backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
-            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } },
-              React.createElement(Shield, { size: 28, color: '#4f46e5' })
-            ),
+            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } }, React.createElement(Shield, { size: 28, color: '#4f46e5' })),
             React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', marginBottom: '8px' } }, 'Secure & reliable'),
             React.createElement('p', { style: { fontSize: '14px', color: '#64748b', lineHeight: '1.6' } }, 'Enterprise-grade security on Supabase infrastructure')
           ),
           React.createElement('div', { style: { textAlign: 'center', padding: '24px', backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
-            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } },
-              React.createElement(Headphones, { size: 28, color: '#4f46e5' })
-            ),
+            React.createElement('div', { style: { width: '56px', height: '56px', backgroundColor: '#eef2ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' } }, React.createElement(Headphones, { size: 28, color: '#4f46e5' })),
             React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', marginBottom: '8px' } }, '24/7 support'),
             React.createElement('p', { style: { fontSize: '14px', color: '#64748b', lineHeight: '1.6' } }, 'Local support team. We speak your language.')
           )
@@ -476,59 +362,19 @@ function HostLandingPage() {
           React.createElement('h2', { style: { fontSize: isDesktop ? '36px' : '28px', fontWeight: '700', marginBottom: '16px', color: '#0f172a' } }, 'Launch in 3 simple steps'),
           React.createElement('p', { style: { fontSize: isDesktop ? '18px' : '16px', color: '#475569' } }, 'From signup to accepting bookings in under 5 minutes')
         ),
-        React.createElement('div', { style: { 
-          display: 'grid', 
-          gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr',
-          gap: isDesktop ? '48px' : '32px'
-        } },
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr', gap: isDesktop ? '48px' : '32px' } },
           React.createElement('div', { style: { textAlign: 'center' } },
-            React.createElement('div', { style: { 
-              width: '72px', 
-              height: '72px', 
-              backgroundColor: '#4f46e5', 
-              borderRadius: '36px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              margin: '0 auto 20px',
-              color: 'white',
-              fontSize: '28px',
-              fontWeight: '800'
-            } }, '1'),
+            React.createElement('div', { style: { width: '72px', height: '72px', backgroundColor: '#4f46e5', borderRadius: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'white', fontSize: '28px', fontWeight: '800' } }, '1'),
             React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', marginBottom: '8px' } }, 'Create your account'),
             React.createElement('p', { style: { fontSize: '14px', color: '#64748b', maxWidth: '280px', margin: '0 auto' } }, 'Tell us about your business — hotel, sports venue, or event space')
           ),
           React.createElement('div', { style: { textAlign: 'center' } },
-            React.createElement('div', { style: { 
-              width: '72px', 
-              height: '72px', 
-              backgroundColor: '#4f46e5', 
-              borderRadius: '36px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              margin: '0 auto 20px',
-              color: 'white',
-              fontSize: '28px',
-              fontWeight: '800'
-            } }, '2'),
+            React.createElement('div', { style: { width: '72px', height: '72px', backgroundColor: '#4f46e5', borderRadius: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'white', fontSize: '28px', fontWeight: '800' } }, '2'),
             React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', marginBottom: '8px' } }, 'Set up your page'),
             React.createElement('p', { style: { fontSize: '14px', color: '#64748b', maxWidth: '280px', margin: '0 auto' } }, 'Add rooms, set prices, upload photos — make it yours')
           ),
           React.createElement('div', { style: { textAlign: 'center' } },
-            React.createElement('div', { style: { 
-              width: '72px', 
-              height: '72px', 
-              backgroundColor: '#4f46e5', 
-              borderRadius: '36px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              margin: '0 auto 20px',
-              color: 'white',
-              fontSize: '28px',
-              fontWeight: '800'
-            } }, '3'),
+            React.createElement('div', { style: { width: '72px', height: '72px', backgroundColor: '#4f46e5', borderRadius: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'white', fontSize: '28px', fontWeight: '800' } }, '3'),
             React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', marginBottom: '8px' } }, 'Start earning'),
             React.createElement('p', { style: { fontSize: '14px', color: '#64748b', maxWidth: '280px', margin: '0 auto' } }, 'Share your booking link. Track every booking in real time')
           )
@@ -543,65 +389,25 @@ function HostLandingPage() {
           React.createElement('h2', { style: { fontSize: isDesktop ? '36px' : '28px', fontWeight: '700', marginBottom: '16px', color: '#0f172a' } }, 'Trusted by business owners'),
           React.createElement('p', { style: { fontSize: isDesktop ? '18px' : '16px', color: '#475569' } }, 'Join 200+ Nigerian businesses already using Booking Hub')
         ),
-        React.createElement('div', { style: { 
-          display: 'grid', 
-          gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr',
-          gap: '32px'
-        } },
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr', gap: '32px' } },
           React.createElement('div', { style: { backgroundColor: 'white', borderRadius: '24px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
             React.createElement('div', { style: { display: 'flex', gap: '4px', marginBottom: '20px' } },
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' })
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' })
             ),
-            React.createElement('p', { style: { fontSize: '16px', lineHeight: '1.6', color: '#334155', marginBottom: '24px' } }, 
-              '"Booking Hub transformed our reservations. Customers book directly from our website. We\'ve seen a 40% increase in direct bookings."'
-            ),
+            React.createElement('p', { style: { fontSize: '16px', lineHeight: '1.6', color: '#334155', marginBottom: '24px' } }, '"Booking Hub transformed our reservations. Customers book directly from our website. We\'ve seen a 40% increase in direct bookings."'),
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
-              React.createElement('img', {
-                src: 'https://images.pexels.com/photos/2380794/pexels-photo-2380794.jpeg?w=80&h=80&fit=crop',
-                alt: 'Amaka O.',
-                style: {
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  objectFit: 'cover'
-                }
-              }),
-              React.createElement('div', null,
-                React.createElement('div', { style: { fontWeight: '700', color: '#0f172a' } }, 'Amaka O.'),
-                React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, 'Preston Hotel, Lagos')
-              )
+              React.createElement('img', { src: 'https://images.pexels.com/photos/2380794/pexels-photo-2380794.jpeg?w=80&h=80&fit=crop', alt: 'Amaka O.', style: { width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' } }),
+              React.createElement('div', null, React.createElement('div', { style: { fontWeight: '700', color: '#0f172a' } }, 'Amaka O.'), React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, 'Preston Hotel, Lagos'))
             )
           ),
           React.createElement('div', { style: { backgroundColor: 'white', borderRadius: '24px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } },
             React.createElement('div', { style: { display: 'flex', gap: '4px', marginBottom: '20px' } },
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }),
-              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' })
+              React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' }), React.createElement(Star, { size: 18, color: '#fbbf24', fill: '#fbbf24' })
             ),
-            React.createElement('p', { style: { fontSize: '16px', lineHeight: '1.6', color: '#334155', marginBottom: '24px' } }, 
-              '"The Paystack integration is seamless. My customers can pay with card, transfer, or USSD. Revenue tracking is a game-changer."'
-            ),
+            React.createElement('p', { style: { fontSize: '16px', lineHeight: '1.6', color: '#334155', marginBottom: '24px' } }, '"The Paystack integration is seamless. My customers can pay with card, transfer, or USSD. Revenue tracking is a game-changer."'),
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
-              React.createElement('img', {
-                src: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?w=80&h=80&fit=crop',
-                alt: 'Chidi N.',
-                style: {
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  objectFit: 'cover'
-                }
-              }),
-              React.createElement('div', null,
-                React.createElement('div', { style: { fontWeight: '700', color: '#0f172a' } }, 'Chidi N.'),
-                React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, 'Lagos Sports Complex')
-              )
+              React.createElement('img', { src: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?w=80&h=80&fit=crop', alt: 'Chidi N.', style: { width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' } }),
+              React.createElement('div', null, React.createElement('div', { style: { fontWeight: '700', color: '#0f172a' } }, 'Chidi N.'), React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, 'Lagos Sports Complex'))
             )
           )
         )
@@ -615,19 +421,8 @@ function HostLandingPage() {
           React.createElement('h2', { style: { fontSize: isDesktop ? '36px' : '28px', fontWeight: '700', marginBottom: '16px', color: '#0f172a' } }, 'Simple, transparent pricing'),
           React.createElement('p', { style: { fontSize: isDesktop ? '18px' : '16px', color: '#475569' } }, 'Start free. Pay only when you grow.')
         ),
-        React.createElement('div', { style: { 
-          display: 'grid', 
-          gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr',
-          gap: '32px',
-          maxWidth: '800px',
-          margin: '0 auto'
-        } },
-          React.createElement('div', { style: { 
-            backgroundColor: '#f8fafc', 
-            borderRadius: '24px', 
-            padding: '32px',
-            border: '1px solid #e2e8f0'
-          } },
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr', gap: '32px', maxWidth: '800px', margin: '0 auto' } },
+          React.createElement('div', { style: { backgroundColor: '#f8fafc', borderRadius: '24px', padding: '32px', border: '1px solid #e2e8f0' } },
             React.createElement('h3', { style: { fontSize: '20px', fontWeight: '700', marginBottom: '12px' } }, 'Free Trial'),
             React.createElement('div', { style: { fontSize: '36px', fontWeight: '800', color: '#0f172a', marginBottom: '20px' } }, '₦0', React.createElement('span', { style: { fontSize: '14px', fontWeight: '400', color: '#64748b' } }, '/first 50 bookings')),
             React.createElement('ul', { style: { listStyle: 'none', padding: 0, margin: '0 0 32px 0' } },
@@ -639,12 +434,7 @@ function HostLandingPage() {
             ),
             React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, width: '100%', justifyContent: 'center' } }, 'Start Free Trial →')
           ),
-          React.createElement('div', { style: { 
-            backgroundColor: '#4f46e5', 
-            borderRadius: '24px', 
-            padding: '32px',
-            color: 'white'
-          } },
+          React.createElement('div', { style: { backgroundColor: '#4f46e5', borderRadius: '24px', padding: '32px', color: 'white' } },
             React.createElement('h3', { style: { fontSize: '20px', fontWeight: '700', marginBottom: '12px', color: 'white' } }, 'Pro Plan'),
             React.createElement('div', { style: { fontSize: '36px', fontWeight: '800', marginBottom: '20px', color: 'white' } }, '₦20,000', React.createElement('span', { style: { fontSize: '14px', fontWeight: '400' } }, '/month')),
             React.createElement('ul', { style: { listStyle: 'none', padding: 0, margin: '0 0 32px 0' } },
@@ -673,17 +463,9 @@ function HostLandingPage() {
     // Footer
     React.createElement('footer', { style: { backgroundColor: '#0f172a', padding: isDesktop ? '60px 0 40px' : '40px 0 30px' } },
       React.createElement('div', { style: containerStyle },
-        React.createElement('div', { style: { 
-          display: 'grid', 
-          gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr',
-          gap: isDesktop ? '40px' : '32px',
-          marginBottom: '40px'
-        } },
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr', gap: isDesktop ? '40px' : '32px', marginBottom: '40px' } },
           React.createElement('div', null,
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' } },
-              React.createElement(Building2, { size: 24, color: '#818cf8' }),
-              React.createElement('span', { style: { fontSize: '18px', fontWeight: '800', color: 'white' } }, 'BookingHub')
-            ),
+            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' } }, React.createElement(Building2, { size: 24, color: '#818cf8' }), React.createElement('span', { style: { fontSize: '18px', fontWeight: '800', color: 'white' } }, 'BookingHub')),
             React.createElement('p', { style: { fontSize: '13px', color: '#94a3b8', lineHeight: '1.6' } }, 'The booking platform built for Nigerian hospitality businesses.')
           ),
           React.createElement('div', null,
@@ -718,4 +500,4 @@ function HostLandingPage() {
   );
 }
 
-export default HostLandingPage;
+export default HostLanding;
