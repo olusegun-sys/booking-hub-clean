@@ -28,6 +28,9 @@ function SimpleAdminLogin({ onLogin }) {
   var _useStateLoading = _useState(false);
   var loading = _useStateLoading[0];
   var setLoading = _useStateLoading[1];
+  var _useStateShowPassword = _useState(false);
+  var showPassword = _useStateShowPassword[0];
+  var setShowPassword = _useStateShowPassword[1];
 
   function handleSubmit() {
     if (!email || !email.includes('@')) {
@@ -65,6 +68,10 @@ function SimpleAdminLogin({ onLogin }) {
       });
   }
 
+  function toggleShowPassword() {
+    setShowPassword(!showPassword);
+  }
+
   return React.createElement('div', { style: { 
     minHeight: '100vh',
     display: 'flex',
@@ -82,7 +89,7 @@ function SimpleAdminLogin({ onLogin }) {
       boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
       textAlign: 'center'
     } },
-      React.createElement('div', { style: { width: '56px', height: '56px', background: '#eef2ff', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' } },
+      React.createElement('div', { style: { width: '56px', height: '56px', background: '#EEF2FF', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' } },
         React.createElement('span', { style: { fontSize: '28px' } }, '🔐')
       ),
       React.createElement('h2', { style: { marginBottom: '8px', fontSize: '24px', fontWeight: '700', color: '#1e293b' } }, 'Admin Login'),
@@ -107,29 +114,67 @@ function SimpleAdminLogin({ onLogin }) {
           backgroundColor: '#ffffff',
           color: '#1e293b'
         },
-        onFocus: function(e) { e.target.style.borderColor = '#4f46e5'; }
+        onFocus: function(e) { e.target.style.borderColor = '#4F46E5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.1)'; },
+        onBlur: function(e) { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }
       }),
       
-      React.createElement('input', {
-        type: 'password',
-        placeholder: 'Password',
-        value: password,
-        onChange: function(e) { setPassword(e.target.value); },
-        onKeyPress: function(e) { if (e.key === 'Enter') handleSubmit(); },
-        style: { 
-          width: '100%', 
-          padding: '14px', 
-          marginBottom: '24px', 
-          border: '1px solid #e2e8f0', 
-          borderRadius: '10px', 
-          fontSize: '14px', 
-          boxSizing: 'border-box',
-          outline: 'none',
-          backgroundColor: '#ffffff',
-          color: '#1e293b'
-        },
-        onFocus: function(e) { e.target.style.borderColor = '#4f46e5'; }
-      }),
+      React.createElement('div', { style: { position: 'relative', marginBottom: '24px' } },
+        React.createElement('input', {
+          type: showPassword ? 'text' : 'password',
+          placeholder: 'Password',
+          value: password,
+          onChange: function(e) { setPassword(e.target.value); },
+          onKeyPress: function(e) { if (e.key === 'Enter') handleSubmit(); },
+          style: { 
+            width: '100%', 
+            padding: '14px', 
+            paddingRight: '44px',
+            border: '1px solid #e2e8f0', 
+            borderRadius: '10px', 
+            fontSize: '14px', 
+            boxSizing: 'border-box',
+            outline: 'none',
+            backgroundColor: '#ffffff',
+            color: '#1e293b'
+          },
+          onFocus: function(e) { e.target.style.borderColor = '#4F46E5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.1)'; },
+          onBlur: function(e) { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }
+        }),
+        React.createElement('button', {
+          type: 'button',
+          onClick: toggleShowPassword,
+          style: {
+            position: 'absolute',
+            right: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px',
+            borderRadius: '8px',
+            transition: 'all 0.2s ease'
+          },
+          onMouseEnter: function(e) { e.currentTarget.style.backgroundColor = '#f1f5f9'; },
+          onMouseLeave: function(e) { e.currentTarget.style.backgroundColor = 'transparent'; }
+        }, showPassword ? [
+          React.createElement('svg', { key: 'eye-slash', width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
+            React.createElement('path', { d: 'M9.88 9.88a3 3 0 1 0 4.24 4.24' }),
+            React.createElement('path', { d: 'M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68' }),
+            React.createElement('path', { d: 'M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61' }),
+            React.createElement('line', { x1: '2', y1: '2', x2: '22', y2: '22' })
+          )
+        ] : [
+          React.createElement('svg', { key: 'eye', width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
+            React.createElement('path', { d: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z' }),
+            React.createElement('circle', { cx: '12', cy: '12', r: '3' })
+          )
+        ])
+      ),
       
       React.createElement('button', {
         onClick: handleSubmit,
@@ -137,7 +182,7 @@ function SimpleAdminLogin({ onLogin }) {
         style: { 
           width: '100%', 
           padding: '14px', 
-          background: loading ? '#94a3b8' : '#4f46e5', 
+          background: loading ? '#94a3b8' : '#4F46E5', 
           color: 'white', 
           border: 'none', 
           borderRadius: '10px', 
@@ -145,7 +190,9 @@ function SimpleAdminLogin({ onLogin }) {
           fontWeight: '600', 
           cursor: loading ? 'not-allowed' : 'pointer',
           transition: 'background 0.2s'
-        }
+        },
+        onMouseEnter: function(e) { if (!loading) e.currentTarget.style.background = '#4338CA'; },
+        onMouseLeave: function(e) { if (!loading) e.currentTarget.style.background = '#4F46E5'; }
       }, loading ? 'Logging in...' : 'Login')
     )
   );
