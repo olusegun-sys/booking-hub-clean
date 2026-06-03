@@ -4,7 +4,7 @@ import {
   MapPin, Phone, Mail, Trash2, Search, Hotel, Dumbbell, CalendarDays, 
   LogOut, TrendingDown, Users, DollarSign, Eye, MoreVertical, 
   ChevronRight, Sparkles, Activity, AlertCircle, Check, X,
-  Loader2, Star, Award, AlertTriangle
+  Loader2, Star, Award, AlertTriangle, Home
 } from 'lucide-react';
 import API_BASE from './config';
 
@@ -19,6 +19,11 @@ function AdminDashboard({ admin, onLogout }) {
   
   // Delete Modal State
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, business: null });
+
+  // Navigate to homepage
+  function goToHomepage() {
+    window.location.href = '/';
+  }
 
   useEffect(function() {
     fetchBusinesses();
@@ -168,7 +173,7 @@ function AdminDashboard({ admin, onLogout }) {
     }
   ];
 
-  // Custom Delete Modal Component - Simplified message
+  // Custom Delete Modal Component
   var DeleteModal = deleteModal.isOpen ? React.createElement('div', {
     style: {
       position: 'fixed',
@@ -197,7 +202,6 @@ function AdminDashboard({ admin, onLogout }) {
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
       }
     },
-      // Header
       React.createElement('div', {
         style: {
           padding: '20px 24px',
@@ -226,7 +230,6 @@ function AdminDashboard({ admin, onLogout }) {
           React.createElement('p', { style: { fontSize: '12px', color: '#b91c1c', margin: 0 } }, 'This action cannot be undone')
         )
       ),
-      // Body - Simplified
       React.createElement('div', { style: { padding: '24px' } },
         React.createElement('p', { style: { fontSize: '14px', color: '#1e293b', margin: 0 } },
           'Are you sure you want to permanently delete ',
@@ -234,7 +237,6 @@ function AdminDashboard({ admin, onLogout }) {
           '?'
         )
       ),
-      // Footer
       React.createElement('div', {
         style: {
           padding: '16px 24px',
@@ -310,29 +312,70 @@ function AdminDashboard({ admin, onLogout }) {
             React.createElement('p', { style: { fontSize: '12px', color: '#64748b', margin: 0 } }, getGreeting() + ', ' + (admin?.full_name || 'Admin'))
           )
         ),
-        React.createElement('button', { 
-          onClick: onLogout, 
-          style: { 
-            padding: '8px 20px', 
-            backgroundColor: '#ef4444', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '10px', 
-            fontSize: '13px', 
-            fontWeight: '500', 
-            cursor: 'pointer', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px',
-            transition: 'all 0.2s',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-          },
-          onMouseEnter: function(e) { e.currentTarget.style.backgroundColor = '#dc2626'; e.currentTarget.style.transform = 'translateY(-1px)'; },
-          onMouseLeave: function(e) { e.currentTarget.style.backgroundColor = '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; }
-        }, React.createElement(LogOut, { size: 16 }), 'Logout')
+        // Button Group - Home + Logout
+        React.createElement('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } },
+          // Home Button
+          React.createElement('button', { 
+            onClick: goToHomepage, 
+            style: { 
+              padding: '8px 20px', 
+              backgroundColor: 'white', 
+              color: '#4f46e5', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: '10px', 
+              fontSize: '13px', 
+              fontWeight: '500', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              transition: 'all 0.2s',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            },
+            onMouseEnter: function(e) { 
+              e.currentTarget.style.backgroundColor = '#f8fafc'; 
+              e.currentTarget.style.borderColor = '#4f46e5'; 
+              e.currentTarget.style.transform = 'translateY(-1px)'; 
+            },
+            onMouseLeave: function(e) { 
+              e.currentTarget.style.backgroundColor = 'white'; 
+              e.currentTarget.style.borderColor = '#e2e8f0'; 
+              e.currentTarget.style.transform = 'translateY(0)'; 
+            }
+          }, React.createElement(Home, { size: 16 }), 'Home'),
+          
+          // Logout Button
+          React.createElement('button', { 
+            onClick: onLogout, 
+            style: { 
+              padding: '8px 20px', 
+              backgroundColor: '#ef4444', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '10px', 
+              fontSize: '13px', 
+              fontWeight: '500', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              transition: 'all 0.2s',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            },
+            onMouseEnter: function(e) { 
+              e.currentTarget.style.backgroundColor = '#dc2626'; 
+              e.currentTarget.style.transform = 'translateY(-1px)'; 
+            },
+            onMouseLeave: function(e) { 
+              e.currentTarget.style.backgroundColor = '#ef4444'; 
+              e.currentTarget.style.transform = 'translateY(0)'; 
+            }
+          }, React.createElement(LogOut, { size: 16 }), 'Logout')
+        )
       )
     ),
 
+    // Rest of the component remains the same...
     React.createElement('main', { style: { maxWidth: '1400px', margin: '0 auto', padding: '24px' } },
 
       // Stats Cards
@@ -483,7 +526,6 @@ function AdminDashboard({ admin, onLogout }) {
                 e.currentTarget.style.boxShadow = 'none'; 
               }
             },
-              // Card Header with Gradient
               React.createElement('div', { style: { 
                 background: iconGradient, 
                 padding: '20px', 
@@ -518,9 +560,7 @@ function AdminDashboard({ admin, onLogout }) {
                   )
                 )
               ),
-              // Card Body
               React.createElement('div', { style: { padding: '20px' } },
-                // Stats Row
                 React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' } },
                   React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
                     React.createElement(Calendar, { size: 14, color: '#64748b' }),
@@ -531,7 +571,6 @@ function AdminDashboard({ admin, onLogout }) {
                     React.createElement('span', { style: { fontSize: '13px', fontWeight: '600', color: '#0f172a' } }, business.current_booking_count || 0, '/', business.booking_limit || 50, ' bookings')
                   )
                 ),
-                // Usage Bar
                 React.createElement('div', { style: { marginBottom: '20px' } },
                   React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: '6px' } },
                     React.createElement('span', { style: { fontSize: '11px', fontWeight: '500', color: '#64748b' } }, 'Free tier usage'),
@@ -547,7 +586,6 @@ function AdminDashboard({ admin, onLogout }) {
                     } })
                   )
                 ),
-                // Contact Info
                 React.createElement('div', { style: { 
                   display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', 
                   padding: '12px 0', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0',
@@ -562,7 +600,6 @@ function AdminDashboard({ admin, onLogout }) {
                     React.createElement('span', { style: { fontSize: '12px', color: '#475569' } }, business.phone)
                   )
                 ),
-                // Action Buttons
                 React.createElement('div', { style: { display: 'flex', gap: '10px' } },
                   business.status === 'pending' ? [
                     React.createElement('button', {
@@ -612,6 +649,7 @@ function AdminDashboard({ admin, onLogout }) {
         )
       )
     )
+  );
 }
 
 export default AdminDashboard;
