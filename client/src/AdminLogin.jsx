@@ -38,7 +38,7 @@ function AdminLogin({ onLogin }) {
         }
         localStorage.setItem('admin', JSON.stringify(data.admin));
         if (onLogin) onLogin(data.admin);
-        window.location.href = '/admin/dashboard';
+        window.location.href = '/admin';
       } else {
         setError(data.error || 'Invalid credentials');
       }
