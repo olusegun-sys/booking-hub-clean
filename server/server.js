@@ -43,7 +43,7 @@ function getLocalIpAddress() {
 }
 
 // ============================================================
-// CORS CONFIGURATION - MUST BE FIRST
+// CORS CONFIGURATION - FIXED
 // ============================================================
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
@@ -53,7 +53,6 @@ const ALLOWED_ORIGINS = [
   'https://booking-hub-frontend-clean.onrender.com'
 ];
 
-// Add production origins from environment if available
 if (process.env.ALLOWED_ORIGINS) {
   process.env.ALLOWED_ORIGINS.split(',').forEach(origin => {
     if (!ALLOWED_ORIGINS.includes(origin)) {
@@ -64,12 +63,10 @@ if (process.env.ALLOWED_ORIGINS) {
 
 const corsOptions = {
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
     if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
       return callback(null, true);
     }
-    // Also allow during development
     if (process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
@@ -80,28 +77,26 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Content-Length', 'X-Kuma-Revision'],
-  maxAge: 86400 // 24 hours
+  maxAge: 86400
 };
 
-// Apply CORS - MUST BE FIRST!
+// Apply CORS - this automatically handles OPTIONS preflight requests
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
-// Trust proxy - Required for rate limiter behind Render's proxy
+// Trust proxy
 app.set('trust proxy', 1);
 
 // ============================================================
 // RATE LIMITING
 // ============================================================
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV !== 'production',
   keyGenerator: (req) => {
-    // Use X-Forwarded-For for proxy requests (Render uses proxy)
     return req.headers['x-forwarded-for'] || req.ip;
   }
 });
@@ -116,7 +111,6 @@ async function authenticateBusiness(req, res, next) {
   const requestedBusinessId = req.params.businessId || req.params.id;
   const authHeader = req.headers.authorization;
 
-  // Development mode bypass
   if (process.env.NODE_ENV !== 'production' && !authHeader) {
     console.log('⚠️ Development mode: skipping auth for business route');
     req.businessId = requestedBusinessId;
@@ -140,7 +134,6 @@ async function authenticateBusiness(req, res, next) {
       return res.status(401).json({ success: false, error: 'Invalid or expired session' });
     }
 
-    // Only check ID if a specific business was requested
     if (requestedBusinessId && session.business_id !== requestedBusinessId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -187,14 +180,14 @@ async function authenticateAdmin(req, res, next) {
 }
 
 // ============================================================
-// DOMAIN DETECTION - Apply ONLY to specific routes
+// DOMAIN DETECTION
 // ============================================================
 app.use('/api/businesses/slug', detectBusinessFromDomain);
 app.use('/api/domain-info', detectBusinessFromDomain);
 app.use('/book', detectBusinessFromDomain);
 
 // ============================================================
-// HEALTH & TEST ROUTES (Public)
+// HEALTH & TEST ROUTES
 // ============================================================
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -370,7 +363,7 @@ app.get('/api/businesses/:businessId/gallery', async (req, res) => {
 });
 
 // ============================================================
-// AUTHENTICATION ROUTES - NO DOMAIN DETECTION
+// AUTHENTICATION ROUTES
 // ============================================================
 
 // ADMIN LOGIN
@@ -664,7 +657,6 @@ app.delete('/api/admin/businesses/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Business not found.' });
     }
 
-    // Delete related data
     await supabase.from('business_gallery').delete().eq('business_id', id);
     await supabase.from('availability').delete().eq('business_id', id);
     await supabase.from('operating_hours').delete().eq('business_id', id);
@@ -1475,7 +1467,6 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async (req,
       return res.status(400).json({ success: false, error: 'Custom domain is required' });
     }
 
-    // Validate domain format
     const domainPattern = /^([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+[a-zA-Z]{2,}$/;
     const isValidDomainFormat = domainPattern.test(custom_domain);
 
@@ -1486,7 +1477,6 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async (req,
       });
     }
 
-    // Update business with verified custom domain
     const { error: updateError } = await supabase
       .from('businesses')
       .update({
@@ -1569,6 +1559,5 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log('========================================\n');
   console.log(`✅ Allowed CORS origins: ${ALLOWED_ORIGINS.join(', ')}`);
 
-  // Create admin user on startup
   await ensureAdminUser();
 });
