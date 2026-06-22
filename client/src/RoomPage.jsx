@@ -1,10 +1,12 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Hotel, Plus, Edit2, Trash2, X, Check, Bed, Users, DollarSign, Home, ArrowLeft } from 'lucide-react';
+import { Hotel, Plus, Edit2, Trash2, X, Check, Bed, Users, DollarSign, Home, ArrowLeft, Loader2 } from 'lucide-react';
 import API_BASE from './config';
 
 function RoomPage({ business, onBack }) {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingBusiness, setLoadingBusiness] = useState(false);
+  const [fullBusiness, setFullBusiness] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
   const [formData, setFormData] = useState({
@@ -21,16 +23,51 @@ function RoomPage({ business, onBack }) {
 
   const token = localStorage.getItem('auth_token');
 
+  // If business is passed with an ID, use it. Otherwise try to fetch by slug or ID.
   useEffect(() => {
-    if (business && business.id) {
-      fetchRooms();
-    }
+    const loadBusiness = async () => {
+      // If we already have a valid business with ID, use it
+      if (business && business.id) {
+        setFullBusiness(business);
+        fetchRooms(business.id);
+        return;
+      }
+
+      // If business has a slug but no ID, fetch it
+      if (business && business.slug) {
+        setLoadingBusiness(true);
+        try {
+          const response = await fetch(`${API_BASE}/api/businesses/slug/${business.slug}`);
+          const data = await response.json();
+          if (data.success && data.business) {
+            setFullBusiness(data.business);
+            fetchRooms(data.business.id);
+          } else {
+            setMessage({ type: 'error', text: 'Business not found. Please go back and try again.' });
+          }
+        } catch (err) {
+          console.error('Fetch business error:', err);
+          setMessage({ type: 'error', text: 'Error loading business data. Please try again.' });
+        } finally {
+          setLoadingBusiness(false);
+        }
+        return;
+      }
+
+      // If no business data at all, show error
+      if (!business) {
+        setMessage({ type: 'error', text: 'Business data not available. Please go back and try again.' });
+        setLoading(false);
+      }
+    };
+
+    loadBusiness();
   }, [business]);
 
-  const fetchRooms = async () => {
+  const fetchRooms = async (businessId) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/api/businesses/${business.id}/rooms`, {
+      const response = await fetch(`${API_BASE}/api/businesses/${businessId}/rooms`, {
         headers: {
           'Authorization': 'Bearer ' + token
         }
@@ -118,11 +155,16 @@ function RoomPage({ business, onBack }) {
       return;
     }
 
+    if (!fullBusiness || !fullBusiness.id) {
+      showMessage('error', 'Business data not available. Please go back and try again.');
+      return;
+    }
+
     setSaving(true);
     try {
       const url = editingRoom
-        ? `${API_BASE}/api/businesses/${business.id}/rooms/${editingRoom.id}`
-        : `${API_BASE}/api/businesses/${business.id}/rooms/create`;
+        ? `${API_BASE}/api/businesses/${fullBusiness.id}/rooms/${editingRoom.id}`
+        : `${API_BASE}/api/businesses/${fullBusiness.id}/rooms/create`;
       
       const method = editingRoom ? 'PUT' : 'POST';
       
@@ -145,7 +187,7 @@ function RoomPage({ business, onBack }) {
       const data = await response.json();
       if (data.success) {
         showMessage('success', editingRoom ? 'Room updated successfully' : 'Room created successfully');
-        fetchRooms();
+        fetchRooms(fullBusiness.id);
         handleCloseModal();
       } else {
         showMessage('error', data.error || 'Failed to save room');
@@ -161,8 +203,13 @@ function RoomPage({ business, onBack }) {
   const handleDeleteRoom = async (room) => {
     if (!confirm(`Delete "${room.name}"? This action cannot be undone.`)) return;
     
+    if (!fullBusiness || !fullBusiness.id) {
+      showMessage('error', 'Business data not available.');
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_BASE}/api/businesses/${business.id}/rooms/${room.id}`, {
+      const response = await fetch(`${API_BASE}/api/businesses/${fullBusiness.id}/rooms/${room.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': 'Bearer ' + token
@@ -171,7 +218,7 @@ function RoomPage({ business, onBack }) {
       const data = await response.json();
       if (data.success) {
         showMessage('success', 'Room deleted successfully');
-        fetchRooms();
+        fetchRooms(fullBusiness.id);
       } else {
         showMessage('error', data.error || 'Failed to delete room');
       }
@@ -185,13 +232,36 @@ function RoomPage({ business, onBack }) {
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(price);
   };
 
-  // Safety check - if no business, show error
-  if (!business || !business.id) {
+  // Safety check - if no business data after loading attempts, show error
+  if (!business && !fullBusiness && !loadingBusiness) {
     return React.createElement('div', { style: { padding: '40px', textAlign: 'center' } },
-      React.createElement('p', { style: { color: '#ef4444' } }, 'Error: Business data not available. Please go back and try again.'),
-      React.createElement('button', { onClick: onBack, style: { marginTop: '16px', padding: '8px 16px', cursor: 'pointer' } }, 'Go Back')
+      React.createElement('p', { style: { color: '#ef4444', fontSize: '16px', marginBottom: '16px' } }, 
+        'Error: Business data not available. Please go back and try again.'
+      ),
+      React.createElement('button', { 
+        onClick: onBack, 
+        style: { 
+          padding: '10px 24px', 
+          backgroundColor: '#4f46e5', 
+          color: 'white',
+          border: 'none',
+          borderRadius: '10px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: '500'
+        }
+      }, 'Go Back')
     );
   }
+
+  if (loadingBusiness) {
+    return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', flexDirection: 'column', gap: '16px' } },
+      React.createElement(Loader2, { size: 32, style: { animation: 'spin 1s linear infinite', color: '#4f46e5' } }),
+      React.createElement('p', { style: { color: '#64748b', fontSize: '14px' } }, 'Loading business data...')
+    );
+  }
+
+  const activeBusiness = fullBusiness || business;
 
   const styles = {
     container: {
@@ -524,7 +594,7 @@ function RoomPage({ business, onBack }) {
         ),
         React.createElement('h2', { style: { ...styles.title, marginTop: '16px' } },
           React.createElement(Hotel, { size: 28, color: '#4f46e5' }),
-          'Manage Rooms'
+          `Manage Rooms - ${activeBusiness?.name || 'Business'}`
         )
       ),
       React.createElement('button', { onClick: () => handleOpenModal(), style: styles.addButton },
