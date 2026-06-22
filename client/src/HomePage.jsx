@@ -9,7 +9,7 @@ import BusinessLogin from './BusinessLogin';
 import BusinessDashboard from './BusinessDashboard';
 import StaffDashboard from './StaffDashboard';
 import HostLanding from './HostLanding';
-import API_BASE from './config';  // <-- ADD THIS LINE
+import API_BASE from './config';
 
 const brandIndigo = '#4F46E5';
 const brandIndigoLight = '#6366F1';
@@ -92,7 +92,6 @@ function HomePage() {
       try {
         if (window.location.pathname !== '/') return;
         const currentDomain = window.location.hostname;
-        // FIXED: Use imported API_BASE
         const response = await fetch(`${API_BASE}/api/domain-info?domain=${currentDomain}`);
         const data = await response.json();
         if (data.success && data.source === 'custom-domain-verified') navigate(`/book/${data.business.slug}`);
@@ -116,7 +115,6 @@ function HomePage() {
     }
     setLoading(true);
     try {
-      // FIXED: Use imported API_BASE
       let searchParams = { location };
       if (selectedCategory === 'hotel') {
         searchParams.checkIn = checkIn;
@@ -146,6 +144,8 @@ function HomePage() {
   };
 
   const handleDirectBook = (business) => {
+    // Store the complete business object for passing to RoomPage
+    // This preserves all fields needed (id, slug, name, type, etc.)
     setSelectedBusiness(business);
     setShowDirectBooking(true);
   };
@@ -161,9 +161,29 @@ function HomePage() {
     return React.createElement(BusinessDashboard, { business: businessUser, onLogout: () => { setBusinessUser(null); localStorage.removeItem('businessUser'); } });
   }
   if (showDirectBooking && selectedBusiness) {
-    if (selectedBusiness.business_type === 'hotel') return React.createElement(RoomPage, { businessId: selectedBusiness.id, businessName: selectedBusiness.name, checkIn: checkIn, checkOut: checkOut, guests: guests, onBack: () => setShowDirectBooking(false) });
-    if (selectedBusiness.business_type === 'sports') return React.createElement(SportsBooking, { business: selectedBusiness, onBack: () => setShowDirectBooking(false) });
-    if (selectedBusiness.business_type === 'event') return React.createElement(EventBooking, { business: selectedBusiness, onBack: () => setShowDirectBooking(false) });
+    // Pass the complete business object as 'business' prop
+    // RoomPage expects 'business' with .id and .slug properties
+    if (selectedBusiness.business_type === 'hotel') {
+      return React.createElement(RoomPage, { 
+        business: selectedBusiness,  // Pass full object, not individual props
+        checkIn: checkIn, 
+        checkOut: checkOut, 
+        guests: guests, 
+        onBack: () => setShowDirectBooking(false) 
+      });
+    }
+    if (selectedBusiness.business_type === 'sports') {
+      return React.createElement(SportsBooking, { 
+        business: selectedBusiness, 
+        onBack: () => setShowDirectBooking(false) 
+      });
+    }
+    if (selectedBusiness.business_type === 'event') {
+      return React.createElement(EventBooking, { 
+        business: selectedBusiness, 
+        onBack: () => setShowDirectBooking(false) 
+      });
+    }
   }
 
   const getCategoryPlaceholder = () => 'e.g., Lagos, Abuja, Port Harcourt';
