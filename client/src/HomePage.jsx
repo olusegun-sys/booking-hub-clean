@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Building2, Trophy, PartyPopper, Shield, Search, MapPin, Phone, Star, Sparkles, Clock, CreditCard, Award, ArrowRight, Calendar, Users, Headphones, Loader2 } from 'lucide-react';
 import { showError } from './toast';
-import RoomPage from './RoomPage';
+import HotelBooking from './HotelBooking';
 import SportsBooking from './SportsBooking';
 import EventBooking from './EventBooking';
 import BusinessLogin from './BusinessLogin';
@@ -144,7 +144,7 @@ function HomePage() {
   };
 
   const handleDirectBook = (business) => {
-    // Store the complete business object for passing to RoomPage
+    // Store the complete business object for passing to booking components
     // This preserves all fields needed (id, slug, name, type, etc.)
     setSelectedBusiness(business);
     setShowDirectBooking(true);
@@ -160,12 +160,12 @@ function HomePage() {
     if (businessUser.staffUser) return React.createElement(StaffDashboard, { staff: businessUser.staffUser, business: businessUser, onLogout: () => { setBusinessUser(null); localStorage.removeItem('businessUser'); } });
     return React.createElement(BusinessDashboard, { business: businessUser, onLogout: () => { setBusinessUser(null); localStorage.removeItem('businessUser'); } });
   }
+  
   if (showDirectBooking && selectedBusiness) {
-    // Pass the complete business object as 'business' prop
-    // RoomPage expects 'business' with .id and .slug properties
+    // Use the appropriate booking component based on business type
     if (selectedBusiness.business_type === 'hotel') {
-      return React.createElement(RoomPage, { 
-        business: selectedBusiness,  // Pass full object, not individual props
+      return React.createElement(HotelBooking, { 
+        business: selectedBusiness,
         checkIn: checkIn, 
         checkOut: checkOut, 
         guests: guests, 
