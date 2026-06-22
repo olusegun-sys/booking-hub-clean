@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Hotel, Calendar, Users, Bed, Check, ArrowLeft, CreditCard, MapPin, Clock, Loader2, Star, Wifi, Tv, Coffee, Dumbbell, Car, Snowflake, Sparkles } from 'lucide-react';
 import API_BASE from './config';
 import { showError, showSuccess } from './toast';
@@ -102,7 +102,7 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       const totalAmount = selectedRoom.price_per_night * nights;
 
       // Create booking with pay_at_venue as default
-      const response = await fetch(`${API_BASE}/api/bookings/create`, {
+      const response = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -490,23 +490,23 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
     // Booking Summary
     React.createElement('div', { style: styles.bookingSummary },
       React.createElement('div', { style: styles.summaryItem },
-        '📅 Check-in',
+        '?? Check-in',
         React.createElement('span', { style: styles.summaryValue }, 
           checkIn ? new Date(checkIn).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'
         )
       ),
       React.createElement('div', { style: styles.summaryItem },
-        '📅 Check-out',
+        '?? Check-out',
         React.createElement('span', { style: styles.summaryValue }, 
           checkOut ? new Date(checkOut).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'
         )
       ),
       React.createElement('div', { style: styles.summaryItem },
-        '👥 Guests',
+        '?? Guests',
         React.createElement('span', { style: styles.summaryValue }, `${guests} guest${guests > 1 ? 's' : ''}`)
       ),
       React.createElement('div', { style: styles.summaryItem },
-        '🌙 Nights',
+        '?? Nights',
         React.createElement('span', { style: styles.summaryValue }, getNightsText())
       )
     ),
