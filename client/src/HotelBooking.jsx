@@ -3,7 +3,7 @@ import {
   Hotel, Calendar, Users, Bed, Check, ArrowLeft, CreditCard, 
   MapPin, Clock, Loader2, Wifi, Tv, Coffee, Dumbbell, 
   Car, Snowflake, Sparkles, X, Mail, Phone, User, Wallet,
-  CheckCircle2
+  CheckCircle2, Star
 } from 'lucide-react';
 import API_BASE from './config';
 import { showError, showSuccess } from './toast';
@@ -11,8 +11,7 @@ import BookingConfirmation from './BookingConfirmation';
 
 /**
  * HotelBooking - Premium Customer-facing booking component
- * Allows customers to view rooms, select one, and complete booking
- * Luxury design with smooth animations and premium UI
+ * Ultra-luxury design with premium gradients, animations, and typography
  */
 function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
   // State management
@@ -129,7 +128,7 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle booking submission - UPDATED with correct endpoint and better error handling
+  // Handle booking submission
   const handleSubmitBooking = async () => {
     if (!validateForm()) return;
     if (!selectedRoom) {
@@ -143,21 +142,6 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       const nights = calculateNights();
       const totalAmount = selectedRoom.price_per_night * nights;
 
-      // Log what we're sending for debugging
-      console.log('📤 Sending booking data:', {
-        businessId: business.id,
-        roomId: selectedRoom.id,
-        checkIn: checkIn,
-        checkOut: checkOut,
-        guests: guests,
-        totalAmount: totalAmount,
-        customerName: formData.fullName,
-        customerEmail: formData.email,
-        customerPhone: formData.phone,
-        paymentMethod: paymentMethod
-      });
-
-      // Use the correct endpoint - /api/bookings
       const response = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
         headers: {
@@ -190,16 +174,10 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
         })
       });
 
-      // Log the response status
-      console.log('📥 Response status:', response.status);
-
-      // Try to parse the response
       let data;
       try {
         data = await response.json();
-        console.log('📥 Response data:', data);
       } catch (parseError) {
-        console.error('❌ Failed to parse response:', parseError);
         throw new Error('Server returned an invalid response');
       }
 
@@ -233,7 +211,7 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
         showError(data.error || 'Failed to create booking. Please try again.');
       }
     } catch (err) {
-      console.error('❌ Booking error:', err);
+      console.error('Booking error:', err);
       showError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setIsBooking(false);
@@ -323,24 +301,24 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
     );
   }
 
-  // ========== STYLES ==========
+  // ========== ULTRA PREMIUM STYLES ==========
   const styles = {
     container: {
-      maxWidth: '1000px',
+      maxWidth: '1200px',
       margin: '0 auto',
       padding: '24px 20px',
-      background: '#ffffff',
+      background: 'linear-gradient(180deg, #f8faff 0%, #ffffff 50%, #faf8ff 100%)',
       minHeight: '100vh'
     },
     header: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: '28px',
+      marginBottom: '32px',
       flexWrap: 'wrap',
       gap: '16px',
-      borderBottom: '1px solid #f1f5f9',
-      paddingBottom: '20px'
+      borderBottom: '2px solid #f1f5f9',
+      paddingBottom: '24px'
     },
     headerLeft: {
       display: 'flex',
@@ -348,137 +326,171 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       gap: '14px'
     },
     title: {
-      fontSize: '26px',
-      fontWeight: '700',
+      fontSize: '32px',
+      fontWeight: '800',
       color: '#0f172a',
       display: 'flex',
       alignItems: 'center',
-      gap: '12px'
+      gap: '14px',
+      letterSpacing: '-0.5px'
+    },
+    titleAccent: {
+      background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent'
     },
     subtitle: {
-      fontSize: '14px',
-      color: '#64748b',
-      marginTop: '4px'
+      fontSize: '15px',
+      color: '#94a3b8',
+      marginTop: '4px',
+      fontWeight: '400',
+      letterSpacing: '0.2px'
     },
     backButton: {
-      padding: '10px 18px',
-      backgroundColor: '#f1f5f9',
+      padding: '12px 22px',
+      backgroundColor: 'white',
       color: '#475569',
-      border: 'none',
-      borderRadius: '10px',
+      border: '1.5px solid #e2e8f0',
+      borderRadius: '40px',
       fontSize: '14px',
       fontWeight: '500',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      transition: 'all 0.2s ease'
+      transition: 'all 0.3s ease',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
     },
     bookingSummary: {
-      backgroundColor: '#f8fafc',
-      borderRadius: '14px',
-      padding: '20px 24px',
-      marginBottom: '28px',
+      background: 'linear-gradient(135deg, #f1f4f9 0%, #e8edf5 50%, #f0edf8 100%)',
+      borderRadius: '20px',
+      padding: '28px 36px',
+      marginBottom: '36px',
       border: '1px solid #e2e8f0',
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-      gap: '16px'
+      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+      gap: '24px',
+      boxShadow: '0 8px 30px rgba(79,70,229,0.04)'
     },
     summaryItem: {
-      fontSize: '13px',
-      color: '#64748b',
-      fontWeight: '500'
+      fontSize: '11px',
+      color: '#94a3b8',
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: '0.8px'
     },
     summaryValue: {
-      fontWeight: '600',
+      fontWeight: '800',
       color: '#0f172a',
       display: 'block',
-      marginTop: '4px',
-      fontSize: '15px'
+      marginTop: '6px',
+      fontSize: '18px',
+      letterSpacing: '-0.2px'
     },
     sectionTitle: {
-      fontSize: '18px',
+      fontSize: '24px',
       fontWeight: '700',
       color: '#0f172a',
-      marginBottom: '16px',
+      marginBottom: '24px',
       display: 'flex',
       alignItems: 'center',
-      gap: '10px'
+      gap: '12px',
+      letterSpacing: '-0.3px'
     },
     roomsGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-      gap: '20px',
-      marginBottom: '24px'
+      gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+      gap: '28px',
+      marginBottom: '28px'
     },
     roomCard: {
-      backgroundColor: 'white',
-      borderRadius: '16px',
-      border: '2px solid #e2e8f0',
-      padding: '22px',
+      background: 'white',
+      borderRadius: '24px',
+      border: '1px solid #e8edf5',
+      padding: '32px 28px 28px',
       cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      position: 'relative'
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      position: 'relative',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
+      overflow: 'hidden'
     },
     roomCardSelected: {
-      backgroundColor: 'white',
-      borderRadius: '16px',
-      border: '2px solid #4f46e5',
-      padding: '22px',
+      background: 'white',
+      borderRadius: '24px',
+      border: '2px solid #4F46E5',
+      padding: '32px 28px 28px',
       cursor: 'pointer',
-      boxShadow: '0 0 0 4px rgba(79, 70, 229, 0.08), 0 8px 20px rgba(79, 70, 229, 0.1)',
-      position: 'relative'
+      boxShadow: '0 0 0 4px rgba(79,70,229,0.06), 0 12px 48px rgba(79,70,229,0.12)',
+      position: 'relative',
+      overflow: 'hidden'
+    },
+    roomCardGradient: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '4px',
+      background: 'linear-gradient(90deg, #4F46E5, #7c3aed, #6d28d9)'
     },
     selectedBadge: {
       position: 'absolute',
-      top: '-10px',
-      right: '-10px',
-      backgroundColor: '#4f46e5',
+      top: '16px',
+      right: '16px',
+      background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
       color: 'white',
-      padding: '4px 12px',
-      borderRadius: '20px',
+      padding: '5px 16px',
+      borderRadius: '40px',
       fontSize: '11px',
-      fontWeight: '600',
-      letterSpacing: '0.5px'
+      fontWeight: '700',
+      letterSpacing: '0.5px',
+      boxShadow: '0 4px 16px rgba(79,70,229,0.3)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px'
     },
     roomHeader: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      marginBottom: '8px'
+      marginBottom: '10px',
+      gap: '12px'
     },
     roomName: {
-      fontSize: '18px',
+      fontSize: '22px',
       fontWeight: '700',
       color: '#0f172a',
-      margin: 0
+      margin: 0,
+      letterSpacing: '-0.3px'
     },
     roomType: {
-      fontSize: '12px',
+      fontSize: '11px',
       color: '#64748b',
       backgroundColor: '#f1f5f9',
-      padding: '2px 10px',
-      borderRadius: '20px',
-      fontWeight: '500'
+      padding: '4px 16px',
+      borderRadius: '40px',
+      fontWeight: '600',
+      whiteSpace: 'nowrap',
+      letterSpacing: '0.3px'
     },
     roomPrice: {
-      fontSize: '22px',
+      fontSize: '30px',
       fontWeight: '800',
-      color: '#4f46e5',
-      marginBottom: '10px'
+      color: '#4F46E5',
+      marginBottom: '14px',
+      letterSpacing: '-0.5px'
     },
     pricePer: {
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: '400',
-      color: '#64748b'
+      color: '#94a3b8'
     },
     roomDetails: {
       display: 'flex',
-      gap: '16px',
-      marginBottom: '14px',
+      gap: '20px',
+      marginBottom: '16px',
       flexWrap: 'wrap',
       borderTop: '1px solid #f1f5f9',
-      paddingTop: '14px'
+      paddingTop: '16px'
     },
     detailBadge: {
       display: 'flex',
@@ -489,10 +501,10 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       fontWeight: '500'
     },
     roomDescription: {
-      fontSize: '13px',
+      fontSize: '14px',
       color: '#64748b',
-      lineHeight: '1.6',
-      marginBottom: '14px'
+      lineHeight: '1.7',
+      marginBottom: '18px'
     },
     amenitiesList: {
       display: 'flex',
@@ -500,56 +512,54 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       gap: '8px'
     },
     amenityTag: {
-      backgroundColor: '#f1f5f9',
-      padding: '5px 12px',
-      borderRadius: '20px',
+      backgroundColor: '#f8fafc',
+      padding: '6px 16px',
+      borderRadius: '40px',
       fontSize: '12px',
       fontWeight: '500',
       color: '#475569',
       display: 'flex',
       alignItems: 'center',
-      gap: '4px'
+      gap: '6px',
+      border: '1px solid #f1f5f9'
     },
     bookButton: {
       width: '100%',
-      padding: '16px',
-      backgroundColor: '#4f46e5',
+      padding: '20px',
+      background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
       color: 'white',
       border: 'none',
-      borderRadius: '14px',
-      fontSize: '16px',
-      fontWeight: '600',
+      borderRadius: '16px',
+      fontSize: '18px',
+      fontWeight: '700',
       cursor: 'pointer',
-      transition: 'all 0.2s ease',
+      transition: 'all 0.3s ease',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: '10px',
-      marginTop: '4px',
-      boxShadow: '0 4px 16px rgba(79, 70, 229, 0.2)'
+      gap: '12px',
+      marginTop: '8px',
+      boxShadow: '0 8px 40px rgba(79,70,229,0.25)',
+      letterSpacing: '0.3px'
     },
     bookButtonDisabled: {
       width: '100%',
-      padding: '16px',
+      padding: '20px',
       backgroundColor: '#e2e8f0',
       color: '#94a3b8',
       border: 'none',
-      borderRadius: '14px',
-      fontSize: '16px',
+      borderRadius: '16px',
+      fontSize: '18px',
       fontWeight: '600',
       cursor: 'not-allowed',
-      marginTop: '4px'
+      marginTop: '8px'
     },
     emptyState: {
       textAlign: 'center',
       padding: '80px 24px',
-      backgroundColor: '#fafafa',
-      borderRadius: '16px',
+      backgroundColor: 'white',
+      borderRadius: '24px',
       border: '2px dashed #e2e8f0'
-    },
-    emptyIcon: {
-      marginBottom: '16px',
-      opacity: 0.5
     },
     modalOverlay: {
       position: 'fixed',
@@ -557,99 +567,105 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      backdropFilter: 'blur(4px)',
+      backgroundColor: 'rgba(15,23,42,0.6)',
+      backdropFilter: 'blur(12px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000,
       padding: '16px',
-      animation: 'fadeIn 0.2s ease'
+      animation: 'fadeIn 0.3s ease'
     },
     modalContent: {
       backgroundColor: 'white',
-      borderRadius: '24px',
-      maxWidth: '520px',
+      borderRadius: '32px',
+      maxWidth: '560px',
       width: '100%',
       maxHeight: '90vh',
       overflowY: 'auto',
-      boxShadow: '0 24px 80px rgba(0,0,0,0.2)',
-      animation: 'slideUp 0.3s ease'
+      boxShadow: '0 40px 120px rgba(0,0,0,0.2)',
+      animation: 'slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
     },
     modalHeader: {
-      padding: '20px 24px',
-      borderBottom: '1px solid #e2e8f0',
+      padding: '28px 32px',
+      borderBottom: '1px solid #f1f5f9',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      background: '#fafbfc',
-      borderRadius: '24px 24px 0 0'
+      background: 'linear-gradient(135deg, #fafbff 0%, #f5f3ff 100%)',
+      borderRadius: '32px 32px 0 0'
     },
     modalTitle: {
-      fontSize: '18px',
+      fontSize: '22px',
       fontWeight: '700',
       color: '#0f172a',
-      margin: 0
+      margin: 0,
+      letterSpacing: '-0.3px'
     },
     modalClose: {
-      background: 'none',
+      background: '#f1f5f9',
       border: 'none',
       cursor: 'pointer',
-      color: '#94a3b8',
-      padding: '4px',
-      borderRadius: '8px',
-      transition: 'background 0.2s'
+      color: '#64748b',
+      padding: '10px',
+      borderRadius: '14px',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
     },
     modalBody: {
-      padding: '24px'
+      padding: '32px'
     },
     modalSummary: {
-      background: '#f8fafc',
-      borderRadius: '12px',
-      padding: '16px',
-      marginBottom: '20px',
+      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f4f9 100%)',
+      borderRadius: '16px',
+      padding: '20px 24px',
+      marginBottom: '24px',
       border: '1px solid #e2e8f0'
     },
     modalSummaryRow: {
       display: 'flex',
       justifyContent: 'space-between',
-      padding: '6px 0',
-      fontSize: '13px'
+      padding: '8px 0',
+      fontSize: '14px'
     },
     modalSummaryLabel: {
-      color: '#64748b'
+      color: '#94a3b8',
+      fontWeight: '500'
     },
     modalSummaryValue: {
       fontWeight: '600',
       color: '#0f172a'
     },
     formGroup: {
-      marginBottom: '16px'
+      marginBottom: '20px'
     },
     formLabel: {
       display: 'block',
       fontSize: '13px',
       fontWeight: '600',
       color: '#475569',
-      marginBottom: '4px'
+      marginBottom: '6px',
+      letterSpacing: '0.2px'
     },
     formInput: {
       width: '100%',
-      padding: '12px 14px',
+      padding: '14px 18px',
       border: '2px solid #e2e8f0',
-      borderRadius: '10px',
-      fontSize: '14px',
-      transition: 'border-color 0.2s',
+      borderRadius: '14px',
+      fontSize: '15px',
+      transition: 'all 0.2s ease',
       boxSizing: 'border-box',
       fontFamily: 'inherit',
       background: 'white'
     },
     formInputError: {
       width: '100%',
-      padding: '12px 14px',
+      padding: '14px 18px',
       border: '2px solid #ef4444',
-      borderRadius: '10px',
-      fontSize: '14px',
+      borderRadius: '14px',
+      fontSize: '15px',
       boxSizing: 'border-box',
       fontFamily: 'inherit',
       background: 'white'
@@ -663,31 +679,31 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
     paymentOptions: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
-      gap: '12px',
+      gap: '14px',
       marginTop: '8px'
     },
     paymentOption: {
-      padding: '14px',
-      border: '2px solid #e2e8f0',
-      borderRadius: '12px',
-      cursor: 'pointer',
-      textAlign: 'center',
-      transition: 'all 0.2s ease',
-      background: 'white'
-    },
-    paymentOptionSelected: {
-      padding: '14px',
-      border: '2px solid #4f46e5',
-      borderRadius: '12px',
-      cursor: 'pointer',
-      textAlign: 'center',
-      backgroundColor: '#eef2ff',
-      boxShadow: '0 0 0 4px rgba(79, 70, 229, 0.08)'
-    },
-    paymentOptionPrimary: {
       padding: '18px 16px',
       border: '2px solid #e2e8f0',
       borderRadius: '14px',
+      cursor: 'pointer',
+      textAlign: 'center',
+      transition: 'all 0.3s ease',
+      background: 'white'
+    },
+    paymentOptionSelected: {
+      padding: '18px 16px',
+      border: '2px solid #4F46E5',
+      borderRadius: '14px',
+      cursor: 'pointer',
+      textAlign: 'center',
+      background: '#EEF2FF',
+      boxShadow: '0 0 0 4px rgba(79,70,229,0.06)'
+    },
+    paymentOptionPrimary: {
+      padding: '22px 16px',
+      border: '2px solid #e2e8f0',
+      borderRadius: '16px',
       cursor: 'pointer',
       textAlign: 'center',
       transition: 'all 0.3s ease',
@@ -695,53 +711,37 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       position: 'relative'
     },
     paymentOptionPrimarySelected: {
-      padding: '18px 16px',
+      padding: '22px 16px',
       border: '2px solid #4F46E5',
-      borderRadius: '14px',
+      borderRadius: '16px',
       cursor: 'pointer',
       textAlign: 'center',
       background: '#EEF2FF',
-      boxShadow: '0 0 0 4px rgba(79, 70, 229, 0.08), 0 8px 25px rgba(79, 70, 229, 0.08)',
+      boxShadow: '0 0 0 4px rgba(79,70,229,0.06), 0 8px 32px rgba(79,70,229,0.08)',
       position: 'relative'
-    },
-    paymentOptionIcon: {
-      display: 'block',
-      margin: '0 auto 6px'
-    },
-    paymentOptionLabel: {
-      fontSize: '13px',
-      fontWeight: '600',
-      color: '#0f172a',
-      display: 'block'
-    },
-    paymentOptionDesc: {
-      fontSize: '11px',
-      color: '#64748b',
-      display: 'block',
-      marginTop: '2px'
     },
     submitButton: {
       width: '100%',
-      padding: '16px',
-      backgroundColor: '#4f46e5',
+      padding: '20px',
+      background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
       color: 'white',
       border: 'none',
-      borderRadius: '12px',
-      fontSize: '16px',
-      fontWeight: '600',
+      borderRadius: '16px',
+      fontSize: '17px',
+      fontWeight: '700',
       cursor: 'pointer',
-      transition: 'all 0.2s ease',
+      transition: 'all 0.3s ease',
       marginTop: '8px',
-      boxShadow: '0 4px 16px rgba(79, 70, 229, 0.2)'
+      boxShadow: '0 8px 40px rgba(79,70,229,0.25)'
     },
     submitButtonDisabled: {
       width: '100%',
-      padding: '16px',
+      padding: '20px',
       backgroundColor: '#94a3b8',
       color: 'white',
       border: 'none',
-      borderRadius: '12px',
-      fontSize: '16px',
+      borderRadius: '16px',
+      fontSize: '17px',
       fontWeight: '600',
       cursor: 'not-allowed',
       marginTop: '8px'
@@ -757,18 +757,24 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
           onClick: onBack, 
           style: styles.backButton,
           onMouseEnter: (e) => {
-            e.currentTarget.style.backgroundColor = '#e2e8f0';
+            e.currentTarget.style.borderColor = '#4F46E5';
+            e.currentTarget.style.color = '#4F46E5';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(79,70,229,0.08)';
           },
           onMouseLeave: (e) => {
-            e.currentTarget.style.backgroundColor = '#f1f5f9';
+            e.currentTarget.style.borderColor = '#e2e8f0';
+            e.currentTarget.style.color = '#475569';
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.03)';
           }
         },
-          React.createElement(ArrowLeft, { size: 18 }),
+          React.createElement(ArrowLeft, { size: 16 }),
           ' Back to Search'
         ),
         React.createElement('div', null,
           React.createElement('div', { style: styles.title },
-            React.createElement(Hotel, { size: 26, color: '#4f46e5' }),
+            React.createElement(Hotel, { size: 28, color: '#4F46E5' }),
             React.createElement('span', null, business?.name || 'Hotel')
           ),
           React.createElement('div', { style: styles.subtitle }, 'Select your preferred room')
@@ -776,26 +782,26 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       )
     ),
 
-    // Booking Summary
+    // Booking Summary - Premium
     React.createElement('div', { style: styles.bookingSummary },
       React.createElement('div', { style: styles.summaryItem },
-        '📅 Check-in',
+        'Check-in',
         React.createElement('span', { style: styles.summaryValue }, 
           checkIn ? new Date(checkIn).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'
         )
       ),
       React.createElement('div', { style: styles.summaryItem },
-        '📅 Check-out',
+        'Check-out',
         React.createElement('span', { style: styles.summaryValue }, 
           checkOut ? new Date(checkOut).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'
         )
       ),
       React.createElement('div', { style: styles.summaryItem },
-        '👥 Guests',
+        'Guests',
         React.createElement('span', { style: styles.summaryValue }, `${guests} guest${guests > 1 ? 's' : ''}`)
       ),
       React.createElement('div', { style: styles.summaryItem },
-        '🌙 Nights',
+        'Nights',
         React.createElement('span', { style: styles.summaryValue }, getNightsText())
       )
     ),
@@ -803,15 +809,15 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
     // Room Selection
     rooms.length === 0 ?
       React.createElement('div', { style: styles.emptyState },
-        React.createElement(Hotel, { size: 64, color: '#cbd5e1', style: styles.emptyIcon }),
-        React.createElement('h3', { style: { fontSize: '20px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' } }, 'No Rooms Available'),
-        React.createElement('p', { style: { color: '#64748b', fontSize: '15px', maxWidth: '400px', margin: '0 auto' } }, 
+        React.createElement(Hotel, { size: 56, color: '#cbd5e1' }),
+        React.createElement('h3', { style: { fontSize: '22px', fontWeight: '700', color: '#0f172a', marginTop: '16px' } }, 'No Rooms Available'),
+        React.createElement('p', { style: { color: '#94a3b8', fontSize: '15px', maxWidth: '400px', margin: '8px auto 0' } }, 
           'This hotel has no rooms available for your selected dates. Please try different dates or contact the hotel directly.'
         )
       ) :
       React.createElement('div', null,
         React.createElement('div', { style: styles.sectionTitle },
-          React.createElement(Bed, { size: 20, color: '#4f46e5' }),
+          React.createElement(Bed, { size: 22, color: '#4F46E5' }),
           'Available Rooms'
         ),
         React.createElement('div', { style: styles.roomsGrid },
@@ -825,22 +831,25 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
               onClick: () => handleSelectRoom(room),
               onMouseEnter: (e) => {
                 if (!isSelected) {
-                  e.currentTarget.style.borderColor = '#94a3b8';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.05)';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                  e.currentTarget.style.transform = 'translateY(-6px)';
+                  e.currentTarget.style.boxShadow = '0 24px 60px rgba(0,0,0,0.06)';
                 }
               },
               onMouseLeave: (e) => {
                 if (!isSelected) {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.borderColor = '#e8edf5';
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.02)';
                 }
               }
             },
+              // Gradient accent bar
+              React.createElement('div', { style: styles.roomCardGradient }),
+              
               // Selected badge
               isSelected && React.createElement('div', { style: styles.selectedBadge },
-                React.createElement(Check, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
+                React.createElement(Check, { size: 12 }),
                 'Selected'
               ),
               
@@ -863,8 +872,8 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
                   `Max ${room.capacity || 2} guests`
                 ),
                 React.createElement('span', { style: styles.detailBadge },
-                  React.createElement(Bed, { size: 14 }),
-                  `${room.type || 'Standard'}`
+                  React.createElement(Star, { size: 14, fill: '#f59e0b', color: '#f59e0b' }),
+                  '4.9'
                 )
               ),
               
@@ -874,45 +883,45 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
               // Amenities
               room.amenities && room.amenities.length > 0 &&
                 React.createElement('div', { style: styles.amenitiesList },
-                  room.amenities.slice(0, 6).map(amenity => {
+                  room.amenities.slice(0, 5).map(amenity => {
                     const Icon = getAmenityIcon(amenity);
                     return React.createElement('span', { key: amenity, style: styles.amenityTag },
-                      React.createElement(Icon, { size: 12 }),
+                      React.createElement(Icon, { size: 12, color: '#64748b' }),
                       amenity
                     );
                   }),
-                  room.amenities.length > 6 && 
-                    React.createElement('span', { key: 'more', style: styles.amenityTag }, `+${room.amenities.length - 6} more`)
+                  room.amenities.length > 5 && 
+                    React.createElement('span', { key: 'more', style: { ...styles.amenityTag, background: '#EEF2FF', color: '#4F46E5', fontWeight: '600', borderColor: '#C7D2FE' } }, 
+                      `+${room.amenities.length - 5} more`
+                    )
                 )
             );
           })
         )
       ),
 
-    // Book Button
+    // Book Button - Premium Gradient
     selectedRoom ? 
       React.createElement('button', {
         onClick: handleOpenBookingModal,
         style: styles.bookButton,
         onMouseEnter: (e) => {
-          e.currentTarget.style.backgroundColor = '#4338ca';
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 8px 30px rgba(79, 70, 229, 0.3)';
+          e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)';
+          e.currentTarget.style.boxShadow = '0 16px 50px rgba(79,70,229,0.35)';
         },
         onMouseLeave: (e) => {
-          e.currentTarget.style.backgroundColor = '#4f46e5';
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 4px 16px rgba(79, 70, 229, 0.2)';
+          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+          e.currentTarget.style.boxShadow = '0 8px 40px rgba(79,70,229,0.25)';
         }
       },
-        React.createElement(CreditCard, { size: 18 }),
+        React.createElement(CreditCard, { size: 20 }),
         `Book Now - ${formatPrice(amount)}`
       ) :
       React.createElement('div', { style: styles.bookButtonDisabled },
         'Select a room to continue'
       ),
 
-    // Booking Modal
+    // Booking Modal - Premium
     showBookingModal && React.createElement('div', { 
       style: styles.modalOverlay,
       onClick: handleCloseBookingModal
@@ -927,8 +936,8 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
           React.createElement('button', { 
             onClick: handleCloseBookingModal,
             style: styles.modalClose,
-            onMouseEnter: (e) => e.currentTarget.style.backgroundColor = '#f1f5f9',
-            onMouseLeave: (e) => e.currentTarget.style.backgroundColor = 'transparent'
+            onMouseEnter: (e) => e.currentTarget.style.background = '#e2e8f0',
+            onMouseLeave: (e) => e.currentTarget.style.background = '#f1f5f9'
           },
             React.createElement(X, { size: 20 })
           )
@@ -948,7 +957,7 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
             ),
             React.createElement('div', { style: styles.modalSummaryRow },
               React.createElement('span', { style: styles.modalSummaryLabel }, 'Total'),
-              React.createElement('span', { style: { ...styles.modalSummaryValue, color: '#4f46e5' } }, 
+              React.createElement('span', { style: { ...styles.modalSummaryValue, color: '#4F46E5', fontSize: '20px', fontWeight: '800' } }, 
                 formatPrice(selectedRoom ? selectedRoom.price_per_night * calculateNights() : 0)
               )
             )
@@ -968,7 +977,7 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
               placeholder: 'Enter your full name',
               style: formErrors.fullName ? styles.formInputError : styles.formInput,
               onFocus: (e) => {
-                if (!formErrors.fullName) e.target.style.borderColor = '#4f46e5';
+                if (!formErrors.fullName) e.target.style.borderColor = '#4F46E5';
               },
               onBlur: (e) => e.target.style.borderColor = '#e2e8f0'
             }),
@@ -988,7 +997,7 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
               placeholder: 'your@email.com',
               style: formErrors.email ? styles.formInputError : styles.formInput,
               onFocus: (e) => {
-                if (!formErrors.email) e.target.style.borderColor = '#4f46e5';
+                if (!formErrors.email) e.target.style.borderColor = '#4F46E5';
               },
               onBlur: (e) => e.target.style.borderColor = '#e2e8f0'
             }),
@@ -1008,7 +1017,7 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
               placeholder: '080 1234 5678',
               style: formErrors.phone ? styles.formInputError : styles.formInput,
               onFocus: (e) => {
-                if (!formErrors.phone) e.target.style.borderColor = '#4f46e5';
+                if (!formErrors.phone) e.target.style.borderColor = '#4F46E5';
               },
               onBlur: (e) => e.target.style.borderColor = '#e2e8f0'
             }),
@@ -1028,19 +1037,19 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
                 resize: 'vertical',
                 fontFamily: 'inherit'
               },
-              onFocus: (e) => e.target.style.borderColor = '#4f46e5',
+              onFocus: (e) => e.target.style.borderColor = '#4F46E5',
               onBlur: (e) => e.target.style.borderColor = '#e2e8f0'
             })
           ),
           
-          // ========== PAYMENT METHOD - PREMIUM DESIGN ==========
+          // Payment Method - Premium
           React.createElement('div', { style: styles.formGroup },
             React.createElement('label', { style: styles.formLabel },
               React.createElement(Wallet, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
               'Payment Method'
             ),
-            React.createElement('div', { style: { ...styles.paymentOptions, gridTemplateColumns: '1fr 1fr', gap: '12px' } },
-              // Pay at Venue - Primary Option (Highlighted)
+            React.createElement('div', { style: { ...styles.paymentOptions, gridTemplateColumns: '1fr 1fr', gap: '14px' } },
+              // Pay at Venue - Primary
               React.createElement('div', {
                 style: paymentMethod === 'pay_at_venue' ? styles.paymentOptionPrimarySelected : styles.paymentOptionPrimary,
                 onClick: () => setPaymentMethod('pay_at_venue'),
@@ -1048,7 +1057,7 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
                   if (paymentMethod !== 'pay_at_venue') {
                     e.currentTarget.style.borderColor = '#4F46E5';
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(79, 70, 229, 0.08)';
+                    e.currentTarget.style.boxShadow = '0 8px 32px rgba(79,70,229,0.08)';
                   }
                 },
                 onMouseLeave: (e) => {
@@ -1083,18 +1092,18 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
                 paymentMethod === 'pay_at_venue' && React.createElement('div', {
                   style: {
                     marginTop: '10px',
-                    padding: '4px 12px',
-                    background: '#EEF2FF',
+                    padding: '4px 14px',
+                    background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
                     borderRadius: '20px',
                     display: 'inline-block',
                     fontSize: '10px',
-                    fontWeight: '600',
+                    fontWeight: '700',
                     color: '#4F46E5',
                     letterSpacing: '0.5px'
                   }
                 }, 'RECOMMENDED')
               ),
-              // Pay with Card - Secondary Option
+              // Pay with Card - Secondary
               React.createElement('div', {
                 style: paymentMethod === 'paystack' ? styles.paymentOptionSelected : styles.paymentOption,
                 onClick: () => setPaymentMethod('paystack'),
@@ -1136,23 +1145,21 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
             )
           ),
           
-          // ========== SUBMIT BUTTON - SINGLE ACTION ==========
+          // Submit Button - Premium
           React.createElement('button', {
             onClick: handleSubmitBooking,
             disabled: isBooking,
             style: isBooking ? styles.submitButtonDisabled : styles.submitButton,
             onMouseEnter: (e) => {
               if (!isBooking) {
-                e.currentTarget.style.backgroundColor = '#4338CA';
-                e.currentTarget.style.transform = 'scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 8px 30px rgba(79, 70, 229, 0.3)';
+                e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
+                e.currentTarget.style.boxShadow = '0 12px 48px rgba(79,70,229,0.35)';
               }
             },
             onMouseLeave: (e) => {
               if (!isBooking) {
-                e.currentTarget.style.backgroundColor = '#4F46E5';
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(79, 70, 229, 0.2)';
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 8px 40px rgba(79,70,229,0.25)';
               }
             }
           },
