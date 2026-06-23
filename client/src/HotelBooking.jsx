@@ -1167,5 +1167,4 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
   );
 }
 
-export default HotelBooking;/ /   t r i g g e r   d e p l o y   0 6 / 2 3 / 2 0 2 6   1 0 : 5 0 : 3 9  
- 
+export default HotelBooking;
