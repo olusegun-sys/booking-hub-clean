@@ -10,9 +10,9 @@ import { showError, showSuccess } from './toast';
 import BookingConfirmation from './BookingConfirmation';
 
 /**
- * HotelBooking - Customer-facing booking component
+ * HotelBooking - Premium Customer-facing booking component
  * Allows customers to view rooms, select one, and complete booking
- * Professional, modern UI with smooth animations
+ * Luxury design with smooth animations and premium UI
  */
 function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
   // State management
@@ -278,6 +278,7 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       { label: 'Guests', value: `${bookingData.guests} guest${bookingData.guests > 1 ? 's' : ''}` },
       { label: 'Nights', value: bookingData.nights },
       { label: 'Price per night', value: formatPrice(bookingData.pricePerNight) },
+      { label: 'Payment Method', value: bookingData.paymentMethod },
       { label: 'Total', value: formatPrice(bookingData.total) }
     ];
 
@@ -524,7 +525,8 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: '10px',
-      marginTop: '4px'
+      marginTop: '4px',
+      boxShadow: '0 4px 16px rgba(79, 70, 229, 0.2)'
     },
     bookButtonDisabled: {
       width: '100%',
@@ -561,7 +563,8 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000,
-      padding: '16px'
+      padding: '16px',
+      animation: 'fadeIn 0.2s ease'
     },
     modalContent: {
       backgroundColor: 'white',
@@ -570,14 +573,17 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       width: '100%',
       maxHeight: '90vh',
       overflowY: 'auto',
-      boxShadow: '0 24px 80px rgba(0,0,0,0.2)'
+      boxShadow: '0 24px 80px rgba(0,0,0,0.2)',
+      animation: 'slideUp 0.3s ease'
     },
     modalHeader: {
       padding: '20px 24px',
       borderBottom: '1px solid #e2e8f0',
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'center',
+      background: '#fafbfc',
+      borderRadius: '24px 24px 0 0'
     },
     modalTitle: {
       fontSize: '18px',
@@ -635,7 +641,8 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       fontSize: '14px',
       transition: 'border-color 0.2s',
       boxSizing: 'border-box',
-      fontFamily: 'inherit'
+      fontFamily: 'inherit',
+      background: 'white'
     },
     formInputError: {
       width: '100%',
@@ -644,7 +651,8 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       borderRadius: '10px',
       fontSize: '14px',
       boxSizing: 'border-box',
-      fontFamily: 'inherit'
+      fontFamily: 'inherit',
+      background: 'white'
     },
     formError: {
       color: '#ef4444',
@@ -664,7 +672,8 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       borderRadius: '12px',
       cursor: 'pointer',
       textAlign: 'center',
-      transition: 'all 0.2s ease'
+      transition: 'all 0.2s ease',
+      background: 'white'
     },
     paymentOptionSelected: {
       padding: '14px',
@@ -674,6 +683,26 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       textAlign: 'center',
       backgroundColor: '#eef2ff',
       boxShadow: '0 0 0 4px rgba(79, 70, 229, 0.08)'
+    },
+    paymentOptionPrimary: {
+      padding: '18px 16px',
+      border: '2px solid #e2e8f0',
+      borderRadius: '14px',
+      cursor: 'pointer',
+      textAlign: 'center',
+      transition: 'all 0.3s ease',
+      background: 'white',
+      position: 'relative'
+    },
+    paymentOptionPrimarySelected: {
+      padding: '18px 16px',
+      border: '2px solid #4F46E5',
+      borderRadius: '14px',
+      cursor: 'pointer',
+      textAlign: 'center',
+      background: '#EEF2FF',
+      boxShadow: '0 0 0 4px rgba(79, 70, 229, 0.08), 0 8px 25px rgba(79, 70, 229, 0.08)',
+      position: 'relative'
     },
     paymentOptionIcon: {
       display: 'block',
@@ -701,8 +730,9 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
       fontSize: '16px',
       fontWeight: '600',
       cursor: 'pointer',
-      transition: 'background 0.2s',
-      marginTop: '8px'
+      transition: 'all 0.2s ease',
+      marginTop: '8px',
+      boxShadow: '0 4px 16px rgba(79, 70, 229, 0.2)'
     },
     submitButtonDisabled: {
       width: '100%',
@@ -866,11 +896,13 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
         style: styles.bookButton,
         onMouseEnter: (e) => {
           e.currentTarget.style.backgroundColor = '#4338ca';
-          e.currentTarget.style.transform = 'scale(1.02)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 8px 30px rgba(79, 70, 229, 0.3)';
         },
         onMouseLeave: (e) => {
           e.currentTarget.style.backgroundColor = '#4f46e5';
-          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(79, 70, 229, 0.2)';
         }
       },
         React.createElement(CreditCard, { size: 18 }),
@@ -1001,68 +1033,133 @@ function HotelBooking({ business, checkIn, checkOut, guests, onBack }) {
             })
           ),
           
-          // Payment Method
+          // ========== PAYMENT METHOD - PREMIUM DESIGN ==========
           React.createElement('div', { style: styles.formGroup },
             React.createElement('label', { style: styles.formLabel },
               React.createElement(Wallet, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
               'Payment Method'
             ),
-            React.createElement('div', { style: styles.paymentOptions },
+            React.createElement('div', { style: { ...styles.paymentOptions, gridTemplateColumns: '1fr 1fr', gap: '12px' } },
+              // Pay at Venue - Primary Option (Highlighted)
               React.createElement('div', {
-                style: paymentMethod === 'pay_at_venue' ? styles.paymentOptionSelected : styles.paymentOption,
+                style: paymentMethod === 'pay_at_venue' ? styles.paymentOptionPrimarySelected : styles.paymentOptionPrimary,
                 onClick: () => setPaymentMethod('pay_at_venue'),
                 onMouseEnter: (e) => {
                   if (paymentMethod !== 'pay_at_venue') {
-                    e.currentTarget.style.borderColor = '#94a3b8';
+                    e.currentTarget.style.borderColor = '#4F46E5';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(79, 70, 229, 0.08)';
                   }
                 },
                 onMouseLeave: (e) => {
                   if (paymentMethod !== 'pay_at_venue') {
                     e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }
                 }
               },
-                React.createElement(MapPin, { size: 20, color: paymentMethod === 'pay_at_venue' ? '#4f46e5' : '#94a3b8', style: styles.paymentOptionIcon }),
-                React.createElement('span', { style: styles.paymentOptionLabel }, 'Pay at Venue'),
-                React.createElement('span', { style: styles.paymentOptionDesc }, 'Pay when you arrive')
+                React.createElement(MapPin, { 
+                  size: 24, 
+                  color: paymentMethod === 'pay_at_venue' ? '#4F46E5' : '#64748b', 
+                  style: { display: 'block', margin: '0 auto 8px' } 
+                }),
+                React.createElement('span', { 
+                  style: { 
+                    fontSize: '15px', 
+                    fontWeight: '700', 
+                    color: paymentMethod === 'pay_at_venue' ? '#4F46E5' : '#0f172a',
+                    display: 'block'
+                  } 
+                }, 'Pay at Venue'),
+                React.createElement('span', { 
+                  style: { 
+                    fontSize: '12px', 
+                    color: '#64748b', 
+                    display: 'block',
+                    marginTop: '4px'
+                  } 
+                }, 'Pay when you arrive'),
+                paymentMethod === 'pay_at_venue' && React.createElement('div', {
+                  style: {
+                    marginTop: '10px',
+                    padding: '4px 12px',
+                    background: '#EEF2FF',
+                    borderRadius: '20px',
+                    display: 'inline-block',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    color: '#4F46E5',
+                    letterSpacing: '0.5px'
+                  }
+                }, 'RECOMMENDED')
               ),
+              // Pay with Card - Secondary Option
               React.createElement('div', {
                 style: paymentMethod === 'paystack' ? styles.paymentOptionSelected : styles.paymentOption,
                 onClick: () => setPaymentMethod('paystack'),
                 onMouseEnter: (e) => {
                   if (paymentMethod !== 'paystack') {
                     e.currentTarget.style.borderColor = '#94a3b8';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
                   }
                 },
                 onMouseLeave: (e) => {
                   if (paymentMethod !== 'paystack') {
                     e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.transform = 'translateY(0)';
                   }
                 }
               },
-                React.createElement(CreditCard, { size: 20, color: paymentMethod === 'paystack' ? '#4f46e5' : '#94a3b8', style: styles.paymentOptionIcon }),
-                React.createElement('span', { style: styles.paymentOptionLabel }, 'Pay with Paystack'),
-                React.createElement('span', { style: styles.paymentOptionDesc }, 'Secure online payment')
+                React.createElement(CreditCard, { 
+                  size: 24, 
+                  color: paymentMethod === 'paystack' ? '#4F46E5' : '#64748b', 
+                  style: { display: 'block', margin: '0 auto 8px' } 
+                }),
+                React.createElement('span', { 
+                  style: { 
+                    fontSize: '15px', 
+                    fontWeight: '600', 
+                    color: paymentMethod === 'paystack' ? '#4F46E5' : '#0f172a',
+                    display: 'block'
+                  } 
+                }, 'Pay with Card'),
+                React.createElement('span', { 
+                  style: { 
+                    fontSize: '12px', 
+                    color: '#64748b', 
+                    display: 'block',
+                    marginTop: '4px'
+                  } 
+                }, 'Secure online payment')
               )
             )
           ),
           
-          // Submit Button
+          // ========== SUBMIT BUTTON - SINGLE ACTION ==========
           React.createElement('button', {
             onClick: handleSubmitBooking,
             disabled: isBooking,
             style: isBooking ? styles.submitButtonDisabled : styles.submitButton,
             onMouseEnter: (e) => {
-              if (!isBooking) e.currentTarget.style.backgroundColor = '#4338ca';
+              if (!isBooking) {
+                e.currentTarget.style.backgroundColor = '#4338CA';
+                e.currentTarget.style.transform = 'scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 8px 30px rgba(79, 70, 229, 0.3)';
+              }
             },
             onMouseLeave: (e) => {
-              if (!isBooking) e.currentTarget.style.backgroundColor = '#4f46e5';
+              if (!isBooking) {
+                e.currentTarget.style.backgroundColor = '#4F46E5';
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(79, 70, 229, 0.2)';
+              }
             }
           },
             isBooking ? 
-              React.createElement(Loader2, { size: 18, style: { animation: 'spin 1s linear infinite', display: 'inline', marginRight: '8px' } }) :
-              React.createElement(Check, { size: 18, style: { display: 'inline', marginRight: '8px' } }),
-            isBooking ? 'Processing...' : 'Confirm Booking'
+              React.createElement(Loader2, { size: 20, style: { animation: 'spin 1s linear infinite', display: 'inline', marginRight: '10px' } }) :
+              React.createElement(Check, { size: 20, style: { display: 'inline', marginRight: '10px' } }),
+            isBooking ? 'Processing...' : paymentMethod === 'pay_at_venue' ? 'Confirm & Pay at Venue' : 'Pay with Card'
           )
         )
       )
