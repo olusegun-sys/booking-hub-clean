@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/HomePage.jsx
-// LOCATION: Entire file (complete redraft)
+// LOCATION: Entire file (FIXED - Destination card race condition)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -148,7 +148,7 @@ function HomePage() {
     setHeroKey(prev => prev + 1);
   };
 
-  // Handle search
+  // Handle search - uses state location
   const handleSearch = async () => {
     if (!location.trim()) {
       showError('Please enter a location');
@@ -175,6 +175,52 @@ function HomePage() {
         setResults(data.businesses);
         if (data.businesses.length === 0 && location) {
           showError(`No ${selectedCategory} found in ${location}`);
+        }
+        
+        // Scroll to results
+        setTimeout(() => {
+          const resultsElement = document.getElementById('results-section');
+          if (resultsElement) {
+            resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      showError('Something went wrong. Please try again.');
+    }
+    setLoading(false);
+  };
+
+  // FIX: Handle search with explicit location parameter (for destination cards)
+  // This prevents the race condition where state hasn't updated yet
+  const handleSearchWithLocation = async (searchLocation) => {
+    // Validate the passed location
+    if (!searchLocation || !searchLocation.trim()) {
+      showError('Please enter a location');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Build search parameters using the passed location directly
+      let searchParams = { location: searchLocation };
+      if (selectedCategory === 'hotel') {
+        searchParams.checkIn = checkIn;
+        searchParams.checkOut = checkOut;
+        searchParams.guests = guests;
+      }
+      
+      const params = new URLSearchParams(searchParams);
+      const response = await fetch(
+        `${API_BASE}/api/businesses/search/category?category=${selectedCategory}&${params}`
+      );
+      const data = await response.json();
+      
+      if (data.success) {
+        setResults(data.businesses);
+        if (data.businesses.length === 0 && searchLocation) {
+          showError(`No ${selectedCategory} found in ${searchLocation}`);
         }
         
         // Scroll to results
@@ -852,11 +898,14 @@ function HomePage() {
       )
     ),
 
-    // Destination Cards Section - UPDATED with white text, new images, professional icons
+    // FIX: Destination Cards Section - Pass location directly to search
+    // This prevents the race condition where state hasn't updated yet
     React.createElement(DestinationCards, {
       onSelectLocation: (location) => {
+        // Update state for UI consistency
         setLocation(location);
-        setTimeout(() => handleSearch(), 300);
+        // Pass location directly to search - no state dependency!
+        handleSearchWithLocation(location);
       }
     }),
 
