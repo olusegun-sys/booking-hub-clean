@@ -250,7 +250,7 @@ function AdminDashboard({ admin, onLogout }) {
         })
       ),
 
-      // Tabs - Scrollable on Mobile
+      // Tabs - Scrollable on Mobile (FIXED: removed duplicate border)
       React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' } },
         React.createElement('div', { style: { display: 'flex', gap: '6px', overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', flexWrap: isDesktop ? 'wrap' : 'nowrap', paddingBottom: '4px' } },
           [
@@ -260,7 +260,7 @@ function AdminDashboard({ admin, onLogout }) {
             { id: 'rejected', label: 'Rejected', icon: XCircle, count: businesses.filter(b => b.status === 'rejected').length }
           ].map(tab => {
             const isActive = activeTab === tab.id;
-            return React.createElement('button', { key: tab.id, onClick: () => setActiveTab(tab.id), style: { display: 'flex', alignItems: 'center', gap: '4px', padding: isMobile ? '6px 12px' : '8px 16px', borderRadius: '40px', border: 'none', fontSize: isMobile ? '11px' : '12px', fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap', backgroundColor: isActive ? '#4f46e5' : 'white', color: isActive ? 'white' : '#475569', boxShadow: isActive ? '0 2px 8px rgba(79,70,229,0.2)' : '0 1px 2px rgba(0,0,0,0.05)', border: isActive ? 'none' : '1px solid #e2e8f0' } },
+            return React.createElement('button', { key: tab.id, onClick: () => setActiveTab(tab.id), style: { display: 'flex', alignItems: 'center', gap: '4px', padding: isMobile ? '6px 12px' : '8px 16px', borderRadius: '40px', fontSize: isMobile ? '11px' : '12px', fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap', backgroundColor: isActive ? '#4f46e5' : 'white', color: isActive ? 'white' : '#475569', boxShadow: isActive ? '0 2px 8px rgba(79,70,229,0.2)' : '0 1px 2px rgba(0,0,0,0.05)', border: isActive ? 'none' : '1px solid #e2e8f0' } },
               React.createElement(tab.icon, { size: isMobile ? 12 : 14 }),
               tab.label,
               React.createElement('span', { style: { marginLeft: '2px', padding: '0px 6px', borderRadius: '20px', fontSize: '10px', fontWeight: '600', backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : '#f1f5f9', color: isActive ? 'white' : '#64748b' } }, tab.count)
@@ -348,11 +348,10 @@ function AdminDashboard({ admin, onLogout }) {
                 )
               )
             );
-          }
+          })
         )
       )
     )
-  );
 }
 
 export default AdminDashboard;

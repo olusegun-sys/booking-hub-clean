@@ -1,6 +1,29 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+﻿// FILE: client/src/HomePage.jsx
+// LOCATION: Entire file (complete redraft)
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Trophy, PartyPopper, Shield, Search, MapPin, Phone, Star, Sparkles, Clock, CreditCard, Award, ArrowRight, Calendar, Users, Headphones, Loader2 } from 'lucide-react';
+import { 
+  Building2, 
+  Trophy, 
+  PartyPopper, 
+  Shield, 
+  Search, 
+  MapPin, 
+  Phone, 
+  Star, 
+  Sparkles, 
+  Clock, 
+  CreditCard, 
+  Award, 
+  ArrowRight, 
+  Calendar, 
+  Users, 
+  Headphones, 
+  Loader2,
+  Waves,
+  Landmark
+} from 'lucide-react';
 import { showError } from './toast';
 import HotelBooking from './HotelBooking';
 import SportsBooking from './SportsBooking';
@@ -9,18 +32,23 @@ import BusinessLogin from './BusinessLogin';
 import BusinessDashboard from './BusinessDashboard';
 import StaffDashboard from './StaffDashboard';
 import HostLanding from './HostLanding';
+import DestinationCards from './components/DestinationCards';
+import PopularStays from './components/PopularStays';
 import API_BASE from './config';
 
+// Brand colors - consistent indigo theme
 const brandIndigo = '#4F46E5';
 const brandIndigoLight = '#6366F1';
 const brandIndigoDark = '#4338CA';
 
+// Hero images for each category
 const heroImages = {
   hotel: 'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=1920&h=650&fit=crop',
   sports: 'https://images.pexels.com/photos/46798/the-ball-stadion-football-the-pitch-46798.jpeg?auto=compress&cs=tinysrgb&w=1920&h=650&fit=crop',
   event: 'https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=1920&h=650&fit=crop'
 };
 
+// Hero titles and subtitles
 const heroTitles = {
   hotel: 'Find Your Perfect Stay',
   sports: 'Book Your Court',
@@ -33,6 +61,7 @@ const heroSubtitles = {
   event: 'Plan your next celebration at premier venues across Nigeria'
 };
 
+// Business images for search results
 const businessImages = {
   hotel: [
     'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop',
@@ -51,6 +80,7 @@ const businessImages = {
   ]
 };
 
+// Helper function to get business image
 const getBusinessImage = (type, index) => {
   const images = businessImages[type] || businessImages.hotel;
   return images[index % images.length];
@@ -58,6 +88,8 @@ const getBusinessImage = (type, index) => {
 
 function HomePage() {
   const navigate = useNavigate();
+  
+  // State
   const [selectedCategory, setSelectedCategory] = useState('hotel');
   const [location, setLocation] = useState('');
   const [checkIn, setCheckIn] = useState('');
@@ -73,11 +105,13 @@ function HomePage() {
   const [heroKey, setHeroKey] = useState(0);
   const [isDesktop, setIsDesktop] = useState(true);
 
+  // Business user state from localStorage
   const [businessUser, setBusinessUser] = useState(() => {
     const savedBusiness = localStorage.getItem('businessUser');
     return savedBusiness ? JSON.parse(savedBusiness) : null;
   });
 
+  // Handle window resize for responsive design
   useEffect(() => {
     function handleResize() {
       setIsDesktop(window.innerWidth >= 768);
@@ -87,6 +121,7 @@ function HomePage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Check custom domain
   useEffect(() => {
     const checkCustomDomain = async () => {
       try {
@@ -94,12 +129,17 @@ function HomePage() {
         const currentDomain = window.location.hostname;
         const response = await fetch(`${API_BASE}/api/domain-info?domain=${currentDomain}`);
         const data = await response.json();
-        if (data.success && data.source === 'custom-domain-verified') navigate(`/book/${data.business.slug}`);
-      } catch (error) {}
+        if (data.success && data.source === 'custom-domain-verified') {
+          navigate(`/book/${data.business.slug}`);
+        }
+      } catch (error) {
+        // Silent fail - custom domain check is optional
+      }
     };
     checkCustomDomain();
   }, [navigate]);
 
+  // Handle category change
   const handleCategoryChange = (category) => {
     if (category === selectedCategory) return;
     setSelectedCategory(category);
@@ -108,27 +148,36 @@ function HomePage() {
     setHeroKey(prev => prev + 1);
   };
 
+  // Handle search
   const handleSearch = async () => {
     if (!location.trim()) {
       showError('Please enter a location');
       return;
     }
+
     setLoading(true);
     try {
+      // Build search parameters
       let searchParams = { location };
       if (selectedCategory === 'hotel') {
         searchParams.checkIn = checkIn;
         searchParams.checkOut = checkOut;
         searchParams.guests = guests;
       }
+      
       const params = new URLSearchParams(searchParams);
-      const response = await fetch(`${API_BASE}/api/businesses/search/category?category=${selectedCategory}&${params}`);
+      const response = await fetch(
+        `${API_BASE}/api/businesses/search/category?category=${selectedCategory}&${params}`
+      );
       const data = await response.json();
+      
       if (data.success) {
         setResults(data.businesses);
         if (data.businesses.length === 0 && location) {
           showError(`No ${selectedCategory} found in ${location}`);
         }
+        
+        // Scroll to results
         setTimeout(() => {
           const resultsElement = document.getElementById('results-section');
           if (resultsElement) {
@@ -138,59 +187,90 @@ function HomePage() {
       }
     } catch (error) {
       console.error('Search error:', error);
-      showError('Something went wrong.');
+      showError('Something went wrong. Please try again.');
     }
     setLoading(false);
   };
 
+  // Handle direct booking
   const handleDirectBook = (business) => {
-    // Store the complete business object for passing to booking components
-    // This preserves all fields needed (id, slug, name, type, etc.)
     setSelectedBusiness(business);
     setShowDirectBooking(true);
   };
 
+  // Navigate to admin
   const goToAdmin = () => {
     const savedAdmin = localStorage.getItem('admin');
-    if (savedAdmin) window.location.href = '/admin';
-    else navigate('/admin');
+    if (savedAdmin) {
+      window.location.href = '/admin';
+    } else {
+      navigate('/admin');
+    }
   };
 
+  // Handle booking back
+  const handleBookingBack = () => {
+    setShowDirectBooking(false);
+    setSelectedBusiness(null);
+    navigate('/', { replace: true });
+  };
+
+  // Render business dashboard if logged in
   if (businessUser) {
-    if (businessUser.staffUser) return React.createElement(StaffDashboard, { staff: businessUser.staffUser, business: businessUser, onLogout: () => { setBusinessUser(null); localStorage.removeItem('businessUser'); } });
-    return React.createElement(BusinessDashboard, { business: businessUser, onLogout: () => { setBusinessUser(null); localStorage.removeItem('businessUser'); } });
+    if (businessUser.staffUser) {
+      return React.createElement(StaffDashboard, { 
+        staff: businessUser.staffUser, 
+        business: businessUser, 
+        onLogout: () => { 
+          setBusinessUser(null); 
+          localStorage.removeItem('businessUser'); 
+        } 
+      });
+    }
+    return React.createElement(BusinessDashboard, { 
+      business: businessUser, 
+      onLogout: () => { 
+        setBusinessUser(null); 
+        localStorage.removeItem('businessUser'); 
+      } 
+    });
   }
-  
+
+  // Render direct booking if selected
   if (showDirectBooking && selectedBusiness) {
-    // Use the appropriate booking component based on business type
     if (selectedBusiness.business_type === 'hotel') {
       return React.createElement(HotelBooking, { 
         business: selectedBusiness,
         checkIn: checkIn, 
         checkOut: checkOut, 
         guests: guests, 
-        onBack: () => setShowDirectBooking(false) 
+        onBack: handleBookingBack
       });
     }
     if (selectedBusiness.business_type === 'sports') {
       return React.createElement(SportsBooking, { 
         business: selectedBusiness, 
-        onBack: () => setShowDirectBooking(false) 
+        onBack: handleBookingBack
       });
     }
     if (selectedBusiness.business_type === 'event') {
       return React.createElement(EventBooking, { 
         business: selectedBusiness, 
-        onBack: () => setShowDirectBooking(false) 
+        onBack: handleBookingBack
       });
     }
   }
 
+  // Helper functions
   const getCategoryPlaceholder = () => 'e.g., Lagos, Abuja, Port Harcourt';
   
   const getSearchButtonText = () => {
     if (loading) return 'Searching...';
-    const texts = { hotel: 'Search Hotels', sports: 'Search Sports', event: 'Search Events' };
+    const texts = { 
+      hotel: 'Search Hotels', 
+      sports: 'Search Sports', 
+      event: 'Search Events' 
+    };
     return texts[selectedCategory];
   };
 
@@ -258,7 +338,7 @@ function HomePage() {
     width: '100%',
     height: isDesktop ? '420px' : '320px',
     borderRadius: '20px',
-    marginBottom: '32px',
+    marginBottom: isDesktop ? '32px' : '24px',
     backgroundImage: `url(${heroImages[selectedCategory]})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
@@ -302,6 +382,7 @@ function HomePage() {
     lineHeight: '1.4'
   };
 
+  // Category Cards
   const categoryCardStyle = (isActive) => ({
     flex: 1,
     minWidth: isDesktop ? 'auto' : '100%',
@@ -338,6 +419,7 @@ function HomePage() {
     color: isActive ? 'rgba(255,255,255,0.7)' : '#999'
   });
 
+  // Trust Badges
   const trustBadgesStyle = {
     display: 'flex',
     justifyContent: 'center',
@@ -355,13 +437,15 @@ function HomePage() {
     color: '#666'
   };
 
+  // Search Card
   const searchCardStyle = {
     background: 'white',
     borderRadius: '20px',
     padding: isDesktop ? '24px 28px' : '20px',
     marginBottom: '48px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-    border: '1px solid #eee'
+    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+    border: '1px solid #f0f0f0',
+    width: '100%'
   };
 
   const formGridStyle = {
@@ -413,6 +497,7 @@ function HomePage() {
     transition: 'all 0.2s ease'
   };
 
+  // Results Section
   const resultsHeaderStyle = {
     display: 'flex',
     justifyContent: 'space-between',
@@ -500,6 +585,7 @@ function HomePage() {
     transition: 'all 0.2s ease'
   };
 
+  // Features Section
   const featuresGridStyle = {
     display: 'grid',
     gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
@@ -536,41 +622,115 @@ function HomePage() {
     color: '#888'
   };
 
+  // ========== RENDER ==========
   return React.createElement('div', { style: containerStyle },
+    // Header
     React.createElement('div', { style: headerStyle },
       React.createElement('div', { style: logoStyle, onClick: () => window.location.reload() },
         React.createElement(Building2, { size: isDesktop ? 24 : 20, color: brandIndigo }),
         React.createElement('span', null, 'BookingHub')
       ),
       React.createElement('div', { style: headerButtonsStyle },
-        React.createElement('button', { onClick: goToAdmin, style: secondaryButtonStyle, onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; }, onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; } },
+        React.createElement('button', 
+          { 
+            onClick: goToAdmin, 
+            style: secondaryButtonStyle,
+            onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; },
+            onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; }
+          },
           React.createElement(Shield, { size: 14 }), ' Admin'
         ),
-        React.createElement('button', { onClick: () => navigate('/become-host'), style: secondaryButtonStyle, onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; }, onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; } },
+        React.createElement('button', 
+          { 
+            onClick: () => navigate('/become-host'), 
+            style: secondaryButtonStyle,
+            onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; },
+            onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; }
+          },
           'Become a Host'
         ),
-        React.createElement('button', { onClick: () => setShowBusinessLogin(true), style: primaryButtonStyle, onMouseEnter: (e) => { e.currentTarget.style.background = brandIndigoDark; }, onMouseLeave: (e) => { e.currentTarget.style.background = brandIndigo; } },
+        React.createElement('button', 
+          { 
+            onClick: () => setShowBusinessLogin(true), 
+            style: primaryButtonStyle,
+            onMouseEnter: (e) => { e.currentTarget.style.background = brandIndigoDark; },
+            onMouseLeave: (e) => { e.currentTarget.style.background = brandIndigo; }
+          },
           'Business Login'
         )
       )
     ),
 
+    // Category Cards
     React.createElement('div', { style: { display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' } },
-      React.createElement('div', { onClick: () => handleCategoryChange('hotel'), style: categoryCardStyle(selectedCategory === 'hotel'), onMouseEnter: (e) => { if (selectedCategory !== 'hotel') { e.currentTarget.style.borderColor = brandIndigoLight; e.currentTarget.style.transform = 'translateY(-2px)'; } }, onMouseLeave: (e) => { if (selectedCategory !== 'hotel') { e.currentTarget.style.borderColor = '#e8e8e8'; e.currentTarget.style.transform = 'translateY(0)'; } } },
+      // Hotel Category
+      React.createElement('div', 
+        { 
+          onClick: () => handleCategoryChange('hotel'), 
+          style: categoryCardStyle(selectedCategory === 'hotel'),
+          onMouseEnter: (e) => { 
+            if (selectedCategory !== 'hotel') { 
+              e.currentTarget.style.borderColor = brandIndigoLight; 
+              e.currentTarget.style.transform = 'translateY(-2px)'; 
+            } 
+          },
+          onMouseLeave: (e) => { 
+            if (selectedCategory !== 'hotel') { 
+              e.currentTarget.style.borderColor = '#e8e8e8'; 
+              e.currentTarget.style.transform = 'translateY(0)'; 
+            } 
+          }
+        },
         React.createElement('div', { style: categoryIconStyle(selectedCategory === 'hotel') },
           React.createElement(Building2, { size: isDesktop ? 20 : 18, color: selectedCategory === 'hotel' ? 'white' : brandIndigo })
         ),
         React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'hotel') }, 'Hotels'),
         React.createElement('div', { style: categoryDescStyle(selectedCategory === 'hotel') }, 'Luxury stays')
       ),
-      React.createElement('div', { onClick: () => handleCategoryChange('sports'), style: categoryCardStyle(selectedCategory === 'sports'), onMouseEnter: (e) => { if (selectedCategory !== 'sports') { e.currentTarget.style.borderColor = brandIndigoLight; e.currentTarget.style.transform = 'translateY(-2px)'; } }, onMouseLeave: (e) => { if (selectedCategory !== 'sports') { e.currentTarget.style.borderColor = '#e8e8e8'; e.currentTarget.style.transform = 'translateY(0)'; } } },
+      
+      // Sports Category
+      React.createElement('div', 
+        { 
+          onClick: () => handleCategoryChange('sports'), 
+          style: categoryCardStyle(selectedCategory === 'sports'),
+          onMouseEnter: (e) => { 
+            if (selectedCategory !== 'sports') { 
+              e.currentTarget.style.borderColor = brandIndigoLight; 
+              e.currentTarget.style.transform = 'translateY(-2px)'; 
+            } 
+          },
+          onMouseLeave: (e) => { 
+            if (selectedCategory !== 'sports') { 
+              e.currentTarget.style.borderColor = '#e8e8e8'; 
+              e.currentTarget.style.transform = 'translateY(0)'; 
+            } 
+          }
+        },
         React.createElement('div', { style: categoryIconStyle(selectedCategory === 'sports') },
           React.createElement(Trophy, { size: isDesktop ? 20 : 18, color: selectedCategory === 'sports' ? 'white' : brandIndigo })
         ),
         React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'sports') }, 'Sports'),
         React.createElement('div', { style: categoryDescStyle(selectedCategory === 'sports') }, 'Courts & pitches')
       ),
-      React.createElement('div', { onClick: () => handleCategoryChange('event'), style: categoryCardStyle(selectedCategory === 'event'), onMouseEnter: (e) => { if (selectedCategory !== 'event') { e.currentTarget.style.borderColor = brandIndigoLight; e.currentTarget.style.transform = 'translateY(-2px)'; } }, onMouseLeave: (e) => { if (selectedCategory !== 'event') { e.currentTarget.style.borderColor = '#e8e8e8'; e.currentTarget.style.transform = 'translateY(0)'; } } },
+      
+      // Events Category
+      React.createElement('div', 
+        { 
+          onClick: () => handleCategoryChange('event'), 
+          style: categoryCardStyle(selectedCategory === 'event'),
+          onMouseEnter: (e) => { 
+            if (selectedCategory !== 'event') { 
+              e.currentTarget.style.borderColor = brandIndigoLight; 
+              e.currentTarget.style.transform = 'translateY(-2px)'; 
+            } 
+          },
+          onMouseLeave: (e) => { 
+            if (selectedCategory !== 'event') { 
+              e.currentTarget.style.borderColor = '#e8e8e8'; 
+              e.currentTarget.style.transform = 'translateY(0)'; 
+            } 
+          }
+        },
         React.createElement('div', { style: categoryIconStyle(selectedCategory === 'event') },
           React.createElement(PartyPopper, { size: isDesktop ? 20 : 18, color: selectedCategory === 'event' ? 'white' : brandIndigo })
         ),
@@ -579,6 +739,7 @@ function HomePage() {
       )
     ),
 
+    // Hero Section
     React.createElement('div', { key: heroKey, style: heroSectionStyle },
       React.createElement('div', { style: heroOverlayStyle }),
       React.createElement('div', { style: heroContentStyle },
@@ -587,136 +748,299 @@ function HomePage() {
       )
     ),
 
-    React.createElement('div', { style: trustBadgesStyle },
-      React.createElement('div', { style: trustBadgeStyle }, React.createElement(Sparkles, { size: 14, color: brandIndigo }), '200+ venues'),
-      React.createElement('div', { style: trustBadgeStyle }, React.createElement(Clock, { size: 14, color: brandIndigo }), 'Instant confirmation'),
-      React.createElement('div', { style: trustBadgeStyle }, React.createElement(CreditCard, { size: 14, color: brandIndigo }), 'Pay online or at venue')
-    ),
-
+    // Search Card
     React.createElement('div', { style: searchCardStyle },
       React.createElement('div', { style: formGridStyle },
+        // Location Input
         React.createElement('div', { style: inputWrapperStyle },
           React.createElement(MapPin, { size: 14, style: inputIconStyle }),
-          React.createElement('input', { type: 'text', placeholder: getCategoryPlaceholder(), value: location, onChange: (e) => setLocation(e.target.value), onKeyPress: (e) => { if (e.key === 'Enter') handleSearch(); }, style: inputFieldStyle, onFocus: (e) => { e.target.style.borderColor = brandIndigo; e.target.style.background = 'white'; }, onBlur: (e) => { e.target.style.borderColor = '#e5e5e5'; e.target.style.background = '#fafafa'; } })
+          React.createElement('input', { 
+            type: 'text', 
+            placeholder: getCategoryPlaceholder(), 
+            value: location, 
+            onChange: (e) => setLocation(e.target.value), 
+            onKeyPress: (e) => { if (e.key === 'Enter') handleSearch(); }, 
+            style: inputFieldStyle,
+            onFocus: (e) => { e.currentTarget.style.borderColor = brandIndigo; e.currentTarget.style.background = 'white'; },
+            onBlur: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; e.currentTarget.style.background = '#fafafa'; }
+          })
         ),
+        
+        // Hotel - Check-in
         selectedCategory === 'hotel' && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Calendar, { size: 14, style: inputIconStyle }),
-          React.createElement('input', { type: 'date', value: checkIn, onChange: (e) => setCheckIn(e.target.value), style: inputFieldStyle, onFocus: (e) => { e.target.style.borderColor = brandIndigo; e.target.style.background = 'white'; }, onBlur: (e) => { e.target.style.borderColor = '#e5e5e5'; e.target.style.background = '#fafafa'; } })
+          React.createElement('input', { 
+            type: 'date', 
+            value: checkIn, 
+            onChange: (e) => setCheckIn(e.target.value), 
+            style: inputFieldStyle,
+            onFocus: (e) => { e.currentTarget.style.borderColor = brandIndigo; e.currentTarget.style.background = 'white'; },
+            onBlur: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; e.currentTarget.style.background = '#fafafa'; }
+          })
         ),
+        
+        // Hotel - Check-out
         selectedCategory === 'hotel' && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Calendar, { size: 14, style: inputIconStyle }),
-          React.createElement('input', { type: 'date', value: checkOut, onChange: (e) => setCheckOut(e.target.value), style: inputFieldStyle, onFocus: (e) => { e.target.style.borderColor = brandIndigo; e.target.style.background = 'white'; }, onBlur: (e) => { e.target.style.borderColor = '#e5e5e5'; e.target.style.background = '#fafafa'; } })
+          React.createElement('input', { 
+            type: 'date', 
+            value: checkOut, 
+            onChange: (e) => setCheckOut(e.target.value), 
+            style: inputFieldStyle,
+            onFocus: (e) => { e.currentTarget.style.borderColor = brandIndigo; e.currentTarget.style.background = 'white'; },
+            onBlur: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; e.currentTarget.style.background = '#fafafa'; }
+          })
         ),
+        
+        // Hotel - Guests
         selectedCategory === 'hotel' && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Users, { size: 14, style: inputIconStyle }),
-          React.createElement('select', { value: guests, onChange: (e) => setGuests(parseInt(e.target.value)), style: { ...inputFieldStyle, cursor: 'pointer', appearance: 'none', paddingRight: '24px' }, onFocus: (e) => { e.target.style.borderColor = brandIndigo; e.target.style.background = 'white'; }, onBlur: (e) => { e.target.style.borderColor = '#e5e5e5'; e.target.style.background = '#fafafa'; } },
-            [1,2,3,4,5,6].map(num => React.createElement('option', { key: num, value: num }, `${num} Guest${num > 1 ? 's' : ''}`))
+          React.createElement('select', { 
+            value: guests, 
+            onChange: (e) => setGuests(parseInt(e.target.value)), 
+            style: { ...inputFieldStyle, cursor: 'pointer', appearance: 'none', paddingRight: '24px' },
+            onFocus: (e) => { e.currentTarget.style.borderColor = brandIndigo; e.currentTarget.style.background = 'white'; },
+            onBlur: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; e.currentTarget.style.background = '#fafafa'; }
+          },
+            [1, 2, 3, 4, 5, 6].map(num => 
+              React.createElement('option', { key: num, value: num }, `${num} Guest${num > 1 ? 's' : ''}`)
+            )
           )
         ),
+        
+        // Sports/Event - Date
         (selectedCategory === 'sports' || selectedCategory === 'event') && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Calendar, { size: 14, style: inputIconStyle }),
-          React.createElement('input', { type: 'date', value: selectedCategory === 'sports' ? sportsDate : eventDate, onChange: (e) => selectedCategory === 'sports' ? setSportsDate(e.target.value) : setEventDate(e.target.value), style: inputFieldStyle, min: new Date().toISOString().split('T')[0], onFocus: (e) => { e.target.style.borderColor = brandIndigo; e.target.style.background = 'white'; }, onBlur: (e) => { e.target.style.borderColor = '#e5e5e5'; e.target.style.background = '#fafafa'; } })
+          React.createElement('input', { 
+            type: 'date', 
+            value: selectedCategory === 'sports' ? sportsDate : eventDate, 
+            onChange: (e) => selectedCategory === 'sports' ? setSportsDate(e.target.value) : setEventDate(e.target.value), 
+            style: inputFieldStyle,
+            min: new Date().toISOString().split('T')[0],
+            onFocus: (e) => { e.currentTarget.style.borderColor = brandIndigo; e.currentTarget.style.background = 'white'; },
+            onBlur: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; e.currentTarget.style.background = '#fafafa'; }
+          })
         ),
-        React.createElement('button', { onClick: handleSearch, disabled: loading, style: searchBtnStyle, onMouseEnter: (e) => { if (!loading) e.currentTarget.style.background = brandIndigoDark; }, onMouseLeave: (e) => { e.currentTarget.style.background = brandIndigo; } },
+        
+        // Search Button
+        React.createElement('button', { 
+          onClick: handleSearch, 
+          disabled: loading, 
+          style: searchBtnStyle,
+          onMouseEnter: (e) => { if (!loading) e.currentTarget.style.background = brandIndigoDark; },
+          onMouseLeave: (e) => { e.currentTarget.style.background = brandIndigo; }
+        },
           loading ? React.createElement(Loader2, { size: 16, style: { animation: 'spin 1s linear infinite' } }) : React.createElement(Search, { size: 14 }),
           getSearchButtonText()
         )
       )
     ),
 
+    // Trust Badges
+    React.createElement('div', { style: trustBadgesStyle },
+      React.createElement('div', { style: trustBadgeStyle }, 
+        React.createElement(Sparkles, { size: 14, color: brandIndigo }), 
+        '200+ venues'
+      ),
+      React.createElement('div', { style: trustBadgeStyle }, 
+        React.createElement(Clock, { size: 14, color: brandIndigo }), 
+        'Instant confirmation'
+      ),
+      React.createElement('div', { style: trustBadgeStyle }, 
+        React.createElement(CreditCard, { size: 14, color: brandIndigo }), 
+        'Pay online or at venue'
+      )
+    ),
+
+    // Destination Cards Section - UPDATED with white text, new images, professional icons
+    React.createElement(DestinationCards, {
+      onSelectLocation: (location) => {
+        setLocation(location);
+        setTimeout(() => handleSearch(), 300);
+      }
+    }),
+
+    // Popular Stays Section
+    React.createElement(PopularStays, {
+      onSelectHotel: (hotel) => {
+        if (hotel && hotel.location) {
+          setLocation(hotel.location);
+          setTimeout(() => handleSearch(), 300);
+        }
+      }
+    }),
+
+    // Results Section
     results.length > 0 && React.createElement('div', { id: 'results-section' },
       React.createElement('div', { style: resultsHeaderStyle },
         React.createElement('div', null,
-          React.createElement('h2', { style: resultsTitleStyle }, `Available ${selectedCategory === 'hotel' ? 'Hotels' : selectedCategory === 'sports' ? 'Sports Facilities' : 'Event Venues'}`),
-          React.createElement('p', { style: { fontSize: '13px', color: '#888', marginTop: '2px' } }, `${results.length} ${results.length === 1 ? 'result' : 'results'} found`)
+          React.createElement('h2', { style: resultsTitleStyle }, 
+            `Available ${selectedCategory === 'hotel' ? 'Hotels' : selectedCategory === 'sports' ? 'Sports Facilities' : 'Event Venues'}`
+          ),
+          React.createElement('p', { style: { fontSize: '13px', color: '#888', marginTop: '2px' } }, 
+            `${results.length} ${results.length === 1 ? 'result' : 'results'} found`
+          )
         )
       )
     ),
 
+    // Loading Skeletons
     loading && React.createElement('div', { style: resultsGridStyle },
-      [1,2,3].map(i => React.createElement('div', { key: i, style: { ...resultCardStyle, cursor: 'default' } },
-        React.createElement('div', { style: { ...resultImageStyle, background: '#f0f0f0' } }),
-        React.createElement('div', { style: resultContentStyle },
-          React.createElement('div', { style: { width: '70%', height: '18px', background: '#f0f0f0', borderRadius: '8px', marginBottom: '8px' } }),
-          React.createElement('div', { style: { width: '40%', height: '12px', background: '#f0f0f0', borderRadius: '8px', marginBottom: '12px' } }),
-          React.createElement('div', { style: { width: '90%', height: '12px', background: '#f0f0f0', borderRadius: '8px', marginBottom: '16px' } }),
-          React.createElement('div', { style: { display: 'flex', gap: '10px' } },
-            React.createElement('div', { style: { flex: 1, height: '36px', background: '#f0f0f0', borderRadius: '100px' } }),
-            React.createElement('div', { style: { flex: 1, height: '36px', background: '#f0f0f0', borderRadius: '100px' } })
+      [1, 2, 3].map(i => 
+        React.createElement('div', { key: i, style: { ...resultCardStyle, cursor: 'default' } },
+          React.createElement('div', { style: { ...resultImageStyle, background: '#f0f0f0' } }),
+          React.createElement('div', { style: resultContentStyle },
+            React.createElement('div', { style: { width: '70%', height: '18px', background: '#f0f0f0', borderRadius: '8px', marginBottom: '8px' } }),
+            React.createElement('div', { style: { width: '40%', height: '12px', background: '#f0f0f0', borderRadius: '8px', marginBottom: '12px' } }),
+            React.createElement('div', { style: { width: '90%', height: '12px', background: '#f0f0f0', borderRadius: '8px', marginBottom: '16px' } }),
+            React.createElement('div', { style: { display: 'flex', gap: '10px' } },
+              React.createElement('div', { style: { flex: 1, height: '36px', background: '#f0f0f0', borderRadius: '100px' } }),
+              React.createElement('div', { style: { flex: 1, height: '36px', background: '#f0f0f0', borderRadius: '100px' } })
+            )
           )
         )
-      ))
+      )
     ),
 
+    // Results Grid
     !loading && results.length > 0 && React.createElement('div', { style: resultsGridStyle },
-      results.map((business, index) => React.createElement('div', { key: business.id, style: resultCardStyle, onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 8px 20px ${brandIndigo}1A`; }, onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; } },
-        React.createElement('img', { src: getBusinessImage(business.business_type, index), alt: business.name, style: resultImageStyle }),
-        React.createElement('div', { style: resultContentStyle },
-          React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' } },
-            React.createElement('div', null,
-              React.createElement('h3', { style: resultNameStyle }, business.name),
-              React.createElement('div', { style: { marginTop: '6px' } },
-                React.createElement('div', { style: resultTypeBadgeStyle },
-                  business.business_type === 'hotel' ? React.createElement(Building2, { size: 10 }) : business.business_type === 'sports' ? React.createElement(Trophy, { size: 10 }) : React.createElement(PartyPopper, { size: 10 }),
-                  React.createElement('span', null, business.business_type === 'hotel' ? 'Hotel' : business.business_type === 'sports' ? 'Sports' : 'Event')
+      results.map((business, index) => 
+        React.createElement('div', 
+          { 
+            key: business.id, 
+            style: resultCardStyle,
+            onMouseEnter: (e) => { 
+              e.currentTarget.style.transform = 'translateY(-4px)'; 
+              e.currentTarget.style.boxShadow = `0 8px 20px ${brandIndigo}1A`; 
+            },
+            onMouseLeave: (e) => { 
+              e.currentTarget.style.transform = 'translateY(0)'; 
+              e.currentTarget.style.boxShadow = 'none'; 
+            }
+          },
+          // Image
+          React.createElement('img', { 
+            src: getBusinessImage(business.business_type, index), 
+            alt: business.name, 
+            style: resultImageStyle 
+          }),
+          
+          // Content
+          React.createElement('div', { style: resultContentStyle },
+            // Header with name and rating
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' } },
+              React.createElement('div', null,
+                React.createElement('h3', { style: resultNameStyle }, business.name),
+                React.createElement('div', { style: { marginTop: '6px' } },
+                  React.createElement('div', { style: resultTypeBadgeStyle },
+                    business.business_type === 'hotel' ? React.createElement(Building2, { size: 10 }) : 
+                    business.business_type === 'sports' ? React.createElement(Trophy, { size: 10 }) : 
+                    React.createElement(PartyPopper, { size: 10 }),
+                    React.createElement('span', null, 
+                      business.business_type === 'hotel' ? 'Hotel' : 
+                      business.business_type === 'sports' ? 'Sports' : 'Event'
+                    )
+                  )
                 )
+              ),
+              // Rating
+              React.createElement('div', { style: { textAlign: 'right' } },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' } },
+                  React.createElement(Star, { size: 12, fill: '#f5a623', color: '#f5a623' }),
+                  React.createElement('span', { style: { fontWeight: '500', fontSize: '12px' } }, '4.9')
+                ),
+                React.createElement('div', { style: { fontSize: '18px', fontWeight: '700', color: '#1a1a1a' } }, '₦0'),
+                React.createElement('div', { style: { fontSize: '10px', color: '#999' } }, 'starting price')
               )
             ),
-            React.createElement('div', { style: { textAlign: 'right' } },
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' } },
-                React.createElement(Star, { size: 12, fill: '#f5a623', color: '#f5a623' }),
-                React.createElement('span', { style: { fontWeight: '500', fontSize: '12px' } }, '4.9')
+            
+            // Location
+            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#888', fontSize: '12px', marginBottom: '10px' } },
+              React.createElement(MapPin, { size: 12 }),
+              React.createElement('span', null, `${business.city || 'Lagos'}, ${business.state || 'Lagos'}`)
+            ),
+            
+            // Description
+            React.createElement('p', { style: { color: '#888', fontSize: '12px', lineHeight: '1.4', marginBottom: '14px' } },
+              business.description ? business.description.substring(0, 70) + '...' : 'Experience premium hospitality and comfort.'
+            ),
+            
+            // Action Buttons
+            React.createElement('div', { style: { display: 'flex', gap: '10px' } },
+              React.createElement('button', { 
+                onClick: () => handleDirectBook(business), 
+                style: bookBtnStyle,
+                onMouseEnter: (e) => e.currentTarget.style.background = brandIndigoDark,
+                onMouseLeave: (e) => e.currentTarget.style.background = brandIndigo
+              }, 
+                'Book Now', 
+                React.createElement(ArrowRight, { size: 12, style: { marginLeft: '4px' } })
               ),
-              React.createElement('div', { style: { fontSize: '18px', fontWeight: '700', color: '#1a1a1a' } }, '₦0'),
-              React.createElement('div', { style: { fontSize: '10px', color: '#999' } }, 'starting price')
+              React.createElement('button', { 
+                onClick: () => navigate(`/book/${business.slug}`), 
+                style: detailsBtnStyle,
+                onMouseEnter: (e) => e.currentTarget.style.background = '#e8e8e8',
+                onMouseLeave: (e) => e.currentTarget.style.background = '#f5f5f5'
+              }, 
+                'Details'
+              )
             )
-          ),
-          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#888', fontSize: '12px', marginBottom: '10px' } },
-            React.createElement(MapPin, { size: 12 }),
-            React.createElement('span', null, `${business.city || 'Lagos'}, ${business.state || 'Lagos'}`)
-          ),
-          React.createElement('p', { style: { color: '#888', fontSize: '12px', lineHeight: '1.4', marginBottom: '14px' } },
-            business.description ? business.description.substring(0, 70) + '...' : 'Experience premium hospitality and comfort.'
-          ),
-          React.createElement('div', { style: { display: 'flex', gap: '10px' } },
-            React.createElement('button', { onClick: () => handleDirectBook(business), style: bookBtnStyle, onMouseEnter: (e) => e.currentTarget.style.background = brandIndigoDark, onMouseLeave: (e) => e.currentTarget.style.background = brandIndigo }, 'Book Now', React.createElement(ArrowRight, { size: 12, style: { marginLeft: '4px' } })),
-            React.createElement('button', { onClick: () => navigate(`/book/${business.slug}`), style: detailsBtnStyle, onMouseEnter: (e) => e.currentTarget.style.background = '#e8e8e8', onMouseLeave: (e) => e.currentTarget.style.background = '#f5f5f5' }, 'Details')
           )
         )
-      ))
+      )
     ),
 
+    // No Results
     !loading && results.length === 0 && location && React.createElement('div', { style: { textAlign: 'center', padding: '60px 20px' } },
       React.createElement(Search, { size: 48, color: '#ccc', style: { marginBottom: '16px' } }),
       React.createElement('h3', { style: { fontSize: '18px', fontWeight: '500', color: '#1a1a1a', marginBottom: '8px' } }, 'No results found'),
-      React.createElement('p', { style: { color: '#888', marginBottom: '20px', fontSize: '14px' } }, `We couldn't find any ${selectedCategory === 'hotel' ? 'hotels' : selectedCategory === 'sports' ? 'sports facilities' : 'event venues'} in "${location}".`),
-      React.createElement('button', { onClick: () => { setLocation(''); setSelectedCategory('hotel'); }, style: { padding: '10px 24px', background: brandIndigo, border: 'none', borderRadius: '100px', cursor: 'pointer', fontWeight: '500', color: 'white', fontSize: '13px' } }, 'Clear Search')
+      React.createElement('p', { style: { color: '#888', marginBottom: '20px', fontSize: '14px' } }, 
+        `We couldn't find any ${selectedCategory === 'hotel' ? 'hotels' : selectedCategory === 'sports' ? 'sports facilities' : 'event venues'} in "${location}".`
+      ),
+      React.createElement('button', { 
+        onClick: () => { setLocation(''); setSelectedCategory('hotel'); }, 
+        style: { padding: '10px 24px', background: brandIndigo, border: 'none', borderRadius: '100px', cursor: 'pointer', fontWeight: '500', color: 'white', fontSize: '13px' } 
+      }, 
+        'Clear Search'
+      )
     ),
 
+    // Features Section (shown when no search results)
     !loading && results.length === 0 && !location && React.createElement('div', { style: featuresGridStyle },
       React.createElement('div', { style: featureItemStyle },
-        React.createElement('div', { style: featureIconStyle }, React.createElement(Award, { size: 20, color: brandIndigo })),
+        React.createElement('div', { style: featureIconStyle }, 
+          React.createElement(Award, { size: 20, color: brandIndigo })
+        ),
         React.createElement('div', { style: featureTitleStyle }, 'Verified Venues'),
         React.createElement('div', { style: featureDescStyle }, 'All properties vetted')
       ),
       React.createElement('div', { style: featureItemStyle },
-        React.createElement('div', { style: featureIconStyle }, React.createElement(Clock, { size: 20, color: brandIndigo })),
+        React.createElement('div', { style: featureIconStyle }, 
+          React.createElement(Clock, { size: 20, color: brandIndigo })
+        ),
         React.createElement('div', { style: featureTitleStyle }, 'Instant Booking'),
         React.createElement('div', { style: featureDescStyle }, 'Immediate confirmation')
       ),
       React.createElement('div', { style: featureItemStyle },
-        React.createElement('div', { style: featureIconStyle }, React.createElement(Shield, { size: 20, color: brandIndigo })),
+        React.createElement('div', { style: featureIconStyle }, 
+          React.createElement(Shield, { size: 20, color: brandIndigo })
+        ),
         React.createElement('div', { style: featureTitleStyle }, 'Secure Payments'),
         React.createElement('div', { style: featureDescStyle }, 'Fraud protection')
       ),
       React.createElement('div', { style: featureItemStyle },
-        React.createElement('div', { style: featureIconStyle }, React.createElement(Headphones, { size: 20, color: brandIndigo })),
+        React.createElement('div', { style: featureIconStyle }, 
+          React.createElement(Headphones, { size: 20, color: brandIndigo })
+        ),
         React.createElement('div', { style: featureTitleStyle }, '24/7 Support'),
         React.createElement('div', { style: featureDescStyle }, 'Always here to help')
       )
     ),
 
-    showBusinessLogin && React.createElement(BusinessLogin, { onClose: () => setShowBusinessLogin(false) })
+    // Business Login Modal
+    showBusinessLogin && React.createElement(BusinessLogin, { 
+      onClose: () => setShowBusinessLogin(false) 
+    })
   );
 }
 

@@ -43,7 +43,7 @@ function getLocalIpAddress() {
 }
 
 // ============================================================
-// CORS CONFIGURATION - FIXED
+// CORS CONFIGURATION
 // ============================================================
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
@@ -80,10 +80,7 @@ const corsOptions = {
   maxAge: 86400
 };
 
-// Apply CORS - this automatically handles OPTIONS preflight requests
 app.use(cors(corsOptions));
-
-// Trust proxy
 app.set('trust proxy', 1);
 
 // ============================================================
@@ -319,7 +316,6 @@ app.get('/api/domain-info', async (req, res) => {
   }
 });
 
-// GET ROOMS - Public
 app.get('/api/businesses/:businessId/rooms', async (req, res) => {
   try {
     const { businessId } = req.params;
@@ -337,7 +333,6 @@ app.get('/api/businesses/:businessId/rooms', async (req, res) => {
   }
 });
 
-// GET GALLERY - Public
 app.get('/api/businesses/:businessId/gallery', async (req, res) => {
   try {
     const { businessId } = req.params;
@@ -366,7 +361,6 @@ app.get('/api/businesses/:businessId/gallery', async (req, res) => {
 // AUTHENTICATION ROUTES
 // ============================================================
 
-// ADMIN LOGIN
 app.post('/api/admin/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -426,7 +420,6 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
-// BUSINESS REGISTRATION
 app.post('/api/businesses/register', async (req, res) => {
   try {
     const { businessName, businessType, email, password, phone, address, city, state, customDomain } = req.body;
@@ -504,7 +497,6 @@ app.post('/api/businesses/register', async (req, res) => {
   }
 });
 
-// BUSINESS LOGIN
 app.post('/api/businesses/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -568,7 +560,6 @@ app.post('/api/businesses/login', async (req, res) => {
   }
 });
 
-// STAFF LOGIN
 app.post('/api/staff/login', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -856,7 +847,6 @@ app.delete('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, as
   }
 });
 
-// BOOKINGS
 app.get('/api/businesses/:businessId/bookings', authenticateBusiness, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -1053,81 +1043,163 @@ app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness,
 });
 
 // ============================================================
-// PUBLIC BOOKING ROUTES
+// PUBLIC BOOKING ROUTES - FIXED
 // ============================================================
 
 app.post('/api/bookings', async (req, res) => {
   try {
-    const { businessId, customerName, customerEmail, customerPhone, totalAmount, bookingDetails, bookingReference, roomId, checkIn, checkOut, guests } = req.body;
-    
-    const bookingRef = bookingReference || 'BK' + Date.now() + Math.floor(Math.random() * 1000);
-    let checkInDate = new Date().toISOString().split('T')[0];
-    if (bookingDetails?.date) checkInDate = bookingDetails.date;
-    else if (checkIn) checkInDate = checkIn;
-    
-    let checkOutDate = checkInDate;
-    if (checkOut) checkOutDate = checkOut;
-    
-    let guestCount = guests ? parseInt(guests) : 1;
-    
-    const { count: bookingCount } = await supabase
-      .from('bookings')
-      .select('*', { count: 'exact', head: true })
-      .eq('business_id', businessId);
-    
-    const { data: businessLimit } = await supabase
+    console.log('📝 Booking request received:', req.body);
+
+    // Extract fields from request body
+    const {
+      businessId,
+      roomId,
+      customerName,
+      customerEmail,
+      customerPhone,
+      totalAmount,
+      bookingDetails,
+      checkIn,
+      checkOut,
+      guests,
+      specialRequests,
+      paymentMethod
+    } = req.body;
+
+    // Validate required fields
+    if (!businessId) {
+      return res.status(400).json({ success: false, error: 'Business ID is required' });
+    }
+    if (!customerEmail) {
+      return res.status(400).json({ success: false, error: 'Customer email is required' });
+    }
+    if (!customerEmail.includes('@')) {
+      return res.status(400).json({ success: false, error: 'Valid email is required' });
+    }
+    if (!totalAmount || totalAmount <= 0) {
+      return res.status(400).json({ success: false, error: 'Valid total amount is required' });
+    }
+
+    // Generate booking reference
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const bookingRef = `BK-${timestamp}-${randomStr}`;
+
+    // Get hotel name for email
+    const { data: business, error: businessError } = await supabase
       .from('businesses')
-      .select('booking_limit')
+      .select('*')
       .eq('id', businessId)
       .single();
-    
-    if ((bookingCount || 0) >= (businessLimit?.booking_limit || 50)) {
-      return res.status(403).json({ success: false, error: 'Free booking limit reached.' });
+
+    if (businessError || !business) {
+      console.error('❌ Business not found:', businessId);
+      return res.status(404).json({ success: false, error: 'Business not found' });
     }
-    
-    let bookingData = {
+
+    // Get room name if roomId provided
+    let roomName = 'Room';
+    if (roomId) {
+      const { data: roomData } = await supabase
+        .from('rooms')
+        .select('name')
+        .eq('id', roomId)
+        .single();
+      if (roomData) {
+        roomName = roomData.name;
+      }
+    }
+
+    // Calculate nights
+    const checkInDate = checkIn || new Date().toISOString().split('T')[0];
+    const checkOutDate = checkOut || checkInDate;
+    const nights = Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)) || 1;
+
+    // Prepare booking data - match the database schema EXACTLY
+    const bookingData = {
       booking_reference: bookingRef,
       business_id: businessId,
-      customer_name: customerName,
+      room_id: roomId || null,  // ← FIXED: Include room_id
+      customer_name: customerName || 'Guest',
       customer_email: customerEmail,
-      customer_phone: customerPhone,
-      total_amount: totalAmount,
+      customer_phone: customerPhone || 'Not provided',
+      total_amount: parseFloat(totalAmount),  // ← FIXED: Ensure it's a number
       check_in_date: checkInDate,
       check_out_date: checkOutDate,
-      number_of_guests: guestCount,
+      number_of_guests: parseInt(guests) || 1,  // ← FIXED: Ensure it's a number
+      special_requests: specialRequests || '',
+      payment_method: paymentMethod || 'pay_at_venue',
       status: 'confirmed',
-      payment_status: 'pending'
+      payment_status: 'pending',
+      created_at: new Date().toISOString()
     };
-    
-    if (roomId) bookingData.room_id = roomId;
-    
+
+    console.log('📦 Inserting booking:', bookingData);
+
+    // Insert booking
     const { data: booking, error } = await supabase
       .from('bookings')
       .insert(bookingData)
       .select()
       .single();
-    
-    if (error) throw error;
-    
+
+    if (error) {
+      console.error('❌ Supabase insert error:', error);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Database error: ' + error.message,
+        details: error
+      });
+    }
+
+    // Update business booking count
+    const { count: bookingCount } = await supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('business_id', businessId);
+
     await supabase
       .from('businesses')
       .update({ current_booking_count: (bookingCount || 0) + 1 })
       .eq('id', businessId);
-    
-    const { data: business } = await supabase
-      .from('businesses')
-      .select('*')
-      .eq('id', businessId)
-      .single();
-    
-    if (business) {
-      sendBookingConfirmation({ ...booking, bookingDetails }, business).catch(err => console.error('Email error:', err));
-    }
-    
-    res.json({ success: true, booking, message: 'Booking confirmed! A confirmation email has been sent.' });
+
+    // Prepare email details
+    const emailDetails = {
+      ...booking,
+      bookingDetails: bookingDetails || {
+        roomName: roomName,
+        hotelName: business.name,
+        checkIn: checkInDate,
+        checkOut: checkOutDate,
+        guests: parseInt(guests) || 1,
+        nights: nights,
+        total: parseFloat(totalAmount),
+        paymentMethod: paymentMethod === 'pay_at_venue' ? 'Pay at Venue' : 'Paystack'
+      }
+    };
+
+    // Send confirmation email (non-blocking)
+    sendBookingConfirmation(emailDetails, business).catch(err => {
+      console.error('Email error:', err);
+    });
+
+    console.log('✅ Booking created successfully:', bookingRef);
+
+    res.json({ 
+      success: true, 
+      booking: {
+        ...booking,
+        room_name: roomName
+      },
+      message: 'Booking confirmed! A confirmation email has been sent.'
+    });
   } catch (error) {
-    console.error('Booking error:', error);
-    res.status(500).json({ success: false, error: 'Booking failed', details: error.message });
+    console.error('❌ Booking error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Something went wrong. Please try again.',
+      details: error.message
+    });
   }
 });
 
