@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/HomePage.jsx
-// LOCATION: Entire file (FIXED - Destination card race condition)
+// LOCATION: Entire file (FIXED - Mobile header spacing)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -192,10 +192,8 @@ function HomePage() {
     setLoading(false);
   };
 
-  // FIX: Handle search with explicit location parameter (for destination cards)
-  // This prevents the race condition where state hasn't updated yet
+  // Handle search with explicit location parameter (for destination cards)
   const handleSearchWithLocation = async (searchLocation) => {
-    // Validate the passed location
     if (!searchLocation || !searchLocation.trim()) {
       showError('Please enter a location');
       return;
@@ -203,7 +201,6 @@ function HomePage() {
 
     setLoading(true);
     try {
-      // Build search parameters using the passed location directly
       let searchParams = { location: searchLocation };
       if (selectedCategory === 'hotel') {
         searchParams.checkIn = checkIn;
@@ -223,7 +220,6 @@ function HomePage() {
           showError(`No ${selectedCategory} found in ${searchLocation}`);
         }
         
-        // Scroll to results
         setTimeout(() => {
           const resultsElement = document.getElementById('results-section');
           if (resultsElement) {
@@ -330,40 +326,46 @@ function HomePage() {
     background: '#ffffff'
   };
 
+  // FIX: Header with proper spacing on mobile
   const headerStyle = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: isDesktop ? '32px' : '20px',
+    marginBottom: isDesktop ? '32px' : '16px',
     flexWrap: 'wrap',
-    gap: '16px'
+    gap: isDesktop ? '16px' : '8px' // Smaller gap on mobile
   };
 
   const logoStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    fontSize: isDesktop ? '24px' : '20px',
+    gap: '8px',
+    fontSize: isDesktop ? '24px' : '18px',
     fontWeight: '700',
     color: brandIndigo,
     letterSpacing: '-0.01em',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    flexShrink: 0 // Prevent logo from shrinking
   };
 
+  // FIX: Header buttons with proper alignment
   const headerButtonsStyle = {
     display: 'flex',
-    gap: '12px',
-    flexWrap: 'wrap'
+    gap: isDesktop ? '12px' : '6px', // Smaller gap on mobile
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'flex-end' // Align buttons to the right
   };
 
   const buttonStyle = {
-    padding: isDesktop ? '8px 20px' : '6px 14px',
+    padding: isDesktop ? '8px 20px' : '6px 10px',
     borderRadius: '100px',
-    fontSize: isDesktop ? '14px' : '12px',
+    fontSize: isDesktop ? '14px' : '11px',
     fontWeight: '500',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    border: 'none'
+    border: 'none',
+    whiteSpace: 'nowrap' // Prevent text wrapping
   };
 
   const primaryButtonStyle = {
@@ -428,14 +430,14 @@ function HomePage() {
     lineHeight: '1.4'
   };
 
-  // Category Cards
+  // Category Cards - Horizontal on mobile
   const categoryCardStyle = (isActive) => ({
     flex: 1,
-    minWidth: isDesktop ? 'auto' : '100%',
-    padding: isDesktop ? '12px 16px' : '14px',
+    minWidth: isDesktop ? 'auto' : '0',
+    padding: isDesktop ? '12px 16px' : '8px 6px',
     background: isActive ? brandIndigo : 'white',
     border: isActive ? 'none' : '1px solid #e8e8e8',
-    borderRadius: '16px',
+    borderRadius: isDesktop ? '16px' : '10px',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     boxShadow: isActive ? `0 2px 8px ${brandIndigo}33` : 'none',
@@ -443,26 +445,27 @@ function HomePage() {
   });
 
   const categoryIconStyle = (isActive) => ({
-    width: isDesktop ? '40px' : '44px',
-    height: isDesktop ? '40px' : '44px',
+    width: isDesktop ? '40px' : '28px',
+    height: isDesktop ? '40px' : '28px',
     background: isActive ? 'rgba(255,255,255,0.15)' : '#f5f5f5',
-    borderRadius: '12px',
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    margin: '0 auto 8px'
+    margin: '0 auto 4px'
   });
 
   const categoryTitleStyle = (isActive) => ({
     fontWeight: '600',
-    fontSize: isDesktop ? '14px' : '15px',
-    marginBottom: '2px',
+    fontSize: isDesktop ? '14px' : '11px',
+    marginBottom: '0px',
     color: isActive ? 'white' : '#1a1a1a'
   });
 
   const categoryDescStyle = (isActive) => ({
-    fontSize: '11px',
-    color: isActive ? 'rgba(255,255,255,0.7)' : '#999'
+    fontSize: '10px',
+    color: isActive ? 'rgba(255,255,255,0.7)' : '#999',
+    display: isDesktop ? 'block' : 'none'
   });
 
   // Trust Badges
@@ -670,10 +673,10 @@ function HomePage() {
 
   // ========== RENDER ==========
   return React.createElement('div', { style: containerStyle },
-    // Header
+    // Header - FIXED: Better mobile spacing
     React.createElement('div', { style: headerStyle },
       React.createElement('div', { style: logoStyle, onClick: () => window.location.reload() },
-        React.createElement(Building2, { size: isDesktop ? 24 : 20, color: brandIndigo }),
+        React.createElement(Building2, { size: isDesktop ? 24 : 18, color: brandIndigo }),
         React.createElement('span', null, 'BookingHub')
       ),
       React.createElement('div', { style: headerButtonsStyle },
@@ -684,7 +687,8 @@ function HomePage() {
             onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; },
             onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; }
           },
-          React.createElement(Shield, { size: 14 }), ' Admin'
+          React.createElement(Shield, { size: isDesktop ? 14 : 12 }), 
+          isDesktop ? ' Admin' : ''
         ),
         React.createElement('button', 
           { 
@@ -693,7 +697,7 @@ function HomePage() {
             onMouseEnter: (e) => { e.currentTarget.style.borderColor = brandIndigo; },
             onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e5e5e5'; }
           },
-          'Become a Host'
+          isDesktop ? 'Become a Host' : 'Host'
         ),
         React.createElement('button', 
           { 
@@ -702,13 +706,20 @@ function HomePage() {
             onMouseEnter: (e) => { e.currentTarget.style.background = brandIndigoDark; },
             onMouseLeave: (e) => { e.currentTarget.style.background = brandIndigo; }
           },
-          'Business Login'
+          isDesktop ? 'Business Login' : 'Login'
         )
       )
     ),
 
-    // Category Cards
-    React.createElement('div', { style: { display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' } },
+    // Category Cards - Horizontal on mobile
+    React.createElement('div', { 
+      style: { 
+        display: 'flex', 
+        gap: isDesktop ? '16px' : '8px',
+        marginBottom: isDesktop ? '32px' : '16px',
+        flexWrap: 'nowrap'
+      } 
+    },
       // Hotel Category
       React.createElement('div', 
         { 
@@ -728,7 +739,7 @@ function HomePage() {
           }
         },
         React.createElement('div', { style: categoryIconStyle(selectedCategory === 'hotel') },
-          React.createElement(Building2, { size: isDesktop ? 20 : 18, color: selectedCategory === 'hotel' ? 'white' : brandIndigo })
+          React.createElement(Building2, { size: isDesktop ? 20 : 14, color: selectedCategory === 'hotel' ? 'white' : brandIndigo })
         ),
         React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'hotel') }, 'Hotels'),
         React.createElement('div', { style: categoryDescStyle(selectedCategory === 'hotel') }, 'Luxury stays')
@@ -753,7 +764,7 @@ function HomePage() {
           }
         },
         React.createElement('div', { style: categoryIconStyle(selectedCategory === 'sports') },
-          React.createElement(Trophy, { size: isDesktop ? 20 : 18, color: selectedCategory === 'sports' ? 'white' : brandIndigo })
+          React.createElement(Trophy, { size: isDesktop ? 20 : 14, color: selectedCategory === 'sports' ? 'white' : brandIndigo })
         ),
         React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'sports') }, 'Sports'),
         React.createElement('div', { style: categoryDescStyle(selectedCategory === 'sports') }, 'Courts & pitches')
@@ -778,7 +789,7 @@ function HomePage() {
           }
         },
         React.createElement('div', { style: categoryIconStyle(selectedCategory === 'event') },
-          React.createElement(PartyPopper, { size: isDesktop ? 20 : 18, color: selectedCategory === 'event' ? 'white' : brandIndigo })
+          React.createElement(PartyPopper, { size: isDesktop ? 20 : 14, color: selectedCategory === 'event' ? 'white' : brandIndigo })
         ),
         React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'event') }, 'Events'),
         React.createElement('div', { style: categoryDescStyle(selectedCategory === 'event') }, 'Venues & halls')
@@ -898,13 +909,10 @@ function HomePage() {
       )
     ),
 
-    // FIX: Destination Cards Section - Pass location directly to search
-    // This prevents the race condition where state hasn't updated yet
+    // Destination Cards Section
     React.createElement(DestinationCards, {
       onSelectLocation: (location) => {
-        // Update state for UI consistency
         setLocation(location);
-        // Pass location directly to search - no state dependency!
         handleSearchWithLocation(location);
       }
     }),
@@ -1054,7 +1062,7 @@ function HomePage() {
       )
     ),
 
-    // Features Section (shown when no search results)
+    // Features Section
     !loading && results.length === 0 && !location && React.createElement('div', { style: featuresGridStyle },
       React.createElement('div', { style: featureItemStyle },
         React.createElement('div', { style: featureIconStyle }, 
