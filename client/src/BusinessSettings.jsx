@@ -1,5 +1,8 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Clock, X, Plus, Trash2, AlertCircle, CheckCircle, Globe, Copy, Check, Save, Calendar, ArrowLeft } from 'lucide-react';
+﻿// FILE: client/src/BusinessSettings.jsx
+// UPDATED - Added expiry warning and better UX
+
+import React, { useState, useEffect } from 'react';
+import { Clock, X, Plus, Trash2, AlertCircle, CheckCircle, Globe, Copy, Check, Save, Calendar, ArrowLeft, Clock as TimerIcon } from 'lucide-react';
 import API_BASE from './config';
 
 function BusinessSettings({ business, onBack, onBusinessUpdate }) {
@@ -17,6 +20,8 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
   const [domainCopied, setDomainCopied] = useState(false);
   const [verifyingDomain, setVerifyingDomain] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
+  const [expiresAt, setExpiresAt] = useState(null);
+  const [verificationStatus, setVerificationStatus] = useState('');
 
   const token = localStorage.getItem('auth_token');
 
@@ -70,7 +75,7 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
 
   function showMessage(type, text) {
     setMessage({ type: type, text: text });
-    setTimeout(function() { setMessage({ type: '', text: '' }); }, 3000);
+    setTimeout(function() { setMessage({ type: '', text: '' }); }, 5000);
   }
 
   function toggleDayOpen(index) {
@@ -148,9 +153,11 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
       .finally(function() { setSaving(false); });
   }
 
-  // FIXED: Generate verification code - No business ID in URL, uses session token
+  // UPDATED: Generate verification code with expiry
   function generateVerificationCode() {
     setVerifyingDomain(true);
+    setVerificationStatus('Generating code...');
+    
     fetch(API_BASE + '/api/businesses/generate-verification', {
       method: 'POST',
       headers: {
@@ -162,22 +169,45 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
       .then(function(data) {
         if (data.success) {
           setVerificationCode(data.verificationCode);
-          showMessage('success', 'Verification code generated. Add this TXT record to your DNS.');
+          setExpiresAt(data.expiresAt);
+          
+          // Calculate hours remaining
+          if (data.expiresAt) {
+            const expiryDate = new Date(data.expiresAt);
+            const hoursLeft = Math.round((expiryDate - new Date()) / (1000 * 60 * 60));
+            showMessage('success', `Verification code generated! It expires in ${hoursLeft} hours.`);
+          } else {
+            showMessage('success', 'Verification code generated! Add this TXT record to your DNS.');
+          }
+          
+          setVerificationStatus('Code generated - add to DNS');
         } else {
           showMessage('error', data.error || 'Failed to generate code');
+          setVerificationStatus('');
         }
       })
-      .catch(function() { showMessage('error', 'Something went wrong'); })
+      .catch(function() { 
+        showMessage('error', 'Something went wrong');
+        setVerificationStatus('');
+      })
       .finally(function() { setVerifyingDomain(false); });
   }
 
-  // FIXED: Verify domain - No business ID in URL, uses session token
+  // UPDATED: Verify domain with DNS check
   function verifyDomain() {
     if (!customDomain) {
       showMessage('error', 'Please enter a domain');
       return;
     }
+    
+    if (!verificationCode) {
+      showMessage('error', 'Please generate a verification code first');
+      return;
+    }
+    
     setVerifyingDomain(true);
+    setVerificationStatus('Checking DNS...');
+    
     fetch(API_BASE + '/api/businesses/check-verification', {
       method: 'POST',
       headers: {
@@ -189,13 +219,20 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success) {
-          showMessage('success', 'Domain verified successfully!');
+          showMessage('success', 'Domain verified successfully! Your booking page is now live at this domain.');
+          setVerificationStatus('Verified');
+          setVerificationCode('');
+          setExpiresAt(null);
           if (onBusinessUpdate) onBusinessUpdate();
         } else {
-          showMessage('error', data.error || 'Verification failed. Please add the TXT record to your DNS and try again.');
+          showMessage('error', data.error || 'Verification failed. Please check DNS and try again.');
+          setVerificationStatus('Verification failed');
         }
       })
-      .catch(function() { showMessage('error', 'Something went wrong'); })
+      .catch(function() { 
+        showMessage('error', 'Something went wrong');
+        setVerificationStatus('');
+      })
       .finally(function() { setVerifyingDomain(false); });
   }
 
@@ -310,8 +347,8 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
       display: 'flex',
       alignItems: 'center',
       gap: '10px',
-      backgroundColor: message.type === 'success' ? '#d1fae5' : '#fee2e2',
-      color: message.type === 'success' ? '#065f46' : '#991b1b'
+      backgroundColor: message.type === 'success' ? '#d1fae5' : message.type === 'warning' ? '#fef3c7' : '#fee2e2',
+      color: message.type === 'success' ? '#065f46' : message.type === 'warning' ? '#92400e' : '#991b1b'
     } },
       message.type === 'success' ? React.createElement(CheckCircle, { size: 18 }) : React.createElement(AlertCircle, { size: 18 }),
       message.text
@@ -408,7 +445,7 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
         )
       ),
 
-      // Custom Domain Settings Card
+      // Custom Domain Settings Card - UPDATED
       React.createElement('div', { style: cardStyle },
         React.createElement('div', { style: cardHeaderStyle },
           React.createElement(Globe, { size: isDesktop ? 20 : 18, color: '#4f46e5' }),
@@ -418,7 +455,9 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } }, 
             'Connect your own domain (e.g., book.yourbusiness.com). Once verified, your booking page will be available at your custom domain.'
           ),
-          React.createElement('div', { style: { marginBottom: '20px' } },
+          
+          // Domain input
+          React.createElement('div', { style: { marginBottom: '16px' } },
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#475569' } }, 'Custom Domain'),
             React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap' } },
               React.createElement('input', {
@@ -437,20 +476,22 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
               }),
               React.createElement('button', {
                 onClick: verifyDomain,
-                disabled: !customDomain || verifyingDomain,
+                disabled: !customDomain || verifyingDomain || !verificationCode,
                 style: {
                   padding: '12px 24px',
-                  backgroundColor: '#4f46e5',
+                  backgroundColor: (!customDomain || verifyingDomain || !verificationCode) ? '#94a3b8' : '#4f46e5',
                   color: 'white',
                   border: 'none',
                   borderRadius: '10px',
                   fontSize: '13px',
                   fontWeight: '600',
-                  cursor: (!customDomain || verifyingDomain) ? 'not-allowed' : 'pointer'
+                  cursor: (!customDomain || verifyingDomain || !verificationCode) ? 'not-allowed' : 'pointer'
                 }
               }, verifyingDomain ? 'Verifying...' : 'Verify Domain')
             )
           ),
+
+          // Status display
           business.custom_domain && business.is_domain_verified && React.createElement('div', { style: {
             backgroundColor: '#d1fae5',
             padding: '12px',
@@ -465,6 +506,8 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
             React.createElement(CheckCircle, { size: 16 }),
             'Domain verified: ', business.custom_domain
           ),
+
+          // Generate code button
           React.createElement('button', {
             onClick: generateVerificationCode,
             disabled: verifyingDomain,
@@ -479,7 +522,9 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
               fontWeight: '500',
               cursor: 'pointer'
             }
-          }, 'Generate DNS Verification Code'),
+          }, verifyingDomain ? 'Generating...' : 'Generate DNS Verification Code'),
+
+          // Show verification code with expiry
           verificationCode && React.createElement('div', { style: {
             marginTop: '16px',
             padding: '14px',
@@ -519,6 +564,21 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
                   gap: '6px'
                 }
               }, domainCopied ? React.createElement(Check, { size: 14 }) : React.createElement(Copy, { size: 14 }), domainCopied ? 'Copied!' : 'Copy')
+            ),
+            // Show expiry warning
+            expiresAt && React.createElement('div', { style: {
+              marginTop: '12px',
+              padding: '8px 12px',
+              backgroundColor: '#fef3c7',
+              borderRadius: '8px',
+              fontSize: '12px',
+              color: '#92400e',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            } },
+              React.createElement(TimerIcon, { size: 14 }),
+              'This code expires in ' + Math.round((new Date(expiresAt) - new Date()) / (1000 * 60 * 60)) + ' hours'
             )
           )
         )

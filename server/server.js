@@ -1,4 +1,7 @@
-﻿require('dotenv').config();
+﻿// FILE: server.js
+// COMPLETE PRODUCTION-READY VERSION - Fixed verification code length
+
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -7,6 +10,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { sendBookingConfirmation, sendWelcomeEmail, sendApprovalEmail } = require('./src/services/emailService');
 const { initializePayment, verifyPayment } = require('./src/services/paystackService');
 const detectBusinessFromDomain = require('./src/middleware/domainDetector');
+const { verifyDomainTxtRecord } = require('./src/services/dnsService');
 
 // ============================================================
 // SUPABASE INITIALIZATION
@@ -14,7 +18,7 @@ const detectBusinessFromDomain = require('./src/middleware/domainDetector');
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing Supabase credentials');
+  console.error('Missing Supabase credentials');
   process.exit(1);
 }
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -54,7 +58,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 if (process.env.ALLOWED_ORIGINS) {
-  process.env.ALLOWED_ORIGINS.split(',').forEach(origin => {
+  process.env.ALLOWED_ORIGINS.split(',').forEach(function(origin) {
     if (!ALLOWED_ORIGINS.includes(origin)) {
       ALLOWED_ORIGINS.push(origin);
     }
@@ -70,7 +74,7 @@ const corsOptions = {
     if (process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
-    console.log('🔴 Blocked CORS request from:', origin);
+    console.log('Blocked CORS request from:', origin);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -92,8 +96,8 @@ const limiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => process.env.NODE_ENV !== 'production',
-  keyGenerator: (req) => {
+  skip: function() { return process.env.NODE_ENV !== 'production'; },
+  keyGenerator: function(req) {
     return req.headers['x-forwarded-for'] || req.ip;
   }
 });
@@ -109,7 +113,7 @@ async function authenticateBusiness(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (process.env.NODE_ENV !== 'production' && !authHeader) {
-    console.log('⚠️ Development mode: skipping auth for business route');
+    console.log('Development mode: skipping auth for business route');
     req.businessId = requestedBusinessId;
     return next();
   }
@@ -147,7 +151,7 @@ async function authenticateAdmin(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (process.env.NODE_ENV !== 'production' && !authHeader) {
-    console.log('⚠️ Development mode: skipping auth for admin route');
+    console.log('Development mode: skipping auth for admin route');
     return next();
   }
 
@@ -186,11 +190,11 @@ app.use('/book', detectBusinessFromDomain);
 // ============================================================
 // HEALTH & TEST ROUTES
 // ============================================================
-app.get('/health', (req, res) => {
+app.get('/health', function(req, res) {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', function(req, res) {
   res.json({
     status: 'ok',
     timestamp: Date.now(),
@@ -199,11 +203,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/test', (req, res) => {
+app.get('/api/test', function(req, res) {
   res.json({ message: 'Backend is connected!', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/supabase-test', async (req, res) => {
+app.get('/api/supabase-test', async function(req, res) {
   try {
     const { data, error, count } = await supabase
       .from('businesses')
@@ -220,7 +224,7 @@ app.get('/api/supabase-test', async (req, res) => {
 // PUBLIC BUSINESS ROUTES
 // ============================================================
 
-app.get('/api/businesses', async (req, res) => {
+app.get('/api/businesses', async function(req, res) {
   try {
     const { data, error } = await supabase
       .from('businesses')
@@ -236,7 +240,7 @@ app.get('/api/businesses', async (req, res) => {
   }
 });
 
-app.get('/api/businesses/featured', async (req, res) => {
+app.get('/api/businesses/featured', async function(req, res) {
   try {
     const { data, error } = await supabase
       .from('businesses')
@@ -250,7 +254,7 @@ app.get('/api/businesses/featured', async (req, res) => {
   }
 });
 
-app.get('/api/businesses/search/category', async (req, res) => {
+app.get('/api/businesses/search/category', async function(req, res) {
   try {
     const { category, location } = req.query;
     let query = supabase
@@ -263,7 +267,7 @@ app.get('/api/businesses/search/category', async (req, res) => {
     }
     
     if (location && location.trim()) {
-      query = query.or(`city.ilike.%${location}%,state.ilike.%${location}%`);
+      query = query.or('city.ilike.%' + location + '%,state.ilike.%' + location + '%');
     }
     
     const { data, error } = await query;
@@ -276,7 +280,7 @@ app.get('/api/businesses/search/category', async (req, res) => {
   }
 });
 
-app.get('/api/businesses/slug/:slug', async (req, res) => {
+app.get('/api/businesses/slug/:slug', async function(req, res) {
   try {
     const { slug } = req.params;
     const { data, error } = await supabase
@@ -293,7 +297,7 @@ app.get('/api/businesses/slug/:slug', async (req, res) => {
   }
 });
 
-app.get('/api/domain-info', async (req, res) => {
+app.get('/api/domain-info', async function(req, res) {
   try {
     const domain = req.query.domain || req.get('host')?.split(':')[0] || '';
     if (domain && domain !== 'localhost' && domain !== '127.0.0.1') {
@@ -316,7 +320,7 @@ app.get('/api/domain-info', async (req, res) => {
   }
 });
 
-app.get('/api/businesses/:businessId/rooms', async (req, res) => {
+app.get('/api/businesses/:businessId/rooms', async function(req, res) {
   try {
     const { businessId } = req.params;
     const { data, error } = await supabase
@@ -333,7 +337,7 @@ app.get('/api/businesses/:businessId/rooms', async (req, res) => {
   }
 });
 
-app.get('/api/businesses/:businessId/gallery', async (req, res) => {
+app.get('/api/businesses/:businessId/gallery', async function(req, res) {
   try {
     const { businessId } = req.params;
     const { data, error } = await supabase
@@ -361,7 +365,7 @@ app.get('/api/businesses/:businessId/gallery', async (req, res) => {
 // AUTHENTICATION ROUTES
 // ============================================================
 
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', async function(req, res) {
   try {
     const { email, password } = req.body;
 
@@ -420,7 +424,7 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
-app.post('/api/businesses/register', async (req, res) => {
+app.post('/api/businesses/register', async function(req, res) {
   try {
     const { businessName, businessType, email, password, phone, address, city, state, customDomain } = req.body;
 
@@ -440,9 +444,9 @@ app.post('/api/businesses/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'City is required.' });
     }
 
-    const slug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    var slug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
-    const { data: existingEmail } = await supabase
+    var { data: existingEmail } = await supabase
       .from('businesses')
       .select('id')
       .eq('email', email)
@@ -452,26 +456,26 @@ app.post('/api/businesses/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'A business with this email already exists.' });
     }
 
-    const { data: existingSlug } = await supabase
+    var { data: existingSlug } = await supabase
       .from('businesses')
       .select('id')
       .eq('slug', slug)
       .single();
     
-    const hashedPassword = await bcrypt.hash(password, 10);
+    var hashedPassword = await bcrypt.hash(password, 10);
 
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('businesses')
       .insert({
         name: businessName,
         slug: existingSlug ? slug + '-' + Date.now().toString(36) : slug,
         business_type: businessType,
-        email,
+        email: email,
         password: password,
         password_hash: hashedPassword,
-        phone,
+        phone: phone,
         address: address || '',
-        city,
+        city: city,
         state: state || '',
         custom_domain: customDomain || null,
         status: 'pending',
@@ -487,7 +491,7 @@ app.post('/api/businesses/register', async (req, res) => {
     }
     
     if (data) {
-      sendWelcomeEmail(data).catch(err => console.error('Welcome email failed:', err));
+      sendWelcomeEmail(data).catch(function(err) { console.error('Welcome email failed:', err); });
     }
     
     res.json({ success: true, business: data, message: 'Business registered! A confirmation email has been sent.' });
@@ -497,15 +501,15 @@ app.post('/api/businesses/register', async (req, res) => {
   }
 });
 
-app.post('/api/businesses/login', async (req, res) => {
+app.post('/api/businesses/login', async function(req, res) {
   try {
-    const { email, password } = req.body;
+    var { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password required.' });
     }
 
-    const { data: business, error } = await supabase
+    var { data: business, error } = await supabase
       .from('businesses')
       .select('*')
       .eq('email', email)
@@ -519,7 +523,7 @@ app.post('/api/businesses/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Your account is pending approval. Please wait for admin approval.' });
     }
 
-    let isValidPassword = false;
+    var isValidPassword = false;
 
     if (business.password_hash) {
       isValidPassword = await bcrypt.compare(password, business.password_hash);
@@ -528,7 +532,7 @@ app.post('/api/businesses/login', async (req, res) => {
     if (!isValidPassword && business.password) {
       isValidPassword = (business.password === password);
       if (isValidPassword) {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        var hashedPassword = await bcrypt.hash(password, 10);
         await supabase.from('businesses').update({ password_hash: hashedPassword }).eq('id', business.id);
       }
     }
@@ -537,8 +541,8 @@ app.post('/api/businesses/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid credentials.' });
     }
 
-    const token = generateToken();
-    const expiresAt = new Date();
+    var token = generateToken();
+    var expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     await supabase.from('business_sessions').upsert({
@@ -547,7 +551,7 @@ app.post('/api/businesses/login', async (req, res) => {
       expires_at: expiresAt.toISOString()
     });
 
-    const { password_hash, password: plainPassword, ...safeBusiness } = business;
+    var { password_hash, password: plainPassword, ...safeBusiness } = business;
 
     res.json({
       success: true,
@@ -560,9 +564,9 @@ app.post('/api/businesses/login', async (req, res) => {
   }
 });
 
-app.post('/api/staff/login', async (req, res) => {
+app.post('/api/staff/login', async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('staff')
       .select('*')
       .eq('email', req.body.email)
@@ -574,7 +578,7 @@ app.post('/api/staff/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
     
-    let valid = false;
+    var valid = false;
     if (data.password_hash) {
       valid = await bcrypt.compare(req.body.password, data.password_hash);
     } else if (data.password === req.body.password) {
@@ -585,8 +589,8 @@ app.post('/api/staff/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
     
-    const { password_hash, password: plainPassword, ...staff } = data;
-    res.json({ success: true, staff });
+    var { password_hash, password: plainPassword, ...staff } = data;
+    res.json({ success: true, staff: staff });
   } catch (error) {
     console.error('Staff login error:', error);
     res.status(500).json({ success: false, error: 'Login failed' });
@@ -597,9 +601,9 @@ app.post('/api/staff/login', async (req, res) => {
 // ADMIN ROUTES
 // ============================================================
 
-app.get('/api/admin/businesses', async (req, res) => {
+app.get('/api/admin/businesses', async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('businesses')
       .select('*')
       .order('created_at', { ascending: false });
@@ -612,9 +616,9 @@ app.get('/api/admin/businesses', async (req, res) => {
   }
 });
 
-app.put('/api/admin/businesses/:id/status', async (req, res) => {
+app.put('/api/admin/businesses/:id/status', async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('businesses')
       .update({ status: req.body.status })
       .eq('id', req.params.id)
@@ -624,7 +628,7 @@ app.put('/api/admin/businesses/:id/status', async (req, res) => {
     if (error) throw error;
     
     if (req.body.status === 'approved' && data) {
-      sendApprovalEmail(data).catch(err => console.error('Approval email failed:', err));
+      sendApprovalEmail(data).catch(function(err) { console.error('Approval email failed:', err); });
     }
     
     res.json({ success: true, business: data });
@@ -634,11 +638,11 @@ app.put('/api/admin/businesses/:id/status', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/businesses/:id', async (req, res) => {
+app.delete('/api/admin/businesses/:id', async function(req, res) {
   try {
-    const { id } = req.params;
+    var { id } = req.params;
     
-    const { data: business, error: findError } = await supabase
+    var { data: business, error: findError } = await supabase
       .from('businesses')
       .select('id, name')
       .eq('id', id)
@@ -655,7 +659,7 @@ app.delete('/api/admin/businesses/:id', async (req, res) => {
     await supabase.from('bookings').delete().eq('business_id', id);
     await supabase.from('rooms').delete().eq('business_id', id);
 
-    const { error } = await supabase.from('businesses').delete().eq('id', id);
+    var { error } = await supabase.from('businesses').delete().eq('id', id);
     if (error) throw error;
     
     res.json({ success: true, message: business.name + ' has been permanently deleted.' });
@@ -665,27 +669,27 @@ app.delete('/api/admin/businesses/:id', async (req, res) => {
   }
 });
 
-app.get('/api/admin/stats', async (req, res) => {
+app.get('/api/admin/stats', async function(req, res) {
   try {
-    const { count: totalBusinesses } = await supabase
+    var { count: totalBusinesses } = await supabase
       .from('businesses')
       .select('*', { count: 'exact', head: true });
     
-    const { count: pendingBusinesses } = await supabase
+    var { count: pendingBusinesses } = await supabase
       .from('businesses')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
     
-    const { count: totalBookings } = await supabase
+    var { count: totalBookings } = await supabase
       .from('bookings')
       .select('*', { count: 'exact', head: true });
     
-    const { data: revenueData } = await supabase
+    var { data: revenueData } = await supabase
       .from('bookings')
       .select('total_amount')
       .eq('status', 'confirmed');
     
-    const totalRevenue = revenueData ? revenueData.reduce((sum, b) => sum + parseFloat(b.total_amount), 0) : 0;
+    var totalRevenue = revenueData ? revenueData.reduce(function(sum, b) { return sum + parseFloat(b.total_amount); }, 0) : 0;
     
     res.json({
       success: true,
@@ -693,7 +697,7 @@ app.get('/api/admin/stats', async (req, res) => {
         totalBusinesses: totalBusinesses || 0,
         pendingBusinesses: pendingBusinesses || 0,
         totalBookings: totalBookings || 0,
-        totalRevenue
+        totalRevenue: totalRevenue
       }
     });
   } catch (error) {
@@ -706,16 +710,16 @@ app.get('/api/admin/stats', async (req, res) => {
 // AUTHENTICATED BUSINESS ROUTES
 // ============================================================
 
-app.get('/api/businesses/profile', authenticateBusiness, async (req, res) => {
-  console.log('📞 Profile request - Business ID from session:', req.businessId);
+app.get('/api/businesses/profile', authenticateBusiness, async function(req, res) {
+  console.log('Profile request - Business ID from session:', req.businessId);
   try {
-    const businessId = req.businessId;
+    var businessId = req.businessId;
 
     if (!businessId) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
 
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('businesses')
       .select('id, name, email, phone, city, state, logo_url, cover_image, business_type, slug, description, about_text, website, status, booking_limit, current_booking_count')
       .eq('id', businessId)
@@ -725,7 +729,7 @@ app.get('/api/businesses/profile', authenticateBusiness, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
 
-    console.log('✅ Profile found:', data.name);
+    console.log('Profile found:', data.name);
     res.json({ success: true, business: data });
   } catch (error) {
     console.error('Profile fetch error:', error);
@@ -733,10 +737,10 @@ app.get('/api/businesses/profile', authenticateBusiness, async (req, res) => {
   }
 });
 
-app.put('/api/businesses/:id', authenticateBusiness, async (req, res) => {
+app.put('/api/businesses/:id', authenticateBusiness, async function(req, res) {
   try {
-    const { cover_image, logo_url, about_text, description, website, name } = req.body;
-    const updateData = {};
+    var { cover_image, logo_url, about_text, description, website, name } = req.body;
+    var updateData = {};
     if (cover_image !== undefined) updateData.cover_image = cover_image;
     if (logo_url !== undefined) updateData.logo_url = logo_url;
     if (about_text !== undefined) updateData.about_text = about_text;
@@ -744,7 +748,7 @@ app.put('/api/businesses/:id', authenticateBusiness, async (req, res) => {
     if (website !== undefined) updateData.website = website;
     if (name !== undefined) updateData.name = name;
     
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('businesses')
       .update(updateData)
       .eq('id', req.params.id)
@@ -760,9 +764,9 @@ app.put('/api/businesses/:id', authenticateBusiness, async (req, res) => {
 });
 
 // ROOM MANAGEMENT
-app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async (req, res) => {
+app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async function(req, res) {
   try {
-    const { name, type, capacity, price_per_night, description, amenities } = req.body;
+    var { name, type, capacity, price_per_night, description, amenities } = req.body;
     if (!name || name.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Room name is required.' });
     }
@@ -770,7 +774,7 @@ app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async
       return res.status(400).json({ success: false, error: 'A valid price is required.' });
     }
     
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('rooms')
       .insert({
         business_id: req.params.businessId,
@@ -794,9 +798,9 @@ app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async
   }
 });
 
-app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async (req, res) => {
+app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async function(req, res) {
   try {
-    const { name, type, capacity, price_per_night, description, amenities, status } = req.body;
+    var { name, type, capacity, price_per_night, description, amenities, status } = req.body;
     if (!name || name.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Room name is required.' });
     }
@@ -804,7 +808,7 @@ app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async
       return res.status(400).json({ success: false, error: 'A valid price is required.' });
     }
     
-    const updateData = {
+    var updateData = {
       name: name.trim(),
       type: type || 'Standard',
       capacity: parseInt(capacity) || 2,
@@ -815,7 +819,7 @@ app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async
       status: status || 'available'
     };
     
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('rooms')
       .update(updateData)
       .eq('id', req.params.roomId)
@@ -831,9 +835,9 @@ app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async
   }
 });
 
-app.delete('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async (req, res) => {
+app.delete('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async function(req, res) {
   try {
-    const { error } = await supabase
+    var { error } = await supabase
       .from('rooms')
       .delete()
       .eq('id', req.params.roomId)
@@ -847,9 +851,9 @@ app.delete('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, as
   }
 });
 
-app.get('/api/businesses/:businessId/bookings', authenticateBusiness, async (req, res) => {
+app.get('/api/businesses/:businessId/bookings', authenticateBusiness, async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('bookings')
       .select('*')
       .eq('business_id', req.params.businessId)
@@ -864,9 +868,9 @@ app.get('/api/businesses/:businessId/bookings', authenticateBusiness, async (req
 });
 
 // STAFF MANAGEMENT
-app.get('/api/businesses/:businessId/staff', authenticateBusiness, async (req, res) => {
+app.get('/api/businesses/:businessId/staff', authenticateBusiness, async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('staff')
       .select('id, email, full_name, role, is_active, created_at')
       .eq('business_id', req.params.businessId)
@@ -881,10 +885,10 @@ app.get('/api/businesses/:businessId/staff', authenticateBusiness, async (req, r
   }
 });
 
-app.post('/api/businesses/:businessId/staff', authenticateBusiness, async (req, res) => {
+app.post('/api/businesses/:businessId/staff', authenticateBusiness, async function(req, res) {
   try {
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    const { data, error } = await supabase
+    var hashedPassword = await bcrypt.hash(req.body.password, 10);
+    var { data, error } = await supabase
       .from('staff')
       .insert({
         business_id: req.params.businessId,
@@ -905,17 +909,17 @@ app.post('/api/businesses/:businessId/staff', authenticateBusiness, async (req, 
       throw error;
     }
     
-    const { password_hash, ...staff } = data;
-    res.json({ success: true, staff });
+    var { password_hash, ...staff } = data;
+    res.json({ success: true, staff: staff });
   } catch (error) {
     console.error('Staff creation error:', error);
     res.status(500).json({ success: false, error: 'Failed to add staff member' });
   }
 });
 
-app.put('/api/staff/:staffId', authenticateBusiness, async (req, res) => {
+app.put('/api/staff/:staffId', authenticateBusiness, async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('staff')
       .update({
         full_name: req.body.full_name,
@@ -927,17 +931,17 @@ app.put('/api/staff/:staffId', authenticateBusiness, async (req, res) => {
       .single();
     
     if (error) throw error;
-    const { password_hash, ...staff } = data;
-    res.json({ success: true, staff });
+    var { password_hash, ...staff } = data;
+    res.json({ success: true, staff: staff });
   } catch (error) {
     console.error('Staff update error:', error);
     res.status(500).json({ success: false, error: 'Failed to update staff' });
   }
 });
 
-app.delete('/api/staff/:staffId', authenticateBusiness, async (req, res) => {
+app.delete('/api/staff/:staffId', authenticateBusiness, async function(req, res) {
   try {
-    const { error } = await supabase
+    var { error } = await supabase
       .from('staff')
       .update({ is_active: false })
       .eq('id', req.params.staffId);
@@ -951,9 +955,9 @@ app.delete('/api/staff/:staffId', authenticateBusiness, async (req, res) => {
 });
 
 // OPERATING HOURS
-app.get('/api/businesses/:businessId/operating-hours', authenticateBusiness, async (req, res) => {
+app.get('/api/businesses/:businessId/operating-hours', authenticateBusiness, async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('operating_hours')
       .select('*')
       .eq('business_id', req.params.businessId)
@@ -967,14 +971,14 @@ app.get('/api/businesses/:businessId/operating-hours', authenticateBusiness, asy
   }
 });
 
-app.put('/api/businesses/:businessId/operating-hours', authenticateBusiness, async (req, res) => {
+app.put('/api/businesses/:businessId/operating-hours', authenticateBusiness, async function(req, res) {
   try {
     await supabase.from('operating_hours').delete().eq('business_id', req.params.businessId);
     
     if (req.body.operatingHours && req.body.operatingHours.length) {
-      const { data, error } = await supabase
+      var { data, error } = await supabase
         .from('operating_hours')
-        .insert(req.body.operatingHours.map(h => ({ ...h, business_id: req.params.businessId })))
+        .insert(req.body.operatingHours.map(function(h) { return { ...h, business_id: req.params.businessId }; }))
         .select();
       
       if (error) throw error;
@@ -989,9 +993,9 @@ app.put('/api/businesses/:businessId/operating-hours', authenticateBusiness, asy
 });
 
 // BLOCKED DATES
-app.get('/api/businesses/:businessId/blocked-dates', authenticateBusiness, async (req, res) => {
+app.get('/api/businesses/:businessId/blocked-dates', authenticateBusiness, async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('availability')
       .select('*')
       .eq('business_id', req.params.businessId)
@@ -1006,9 +1010,9 @@ app.get('/api/businesses/:businessId/blocked-dates', authenticateBusiness, async
   }
 });
 
-app.post('/api/businesses/:businessId/block-date', authenticateBusiness, async (req, res) => {
+app.post('/api/businesses/:businessId/block-date', authenticateBusiness, async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('availability')
       .upsert({
         business_id: req.params.businessId,
@@ -1027,7 +1031,7 @@ app.post('/api/businesses/:businessId/block-date', authenticateBusiness, async (
   }
 });
 
-app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness, async (req, res) => {
+app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness, async function(req, res) {
   try {
     await supabase
       .from('availability')
@@ -1043,15 +1047,14 @@ app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness,
 });
 
 // ============================================================
-// PUBLIC BOOKING ROUTES - FIXED
+// PUBLIC BOOKING ROUTES
 // ============================================================
 
-app.post('/api/bookings', async (req, res) => {
+app.post('/api/bookings', async function(req, res) {
   try {
-    console.log('📝 Booking request received:', req.body);
+    console.log('Booking request received:', req.body);
 
-    // Extract fields from request body
-    const {
+    var {
       businessId,
       roomId,
       customerName,
@@ -1066,7 +1069,6 @@ app.post('/api/bookings', async (req, res) => {
       paymentMethod
     } = req.body;
 
-    // Validate required fields
     if (!businessId) {
       return res.status(400).json({ success: false, error: 'Business ID is required' });
     }
@@ -1080,27 +1082,24 @@ app.post('/api/bookings', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Valid total amount is required' });
     }
 
-    // Generate booking reference
-    const timestamp = Date.now();
-    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const bookingRef = `BK-${timestamp}-${randomStr}`;
+    var timestamp = Date.now();
+    var randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    var bookingRef = 'BK-' + timestamp + '-' + randomStr;
 
-    // Get hotel name for email
-    const { data: business, error: businessError } = await supabase
+    var { data: business, error: businessError } = await supabase
       .from('businesses')
       .select('*')
       .eq('id', businessId)
       .single();
 
     if (businessError || !business) {
-      console.error('❌ Business not found:', businessId);
+      console.error('Business not found:', businessId);
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
 
-    // Get room name if roomId provided
-    let roomName = 'Room';
+    var roomName = 'Room';
     if (roomId) {
-      const { data: roomData } = await supabase
+      var { data: roomData } = await supabase
         .from('rooms')
         .select('name')
         .eq('id', roomId)
@@ -1110,23 +1109,21 @@ app.post('/api/bookings', async (req, res) => {
       }
     }
 
-    // Calculate nights
-    const checkInDate = checkIn || new Date().toISOString().split('T')[0];
-    const checkOutDate = checkOut || checkInDate;
-    const nights = Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)) || 1;
+    var checkInDate = checkIn || new Date().toISOString().split('T')[0];
+    var checkOutDate = checkOut || checkInDate;
+    var nights = Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)) || 1;
 
-    // Prepare booking data - match the database schema EXACTLY
-    const bookingData = {
+    var bookingData = {
       booking_reference: bookingRef,
       business_id: businessId,
-      room_id: roomId || null,  // ← FIXED: Include room_id
+      room_id: roomId || null,
       customer_name: customerName || 'Guest',
       customer_email: customerEmail,
       customer_phone: customerPhone || 'Not provided',
-      total_amount: parseFloat(totalAmount),  // ← FIXED: Ensure it's a number
+      total_amount: parseFloat(totalAmount),
       check_in_date: checkInDate,
       check_out_date: checkOutDate,
-      number_of_guests: parseInt(guests) || 1,  // ← FIXED: Ensure it's a number
+      number_of_guests: parseInt(guests) || 1,
       special_requests: specialRequests || '',
       payment_method: paymentMethod || 'pay_at_venue',
       status: 'confirmed',
@@ -1134,17 +1131,16 @@ app.post('/api/bookings', async (req, res) => {
       created_at: new Date().toISOString()
     };
 
-    console.log('📦 Inserting booking:', bookingData);
+    console.log('Inserting booking:', bookingData);
 
-    // Insert booking
-    const { data: booking, error } = await supabase
+    var { data: booking, error } = await supabase
       .from('bookings')
       .insert(bookingData)
       .select()
       .single();
 
     if (error) {
-      console.error('❌ Supabase insert error:', error);
+      console.error('Supabase insert error:', error);
       return res.status(500).json({ 
         success: false, 
         error: 'Database error: ' + error.message,
@@ -1152,8 +1148,7 @@ app.post('/api/bookings', async (req, res) => {
       });
     }
 
-    // Update business booking count
-    const { count: bookingCount } = await supabase
+    var { count: bookingCount } = await supabase
       .from('bookings')
       .select('*', { count: 'exact', head: true })
       .eq('business_id', businessId);
@@ -1163,8 +1158,7 @@ app.post('/api/bookings', async (req, res) => {
       .update({ current_booking_count: (bookingCount || 0) + 1 })
       .eq('id', businessId);
 
-    // Prepare email details
-    const emailDetails = {
+    var emailDetails = {
       ...booking,
       bookingDetails: bookingDetails || {
         roomName: roomName,
@@ -1178,12 +1172,11 @@ app.post('/api/bookings', async (req, res) => {
       }
     };
 
-    // Send confirmation email (non-blocking)
-    sendBookingConfirmation(emailDetails, business).catch(err => {
+    sendBookingConfirmation(emailDetails, business).catch(function(err) {
       console.error('Email error:', err);
     });
 
-    console.log('✅ Booking created successfully:', bookingRef);
+    console.log('Booking created successfully:', bookingRef);
 
     res.json({ 
       success: true, 
@@ -1194,7 +1187,7 @@ app.post('/api/bookings', async (req, res) => {
       message: 'Booking confirmed! A confirmation email has been sent.'
     });
   } catch (error) {
-    console.error('❌ Booking error:', error);
+    console.error('Booking error:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Something went wrong. Please try again.',
@@ -1203,9 +1196,9 @@ app.post('/api/bookings', async (req, res) => {
   }
 });
 
-app.get('/api/bookings/reference/:reference', async (req, res) => {
+app.get('/api/bookings/reference/:reference', async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('bookings')
       .select('*')
       .eq('booking_reference', req.params.reference)
@@ -1218,9 +1211,9 @@ app.get('/api/bookings/reference/:reference', async (req, res) => {
   }
 });
 
-app.post('/api/bookings/:reference/cancel', async (req, res) => {
+app.post('/api/bookings/:reference/cancel', async function(req, res) {
   try {
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('bookings')
       .update({ status: 'cancelled' })
       .eq('booking_reference', req.params.reference)
@@ -1235,16 +1228,16 @@ app.post('/api/bookings/:reference/cancel', async (req, res) => {
   }
 });
 
-app.patch('/api/bookings/:id', async (req, res) => {
+app.patch('/api/bookings/:id', async function(req, res) {
   try {
-    const { id } = req.params;
-    const { payment_reference, payment_status, amount_paid } = req.body;
-    const updateData = {};
+    var { id } = req.params;
+    var { payment_reference, payment_status, amount_paid } = req.body;
+    var updateData = {};
     if (payment_reference !== undefined) updateData.payment_reference = payment_reference;
     if (payment_status !== undefined) updateData.payment_status = payment_status;
     if (amount_paid !== undefined) updateData.amount_paid = amount_paid;
     
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('bookings')
       .update(updateData)
       .eq('id', id)
@@ -1263,14 +1256,14 @@ app.patch('/api/bookings/:id', async (req, res) => {
 // PAYMENT ROUTES
 // ============================================================
 
-app.post('/api/create-payment', async (req, res) => {
+app.post('/api/create-payment', async function(req, res) {
   try {
-    const { bookingReference, email, amount } = req.body;
+    var { bookingReference, email, amount } = req.body;
     if (!bookingReference) return res.status(400).json({ success: false, error: 'Booking reference is required.' });
-    if (!email?.includes('@')) return res.status(400).json({ success: false, error: 'Valid email required.' });
+    if (!email || !email.includes('@')) return res.status(400).json({ success: false, error: 'Valid email required.' });
     if (!amount || isNaN(amount) || amount <= 0) return res.status(400).json({ success: false, error: 'Valid amount required.' });
     
-    const { data: booking, error: bookingError } = await supabase
+    var { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('*')
       .eq('booking_reference', bookingReference)
@@ -1282,7 +1275,7 @@ app.post('/api/create-payment', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Booking already paid. Please contact support.' });
     }
     
-    const result = await initializePayment({ email, amount: amount, bookingReference });
+    var result = await initializePayment({ email: email, amount: amount, bookingReference: bookingReference });
     res.json({ success: true, authorization_url: result.authorization_url, reference: result.reference });
   } catch (error) {
     console.error('Create payment error:', error);
@@ -1290,12 +1283,12 @@ app.post('/api/create-payment', async (req, res) => {
   }
 });
 
-app.post('/api/verify-payment', async (req, res) => {
+app.post('/api/verify-payment', async function(req, res) {
   try {
-    const { reference, bookingReference } = req.body;
+    var { reference, bookingReference } = req.body;
     if (!reference) return res.status(400).json({ success: false, error: 'Payment reference is required.' });
     
-    const verification = await verifyPayment(reference);
+    var verification = await verifyPayment(reference);
     if (verification.success) {
       await supabase
         .from('bookings')
@@ -1320,41 +1313,41 @@ app.post('/api/verify-payment', async (req, res) => {
 // GALLERY ROUTES
 // ============================================================
 
-app.post('/api/upload-gallery-image', async (req, res) => {
+app.post('/api/upload-gallery-image', async function(req, res) {
   try {
-    const { businessId, fileName, fileType, fileData } = req.body;
+    var { businessId, fileName, fileType, fileData } = req.body;
 
-    console.log('📸 Upload request received:', { businessId, fileName, fileType, dataLength: fileData?.length });
+    console.log('Upload request received:', { businessId: businessId, fileName: fileName, fileType: fileType, dataLength: fileData?.length });
 
     if (!businessId || !fileName || !fileData) {
       return res.status(400).json({ error: 'Business ID, file name, and file data are required' });
     }
 
-    const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    var matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
       return res.status(400).json({ error: 'Invalid image data format' });
     }
 
-    const fileBuffer = Buffer.from(matches[2], 'base64');
-    const mimeType = matches[1];
+    var fileBuffer = Buffer.from(matches[2], 'base64');
+    var mimeType = matches[1];
 
     if (fileBuffer.length > 5 * 1024 * 1024) {
       return res.status(400).json({ error: 'File size must be under 5MB' });
     }
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    var allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
     if (!allowedTypes.includes(mimeType)) {
       return res.status(400).json({ error: 'Only JPEG, PNG, and WEBP images are allowed' });
     }
 
-    const timestamp = Date.now();
-    const randomStr = Math.random().toString(36).substring(2, 10);
-    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = `business-images/${businessId}/${timestamp}-${randomStr}-${safeName}`;
+    var timestamp = Date.now();
+    var randomStr = Math.random().toString(36).substring(2, 10);
+    var safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    var filePath = 'business-images/' + businessId + '/' + timestamp + '-' + randomStr + '-' + safeName;
 
-    console.log('📁 Uploading to storage path:', filePath);
+    console.log('Uploading to storage path:', filePath);
 
-    const { data, error } = await supabase.storage
+    var { data, error } = await supabase.storage
       .from('business-images')
       .upload(filePath, fileBuffer, {
         contentType: mimeType,
@@ -1363,29 +1356,29 @@ app.post('/api/upload-gallery-image', async (req, res) => {
       });
 
     if (error) {
-      console.error('❌ Storage upload error:', error);
+      console.error('Storage upload error:', error);
       return res.status(500).json({ error: 'Failed to upload image to storage: ' + error.message });
     }
 
-    const { data: urlData } = supabase.storage.from('business-images').getPublicUrl(filePath);
+    var { data: urlData } = supabase.storage.from('business-images').getPublicUrl(filePath);
 
-    console.log('✅ Upload successful:', urlData.publicUrl);
+    console.log('Upload successful:', urlData.publicUrl);
 
     res.json({ success: true, imageUrl: urlData.publicUrl, filePath: filePath });
   } catch (err) {
-    console.error('❌ Upload error:', err);
+    console.error('Upload error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
 
-app.post('/api/businesses/:businessId/gallery', authenticateBusiness, async (req, res) => {
+app.post('/api/businesses/:businessId/gallery', authenticateBusiness, async function(req, res) {
   try {
-    const { businessId } = req.params;
-    const { imageUrl, fileName } = req.body;
+    var { businessId } = req.params;
+    var { imageUrl, fileName } = req.body;
 
     if (!imageUrl) return res.status(400).json({ error: 'Image URL is required' });
 
-    const { count } = await supabase
+    var { count } = await supabase
       .from('business_gallery')
       .select('*', { count: 'exact', head: true })
       .eq('business_id', businessId);
@@ -1394,16 +1387,16 @@ app.post('/api/businesses/:businessId/gallery', authenticateBusiness, async (req
       return res.status(400).json({ error: 'Gallery is full. Maximum 5 images allowed.' });
     }
 
-    const { data: lastImage } = await supabase
+    var { data: lastImage } = await supabase
       .from('business_gallery')
       .select('sort_order')
       .eq('business_id', businessId)
       .order('sort_order', { ascending: false })
       .limit(1);
     
-    const nextSortOrder = (lastImage && lastImage.length > 0) ? lastImage[0].sort_order + 1 : 0;
+    var nextSortOrder = (lastImage && lastImage.length > 0) ? lastImage[0].sort_order + 1 : 0;
 
-    const { data, error } = await supabase
+    var { data, error } = await supabase
       .from('business_gallery')
       .insert({
         business_id: businessId,
@@ -1423,11 +1416,11 @@ app.post('/api/businesses/:businessId/gallery', authenticateBusiness, async (req
   }
 });
 
-app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness, async (req, res) => {
+app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness, async function(req, res) {
   try {
-    const { businessId, imageId } = req.params;
+    var { businessId, imageId } = req.params;
 
-    const { data: image } = await supabase
+    var { data: image } = await supabase
       .from('business_gallery')
       .select('id, image_url')
       .eq('id', imageId)
@@ -1437,11 +1430,11 @@ app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness,
     if (!image) return res.status(404).json({ error: 'Image not found' });
 
     try {
-      const parts = image.image_url.split('/business-images/');
+      var parts = image.image_url.split('/business-images/');
       if (parts.length === 2) {
-        const storagePath = decodeURIComponent(parts[1]);
+        var storagePath = decodeURIComponent(parts[1]);
         await supabase.storage.from('business-images').remove([storagePath]);
-        console.log('🗑️ Deleted from storage:', storagePath);
+        console.log('Deleted from storage:', storagePath);
       }
     } catch (e) {
       console.log('Storage delete skipped:', e.message);
@@ -1449,14 +1442,14 @@ app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness,
 
     await supabase.from('business_gallery').delete().eq('id', imageId).eq('business_id', businessId);
 
-    const { data: remaining } = await supabase
+    var { data: remaining } = await supabase
       .from('business_gallery')
       .select('id')
       .eq('business_id', businessId)
       .order('sort_order', { ascending: true });
     
     if (remaining) {
-      for (let i = 0; i < remaining.length; i++) {
+      for (var i = 0; i < remaining.length; i++) {
         await supabase.from('business_gallery').update({ sort_order: i }).eq('id', remaining[i].id);
       }
     }
@@ -1468,13 +1461,13 @@ app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness,
   }
 });
 
-app.put('/api/businesses/:businessId/gallery/reorder', authenticateBusiness, async (req, res) => {
+app.put('/api/businesses/:businessId/gallery/reorder', authenticateBusiness, async function(req, res) {
   try {
-    const { businessId } = req.params;
-    const { imageIds } = req.body;
+    var { businessId } = req.params;
+    var { imageIds } = req.body;
     if (!Array.isArray(imageIds)) return res.status(400).json({ error: 'Invalid order data' });
     
-    for (let i = 0; i < imageIds.length; i++) {
+    for (var i = 0; i < imageIds.length; i++) {
       await supabase
         .from('business_gallery')
         .update({ sort_order: i })
@@ -1490,46 +1483,80 @@ app.put('/api/businesses/:businessId/gallery/reorder', authenticateBusiness, asy
 });
 
 // ============================================================
-// CUSTOM DOMAIN VERIFICATION
+// CUSTOM DOMAIN VERIFICATION - FIXED
 // ============================================================
 
-app.post('/api/businesses/generate-verification', authenticateBusiness, async (req, res) => {
+app.post('/api/businesses/generate-verification', authenticateBusiness, async function(req, res) {
   try {
-    const businessId = req.businessId;
+    var businessId = req.businessId;
 
     if (!businessId) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
 
-    const verificationCode = require('crypto').randomBytes(32).toString('hex');
+    // Generate SHORT verification code (24 characters - fits in VARCHAR(50))
+    // Using 12 bytes = 24 hex characters - cryptographically secure
+    var crypto = require('crypto');
+    var verificationCode = crypto.randomBytes(12).toString('hex');
+    
+    var expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
 
-    const { data, error } = await supabase
+    console.log('[DNS] Generating code for business:', businessId);
+    console.log('[DNS] Code length:', verificationCode.length);
+    console.log('[DNS] Code:', verificationCode);
+
+    var { data, error } = await supabase
       .from('businesses')
       .update({
         domain_verification_code: verificationCode,
-        domain_verification_expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        domain_verification_expires: expiresAt.toISOString()
       })
       .eq('id', businessId)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[DNS] Database error:', error);
+      
+      // Check if the error is about missing columns
+      if (error.message && error.message.includes('column') && error.message.includes('does not exist')) {
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Database schema missing required columns. Please add: domain_verification_code, domain_verification_expires, domain_verified_at',
+          details: error.message
+        });
+      }
+      
+      throw error;
+    }
+
+    if (!data) {
+      return res.status(404).json({ success: false, error: 'Business not found' });
+    }
+
+    console.log('[DNS] Code generated successfully for:', data.name);
 
     res.json({
       success: true,
-      verificationCode: `booking-hub-verify=${verificationCode}`,
-      instructions: `Add this TXT record to your DNS: booking-hub-verify=${verificationCode}`
+      verificationCode: verificationCode,
+      expiresAt: expiresAt.toISOString(),
+      instructions: 'Add this TXT record to your DNS: ' + verificationCode,
+      warning: 'This code expires in 24 hours. Please verify your domain before then.'
     });
   } catch (error) {
-    console.error('Generate verification error:', error);
-    res.status(500).json({ success: false, error: 'Failed to generate verification code' });
+    console.error('[DNS] Generate verification error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to generate verification code: ' + error.message
+    });
   }
 });
 
-app.post('/api/businesses/check-verification', authenticateBusiness, async (req, res) => {
+app.post('/api/businesses/check-verification', authenticateBusiness, async function(req, res) {
   try {
-    const businessId = req.businessId;
-    const { custom_domain } = req.body;
+    var businessId = req.businessId;
+    var { custom_domain } = req.body;
 
     if (!businessId) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
@@ -1539,8 +1566,9 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async (req,
       return res.status(400).json({ success: false, error: 'Custom domain is required' });
     }
 
-    const domainPattern = /^([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+[a-zA-Z]{2,}$/;
-    const isValidDomainFormat = domainPattern.test(custom_domain);
+    // Validate domain format
+    var domainPattern = /^([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+[a-zA-Z]{2,}$/;
+    var isValidDomainFormat = domainPattern.test(custom_domain);
 
     if (!isValidDomainFormat) {
       return res.status(400).json({
@@ -1549,24 +1577,87 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async (req,
       });
     }
 
-    const { error: updateError } = await supabase
+    // Get the business to retrieve verification code
+    var { data: business, error: fetchError } = await supabase
+      .from('businesses')
+      .select('domain_verification_code, domain_verification_expires, name')
+      .eq('id', businessId)
+      .single();
+
+    if (fetchError || !business) {
+      return res.status(404).json({ success: false, error: 'Business not found' });
+    }
+
+    // Check if verification code exists
+    if (!business.domain_verification_code) {
+      return res.status(400).json({
+        success: false,
+        error: 'No verification code found. Please generate a code first.'
+      });
+    }
+
+    // Check if verification code has expired
+    if (business.domain_verification_expires) {
+      var expiryDate = new Date(business.domain_verification_expires);
+      if (new Date() > expiryDate) {
+        return res.status(400).json({
+          success: false,
+          error: 'Verification code has expired. Please generate a new code and try again.'
+        });
+      }
+    }
+
+    console.log('[DNS] Verifying domain for:', business.name);
+    console.log('[DNS] Domain:', custom_domain);
+    console.log('[DNS] Expected code:', business.domain_verification_code);
+
+    // ACTUAL DNS VERIFICATION
+    var result = await verifyDomainTxtRecord(custom_domain, business.domain_verification_code);
+
+    console.log('[DNS] Verification result:', result);
+
+    if (!result.verified) {
+      return res.status(400).json({
+        success: false,
+        error: result.error || 'TXT record not found. Please add the verification code to your DNS and wait 10-30 minutes for propagation.',
+        details: result
+      });
+    }
+
+    // DNS verification successful - update business
+    var { error: updateError } = await supabase
       .from('businesses')
       .update({
         custom_domain: custom_domain,
         is_domain_verified: true,
-        domain_verified_at: new Date().toISOString()
+        domain_verified_at: new Date().toISOString(),
+        domain_verification_code: null,
+        domain_verification_expires: null
       })
       .eq('id', businessId);
 
     if (updateError) throw updateError;
 
+    // Get updated business data
+    var { data: updatedBusiness } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('id', businessId)
+      .single();
+
     res.json({
       success: true,
-      message: 'Domain verified successfully! Your booking page will now be available at this domain.'
+      message: 'Domain verified successfully! Your booking page will now be available at this domain.',
+      business: updatedBusiness
     });
+
   } catch (error) {
-    console.error('Check verification error:', error);
-    res.status(500).json({ success: false, error: 'Failed to verify domain' });
+    console.error('[DNS] Check verification error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to verify domain. Please try again.',
+      details: error.message
+    });
   }
 });
 
@@ -1574,62 +1665,64 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async (req,
 // UTILITY ROUTES
 // ============================================================
 
-app.get('/api/rooms/:id/availability', async (req, res) => {
+app.get('/api/rooms/:id/availability', function(req, res) {
   res.json({ success: true, available: true, roomId: req.params.id });
 });
 
-app.get('/', (req, res) => res.send('Booking System API is running!'));
+app.get('/', function(req, res) {
+  res.send('Booking System API is running!');
+});
 
 // ============================================================
 // ENSURE ADMIN USER EXISTS
 // ============================================================
 async function ensureAdminUser() {
   try {
-    const { data: existingAdmin } = await supabase
+    var { data: existingAdmin } = await supabase
       .from('admin_users')
       .select('id')
       .eq('email', 'admin@bookinghub.com')
       .single();
 
     if (!existingAdmin) {
-      console.log('📝 Creating default admin user...');
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      const { error } = await supabase.from('admin_users').insert({
+      console.log('Creating default admin user...');
+      var hashedPassword = await bcrypt.hash('admin123', 10);
+      var { error } = await supabase.from('admin_users').insert({
         email: 'admin@bookinghub.com',
         password: 'admin123',
         password_hash: hashedPassword,
         created_at: new Date().toISOString()
       });
       if (error) {
-        console.error('❌ Failed to create admin user:', error.message);
+        console.error('Failed to create admin user:', error.message);
       } else {
-        console.log('✅ Admin user created: admin@bookinghub.com / admin123');
+        console.log('Admin user created: admin@bookinghub.com / admin123');
       }
     } else {
-      console.log('✅ Admin user already exists');
+      console.log('Admin user already exists');
     }
   } catch (error) {
-    console.log('⚠️ Admin user check skipped:', error.message);
+    console.log('Admin user check skipped:', error.message);
   }
 }
 
 // ============================================================
 // START SERVER
 // ============================================================
-app.listen(PORT, '0.0.0.0', async () => {
-  const localIp = getLocalIpAddress();
+app.listen(PORT, '0.0.0.0', async function() {
+  var localIp = getLocalIpAddress();
   console.log('\n========================================');
-  console.log('🚀 Booking Hub Server Running');
+  console.log('Booking Hub Server Running');
   console.log('========================================');
-  console.log(`📍 On your COMPUTER: http://localhost:${PORT}`);
-  console.log(`📱 On your PHONE:     http://${localIp}:${PORT}`);
+  console.log('On your COMPUTER: http://localhost:' + PORT);
+  console.log('On your PHONE:     http://' + localIp + ':' + PORT);
   if (process.env.NODE_ENV === 'production') {
-    console.log('🔒 PRODUCTION MODE: Auth enabled, CORS restricted');
+    console.log('PRODUCTION MODE: Auth enabled, CORS restricted');
   } else {
-    console.log('⚠️ DEVELOPMENT MODE: Auth bypassed, CORS open');
+    console.log('DEVELOPMENT MODE: Auth bypassed, CORS open');
   }
   console.log('========================================\n');
-  console.log(`✅ Allowed CORS origins: ${ALLOWED_ORIGINS.join(', ')}`);
+  console.log('Allowed CORS origins: ' + ALLOWED_ORIGINS.join(', '));
 
   await ensureAdminUser();
 });
