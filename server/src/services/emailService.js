@@ -1,18 +1,59 @@
 ﻿// FILE: server/src/services/emailService.js
-// FIXED: Proper email delivery with environment-based routing
+// COMPLETE FIX - Force production mode on Render with multiple detection methods
 
 var Resend = require('resend').Resend;
 
 var resend = new Resend(process.env.RESEND_API_KEY);
 
-// Environment-based email routing
-var IS_PRODUCTION = process.env.NODE_ENV === 'production';
+// ============================================================
+// ENVIRONMENT DETECTION - FORCE PRODUCTION ON RENDER
+// ============================================================
+// Check multiple ways to detect production environment
+var IS_PRODUCTION = false;
+
+// Method 1: Check NODE_ENV
+if (process.env.NODE_ENV === 'production') {
+  IS_PRODUCTION = true;
+}
+
+// Method 2: Check Render specific variables
+if (process.env.RENDER === 'true' || process.env.RENDER_GIT_COMMIT !== undefined) {
+  IS_PRODUCTION = true;
+}
+
+// Method 3: Check if we're on a deployed URL (not localhost)
+if (process.env.RENDER_EXTERNAL_URL || process.env.RENDER_EXTERNAL_HOSTNAME) {
+  IS_PRODUCTION = true;
+}
+
+// Method 4: Force production if SUPABASE_URL contains 'render'
+if (process.env.SUPABASE_URL && process.env.SUPABASE_URL.includes('render')) {
+  IS_PRODUCTION = true;
+}
+
+// Method 5: Check if PORT is not default development port
+if (process.env.PORT && process.env.PORT !== '5000') {
+  IS_PRODUCTION = true;
+}
+
+// Method 6: Check if there's a Render URL in the environment
+if (process.env.RENDER_SERVICE_NAME || process.env.RENDER_SERVICE_TYPE) {
+  IS_PRODUCTION = true;
+}
+
+// Log the detection result for debugging
+console.log('[Email] ========================================');
+console.log('[Email] Environment detection results:');
+console.log('[Email] - NODE_ENV:', process.env.NODE_ENV || 'not set');
+console.log('[Email] - RENDER:', process.env.RENDER || 'not set');
+console.log('[Email] - RENDER_EXTERNAL_URL:', process.env.RENDER_EXTERNAL_URL || 'not set');
+console.log('[Email] - PORT:', process.env.PORT || 'not set');
+console.log('[Email] - IS_PRODUCTION:', IS_PRODUCTION);
+console.log('[Email] ========================================');
+
+// Email configuration
 var VERIFIED_EMAIL = process.env.VERIFIED_EMAIL || 'olusegun@luminara.io';
 var FROM_EMAIL = process.env.FROM_EMAIL || 'Booking Hub <onboarding@resend.dev>';
-
-console.log('[Email] Environment:', IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT');
-console.log('[Email] From email:', FROM_EMAIL);
-console.log('[Email] Verified email (dev mode):', VERIFIED_EMAIL);
 
 // ============================================================
 // EMAIL TEMPLATES
@@ -50,7 +91,7 @@ async function sendEmail(options) {
   var html = options.html;
 
   try {
-    // FIX: Determine recipient based on environment
+    // Determine recipient based on environment
     var actualTo;
     var finalSubject = subject;
 
@@ -59,14 +100,13 @@ async function sendEmail(options) {
       actualTo = to;
       console.log('[Email] Production mode - sending to:', to);
     } else {
-      // Development: Send to verified email, but BCC the original recipient
+      // Development: Send to verified email
       actualTo = VERIFIED_EMAIL;
-      // Add original recipient to subject for visibility
       finalSubject = subject + ' [To: ' + to + ']';
       console.log('[Email] Development mode - sending to:', VERIFIED_EMAIL, ' (original: ' + to + ')');
     }
 
-    // Ensure we have a valid recipient
+    // Validate recipient
     if (!actualTo || !actualTo.includes('@')) {
       console.error('[Email] Invalid recipient:', actualTo);
       return { success: false, error: 'Invalid recipient email address' };

@@ -1,4 +1,7 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿// FILE: client/src/BusinessProfile.jsx
+// COMPLETE FIX - Proper image handling with error feedback
+
+import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Phone, Mail, Globe, Save, Camera, X, CheckCircle, AlertCircle, Edit3, ExternalLink, ArrowLeft, Layers, Image, Sparkles } from 'lucide-react';
 import ImageUpload from './components/forms/ImageUpload';
 import BusinessGallery from './components/forms/BusinessGallery';
@@ -21,11 +24,11 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [isDesktop, setIsDesktop] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(function() {
     function handleResize() {
-      setIsDesktop(window.innerWidth >= 768);
+      setIsMobile(window.innerWidth < 768);
     }
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -52,7 +55,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
 
   function showMessage(type, text) {
     setMessage({ type: type, text: text });
-    setTimeout(function() { setMessage({ type: '', text: '' }); }, 3000);
+    setTimeout(function() { setMessage({ type: '', text: '' }); }, 5000);
   }
 
   function handleChange(field, value) {
@@ -64,7 +67,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     });
   }
 
-  // FIXED: Added authentication token to the PUT request
+  // FIXED: Better error handling and token check
   function handleSave() {
     if (!business || !business.id) {
       showMessage('error', 'Business data not available');
@@ -72,7 +75,13 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     }
     
     setSaving(true);
-    const token = localStorage.getItem('auth_token');
+    var token = localStorage.getItem('auth_token');
+    
+    if (!token) {
+      showMessage('error', 'Authentication required. Please log in again.');
+      setSaving(false);
+      return;
+    }
     
     var updateData = {
       cover_image: formData.cover_image,
@@ -83,6 +92,8 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       name: formData.name
     };
     
+    console.log('[BusinessProfile] Saving:', updateData);
+    
     fetch(API_BASE + '/api/businesses/' + business.id, {
       method: 'PUT',
       headers: { 
@@ -91,8 +102,16 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       },
       body: JSON.stringify(updateData)
     })
-      .then(function(r) { return r.json(); })
+      .then(function(r) { 
+        if (!r.ok) {
+          return r.json().then(function(errData) {
+            throw new Error(errData.error || 'Failed to update profile');
+          });
+        }
+        return r.json(); 
+      })
       .then(function(data) {
+        console.log('[BusinessProfile] Save response:', data);
         if (data.success) {
           showMessage('success', 'Profile updated successfully');
           setIsEditing(false);
@@ -106,9 +125,12 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               parsed.cover_image = formData.cover_image;
               parsed.name = formData.name;
               localStorage.setItem('currentBusiness', JSON.stringify(parsed));
-            } catch(e) {}
+            } catch(e) {
+              console.error('Failed to update localStorage:', e);
+            }
           }
           
+          // Call onUpdate with the updated business data
           if (onUpdate) onUpdate(data.business);
         } else {
           showMessage('error', data.error || 'Failed to update profile');
@@ -116,24 +138,38 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       })
       .catch(function(err) { 
         console.error('Save error:', err);
-        showMessage('error', 'Something went wrong. Please try again.'); 
+        showMessage('error', err.message || 'Something went wrong. Please try again.'); 
       })
       .finally(function() { setSaving(false); });
   }
 
+  // FIXED: Better error handling for logo upload
   function handleLogoUpload(url) {
+    console.log('[BusinessProfile] Logo upload callback:', url);
     if (url) {
       handleChange('logo_url', url);
       // Auto-save after logo upload
-      setTimeout(function() { handleSave(); }, 300);
+      setTimeout(function() { 
+        console.log('[BusinessProfile] Auto-saving after logo upload');
+        handleSave(); 
+      }, 500);
+    } else {
+      showMessage('error', 'Logo upload failed. Please try again.');
     }
   }
 
+  // FIXED: Better error handling for cover upload
   function handleCoverUpload(url) {
+    console.log('[BusinessProfile] Cover upload callback:', url);
     if (url) {
       handleChange('cover_image', url);
       // Auto-save after cover upload
-      setTimeout(function() { handleSave(); }, 300);
+      setTimeout(function() { 
+        console.log('[BusinessProfile] Auto-saving after cover upload');
+        handleSave(); 
+      }, 500);
+    } else {
+      showMessage('error', 'Cover image upload failed. Please try again.');
     }
   }
 
@@ -145,11 +181,11 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     );
   }
 
-  // Premium styles
+  // ========== RESPONSIVE STYLES ==========
   var containerStyle = {
     maxWidth: '1200px',
     margin: '0 auto',
-    padding: isDesktop ? '32px' : '16px',
+    padding: isMobile ? '12px' : '32px',
     background: '#f8fafc',
     minHeight: '100vh'
   };
@@ -158,142 +194,142 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: '32px',
+    marginBottom: isMobile ? '20px' : '32px',
     flexWrap: 'wrap',
-    gap: '16px'
+    gap: '12px'
   };
 
   var titleStyle = {
-    fontSize: isDesktop ? '28px' : '22px',
+    fontSize: isMobile ? '22px' : '28px',
     fontWeight: '700',
     color: '#0f172a',
     margin: 0
   };
 
   var subtitleStyle = {
-    fontSize: '14px',
+    fontSize: isMobile ? '13px' : '14px',
     color: '#64748b',
-    marginTop: '4px'
+    marginTop: '2px'
   };
 
   var backButtonStyle = {
-    padding: '10px 20px',
+    padding: isMobile ? '8px 14px' : '10px 20px',
     backgroundColor: 'white',
     color: '#475569',
     border: '1px solid #e2e8f0',
     borderRadius: '40px',
-    fontSize: '14px',
+    fontSize: isMobile ? '12px' : '14px',
     fontWeight: '500',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '6px'
   };
 
   var editButtonStyle = {
-    padding: '10px 20px',
+    padding: isMobile ? '8px 14px' : '10px 20px',
     background: '#4f46e5',
     color: 'white',
     border: 'none',
     borderRadius: '40px',
-    fontSize: '14px',
+    fontSize: isMobile ? '12px' : '14px',
     fontWeight: '500',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '6px'
   };
 
   var saveButtonStyle = {
-    padding: '10px 20px',
+    padding: isMobile ? '8px 14px' : '10px 20px',
     background: '#10b981',
     color: 'white',
     border: 'none',
     borderRadius: '40px',
-    fontSize: '14px',
+    fontSize: isMobile ? '12px' : '14px',
     fontWeight: '500',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '6px'
   };
 
   var cancelButtonStyle = {
-    padding: '10px 20px',
+    padding: isMobile ? '8px 14px' : '10px 20px',
     backgroundColor: '#f1f5f9',
     color: '#475569',
     border: 'none',
     borderRadius: '40px',
-    fontSize: '14px',
+    fontSize: isMobile ? '12px' : '14px',
     fontWeight: '500',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '6px'
   };
 
   var gridStyle = {
     display: 'grid',
-    gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr',
-    gap: '24px'
+    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+    gap: isMobile ? '16px' : '24px'
   };
 
   var cardStyle = {
     backgroundColor: 'white',
-    borderRadius: '20px',
+    borderRadius: isMobile ? '16px' : '20px',
     border: '1px solid #e2e8f0',
     overflow: 'hidden'
   };
 
   var cardHeaderStyle = {
-    padding: '20px 24px',
+    padding: isMobile ? '16px 18px' : '20px 24px',
     borderBottom: '1px solid #f1f5f9',
     backgroundColor: '#fafbff',
     display: 'flex',
     alignItems: 'center',
-    gap: '12px'
+    gap: '10px'
   };
 
   var cardHeaderIconStyle = {
-    width: '40px',
-    height: '40px',
+    width: isMobile ? '36px' : '40px',
+    height: isMobile ? '36px' : '40px',
     background: '#eef2ff',
-    borderRadius: '12px',
+    borderRadius: '10px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'
   };
 
   var cardTitleStyle = {
-    fontSize: '18px',
+    fontSize: isMobile ? '16px' : '18px',
     fontWeight: '600',
     color: '#0f172a',
     margin: 0
   };
 
   var cardBodyStyle = {
-    padding: '24px'
+    padding: isMobile ? '16px' : '24px'
   };
 
   var infoRowStyle = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: '12px 0',
+    padding: isMobile ? '10px 0' : '12px 0',
     borderBottom: '1px solid #f1f5f9',
     flexWrap: 'wrap',
-    gap: '8px'
+    gap: '6px'
   };
 
   var labelStyle = {
-    fontSize: '12px',
+    fontSize: isMobile ? '11px' : '12px',
     fontWeight: '600',
     color: '#64748b',
-    minWidth: '100px'
+    minWidth: isMobile ? '80px' : '100px'
   };
 
   var valueStyle = {
-    fontSize: '14px',
+    fontSize: isMobile ? '13px' : '14px',
     color: '#1e293b',
     flex: 1,
     wordBreak: 'break-word'
@@ -301,21 +337,21 @@ function BusinessProfile({ business, onBack, onUpdate }) {
 
   var inputStyle = {
     width: '100%',
-    padding: '12px 14px',
+    padding: isMobile ? '10px 12px' : '12px 14px',
     border: '1.5px solid #e2e8f0',
-    borderRadius: '12px',
-    fontSize: '14px',
+    borderRadius: '10px',
+    fontSize: isMobile ? '14px' : '14px',
     fontFamily: 'inherit',
     boxSizing: 'border-box'
   };
 
   var textareaStyle = {
     width: '100%',
-    padding: '12px 14px',
+    padding: isMobile ? '10px 12px' : '12px 14px',
     border: '1.5px solid #e2e8f0',
-    borderRadius: '12px',
-    fontSize: '14px',
-    minHeight: '100px',
+    borderRadius: '10px',
+    fontSize: isMobile ? '14px' : '14px',
+    minHeight: isMobile ? '80px' : '100px',
     resize: 'vertical',
     fontFamily: 'inherit',
     boxSizing: 'border-box'
@@ -323,31 +359,32 @@ function BusinessProfile({ business, onBack, onUpdate }) {
 
   var imageRowStyle = {
     display: 'grid',
-    gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr',
-    gap: '24px'
+    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+    gap: isMobile ? '16px' : '24px'
   };
 
   var imageCardStyle = {
     background: '#fafbff',
-    borderRadius: '16px',
-    padding: '24px',
+    borderRadius: '14px',
+    padding: isMobile ? '16px' : '24px',
     textAlign: 'center',
     border: '1px solid #eef2ff'
   };
 
   var imageTitleStyle = {
-    fontSize: '16px',
+    fontSize: isMobile ? '14px' : '16px',
     fontWeight: '600',
     color: '#0f172a',
     margin: '0 0 4px 0'
   };
 
   var imageHintStyle = {
-    fontSize: '12px',
+    fontSize: isMobile ? '11px' : '12px',
     color: '#64748b',
-    marginBottom: '16px'
+    marginBottom: '12px'
   };
 
+  // ========== RENDER ==========
   return React.createElement('div', { style: containerStyle },
     // Header
     React.createElement('div', { style: headerStyle },
@@ -355,15 +392,15 @@ function BusinessProfile({ business, onBack, onUpdate }) {
         React.createElement('h1', { style: titleStyle }, 'Business Profile'),
         React.createElement('p', { style: subtitleStyle }, 'Manage your brand identity and business information')
       ),
-      React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap' } },
+      React.createElement('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
         React.createElement('button', { onClick: onBack, style: backButtonStyle },
-          React.createElement(ArrowLeft, { size: 14 }), ' Dashboard'
+          React.createElement(ArrowLeft, { size: isMobile ? 12 : 14 }), 'Dashboard'
         ),
         !isEditing && React.createElement('button', { onClick: function() { setIsEditing(true); }, style: editButtonStyle },
-          React.createElement(Edit3, { size: 14 }), ' Edit Profile'
+          React.createElement(Edit3, { size: isMobile ? 12 : 14 }), isMobile ? 'Edit' : 'Edit Profile'
         ),
         isEditing && React.createElement('button', { onClick: handleSave, disabled: saving, style: saveButtonStyle },
-          React.createElement(Save, { size: 14 }), saving ? 'Saving...' : 'Save Changes'
+          React.createElement(Save, { size: isMobile ? 12 : 14 }), saving ? 'Saving...' : 'Save'
         ),
         isEditing && React.createElement('button', { onClick: function() { setIsEditing(false); }, style: cancelButtonStyle }, 'Cancel')
       )
@@ -371,16 +408,17 @@ function BusinessProfile({ business, onBack, onUpdate }) {
 
     // Message Toast
     message.text && React.createElement('div', { style: {
-      padding: '12px 16px',
-      borderRadius: '12px',
-      marginBottom: '20px',
+      padding: '10px 14px',
+      borderRadius: '10px',
+      marginBottom: '16px',
       display: 'flex',
       alignItems: 'center',
-      gap: '10px',
+      gap: '8px',
       background: message.type === 'success' ? '#d1fae5' : '#fee2e2',
-      color: message.type === 'success' ? '#065f46' : '#991b1b'
+      color: message.type === 'success' ? '#065f46' : '#991b1b',
+      fontSize: isMobile ? '13px' : '14px'
     } },
-      message.type === 'success' ? React.createElement(CheckCircle, { size: 18 }) : React.createElement(AlertCircle, { size: 18 }),
+      message.type === 'success' ? React.createElement(CheckCircle, { size: isMobile ? 16 : 18 }) : React.createElement(AlertCircle, { size: isMobile ? 16 : 18 }),
       message.text
     ),
 
@@ -390,7 +428,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       React.createElement('div', { style: cardStyle },
         React.createElement('div', { style: cardHeaderStyle },
           React.createElement('div', { style: cardHeaderIconStyle },
-            React.createElement(Building2, { size: 20, color: '#4f46e5' })
+            React.createElement(Building2, { size: isMobile ? 16 : 20, color: '#4f46e5' })
           ),
           React.createElement('h3', { style: cardTitleStyle }, 'Basic Information')
         ),
@@ -408,20 +446,20 @@ function BusinessProfile({ business, onBack, onUpdate }) {
           ),
           React.createElement('div', { style: infoRowStyle },
             React.createElement('span', { style: labelStyle }, 'Email'),
-            React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '6px' } },
-              React.createElement(Mail, { size: 14, color: '#64748b' }), formData.email
+            React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '4px' } },
+              React.createElement(Mail, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.email
             )
           ),
           React.createElement('div', { style: infoRowStyle },
             React.createElement('span', { style: labelStyle }, 'Phone'),
-            React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '6px' } },
-              React.createElement(Phone, { size: 14, color: '#64748b' }), formData.phone || 'Not set'
+            React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '4px' } },
+              React.createElement(Phone, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.phone || 'Not set'
             )
           ),
           React.createElement('div', { style: infoRowStyle },
             React.createElement('span', { style: labelStyle }, 'Location'),
-            React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '6px' } },
-              React.createElement(MapPin, { size: 14, color: '#64748b' }), formData.city + ', ' + formData.state
+            React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '4px' } },
+              React.createElement(MapPin, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.city + ', ' + formData.state
             )
           ),
           React.createElement('div', { style: { ...infoRowStyle, borderBottom: 'none' } },
@@ -437,13 +475,13 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       React.createElement('div', { style: cardStyle },
         React.createElement('div', { style: cardHeaderStyle },
           React.createElement('div', { style: cardHeaderIconStyle },
-            React.createElement(Globe, { size: 20, color: '#4f46e5' })
+            React.createElement(Globe, { size: isMobile ? 16 : 20, color: '#4f46e5' })
           ),
           React.createElement('h3', { style: cardTitleStyle }, 'About Your Business')
         ),
         React.createElement('div', { style: cardBodyStyle },
-          React.createElement('div', { style: { marginBottom: '20px' } },
-            React.createElement('label', { style: { fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '6px', display: 'block' } }, 'Short Description'),
+          React.createElement('div', { style: { marginBottom: '16px' } },
+            React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: '#475569', marginBottom: '4px', display: 'block' } }, 'Short Description'),
             isEditing ?
               React.createElement('textarea', {
                 value: formData.description,
@@ -452,29 +490,29 @@ function BusinessProfile({ business, onBack, onUpdate }) {
                 placeholder: 'Brief description of your business...',
                 style: textareaStyle
               }) :
-              React.createElement('p', { style: { fontSize: '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.description || 'No description provided')
+              React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.description || 'No description provided')
           ),
           React.createElement('div', null,
-            React.createElement('label', { style: { fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '6px', display: 'block' } }, 'Full Story'),
+            React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: '#475569', marginBottom: '4px', display: 'block' } }, 'Full Story'),
             isEditing ?
               React.createElement('textarea', {
                 value: formData.about_text,
                 onChange: function(e) { handleChange('about_text', e.target.value); },
-                rows: 6,
+                rows: 5,
                 placeholder: 'Share your story, amenities, what makes you special...',
-                style: { ...textareaStyle, minHeight: '150px' }
+                style: { ...textareaStyle, minHeight: isMobile ? '120px' : '150px' }
               }) :
-              React.createElement('p', { style: { fontSize: '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.about_text || 'No story provided')
+              React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.about_text || 'No story provided')
           )
         )
       )
     ),
 
     // Brand Images Section
-    React.createElement('div', { style: { ...cardStyle, marginTop: '24px' } },
+    React.createElement('div', { style: { ...cardStyle, marginTop: '16px' } },
       React.createElement('div', { style: cardHeaderStyle },
         React.createElement('div', { style: cardHeaderIconStyle },
-          React.createElement(Camera, { size: 20, color: '#4f46e5' })
+          React.createElement(Camera, { size: isMobile ? 16 : 20, color: '#4f46e5' })
         ),
         React.createElement('h3', { style: cardTitleStyle }, 'Brand Images')
       ),
@@ -505,10 +543,10 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     ),
 
     // Photo Gallery Section
-    React.createElement('div', { style: { ...cardStyle, marginTop: '24px' } },
+    React.createElement('div', { style: { ...cardStyle, marginTop: '16px', marginBottom: '24px' } },
       React.createElement('div', { style: cardHeaderStyle },
         React.createElement('div', { style: cardHeaderIconStyle },
-          React.createElement(Image, { size: 20, color: '#4f46e5' })
+          React.createElement(Image, { size: isMobile ? 16 : 20, color: '#4f46e5' })
         ),
         React.createElement('h3', { style: cardTitleStyle }, 'Photo Gallery')
       ),
