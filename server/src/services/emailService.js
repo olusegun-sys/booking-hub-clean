@@ -1,11 +1,22 @@
-﻿﻿var Resend = require('resend').Resend;
+﻿// FILE: server/src/services/emailService.js
+// FIXED: Proper email delivery with environment-based routing
+
+var Resend = require('resend').Resend;
 
 var resend = new Resend(process.env.RESEND_API_KEY);
 
-// Test mode: Resend only delivers to verified emails
-// All emails go to your address with original recipient in subject
-var VERIFIED_EMAIL = 'olusegun@luminara.io';
-var FROM_EMAIL = 'Booking Hub <onboarding@resend.dev>';
+// Environment-based email routing
+var IS_PRODUCTION = process.env.NODE_ENV === 'production';
+var VERIFIED_EMAIL = process.env.VERIFIED_EMAIL || 'olusegun@luminara.io';
+var FROM_EMAIL = process.env.FROM_EMAIL || 'Booking Hub <onboarding@resend.dev>';
+
+console.log('[Email] Environment:', IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT');
+console.log('[Email] From email:', FROM_EMAIL);
+console.log('[Email] Verified email (dev mode):', VERIFIED_EMAIL);
+
+// ============================================================
+// EMAIL TEMPLATES
+// ============================================================
 
 var templates = {
   hotel: function (booking, business) {
@@ -26,8 +37,12 @@ var welcomeTemplate = function (business) {
 };
 
 var approvalTemplate = function (business) {
-  return '<!DOCTYPE html><html><head><style>body{font-family:"Inter",Arial,sans-serif;line-height:1.6;color:#1e293b;margin:0;padding:0}.container{max-width:600px;margin:0 auto;background:white}.header{background:linear-gradient(135deg,#10b981 0%,#34d399 100%);color:white;padding:40px 30px;text-align:center}.header h1{margin:0;font-size:26px;font-weight:700}.content{padding:30px;background:#f8fafc}.card{background:white;border-radius:12px;padding:24px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)}.button{display:inline-block;background:#4f46e5;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;margin:20px 0}.footer{text-align:center;padding:30px;color:#64748b;font-size:13px;border-top:1px solid #e2e8f0}.badge{background:#d1fae5;color:#065f46;padding:4px 12px;border-radius:30px;font-size:12px;font-weight:600;display:inline-block}</style></head><body><div class="container"><div class="header"><h1>You are Approved!</h1><p style="margin:10px 0 0;opacity:0.9">Your booking page is now live</p></div><div class="content"><p>Dear ' + business.name + ',</p><p>Great news! Your business has been approved. Your booking page is now live and ready to accept reservations.</p><div class="card"><h3 style="margin:0 0 8px;color:#0f172a">Your Status</h3><p style="margin:0"><span class="badge">Approved</span></p></div><div class="card"><h3 style="margin:0 0 8px;color:#0f172a">Your Live Booking Link</h3><p style="font-family:monospace;font-size:16px;color:#4f46e5;font-weight:700;margin:0">localhost:5173/book/' + business.slug + '</p><p style="color:#64748b;font-size:14px;margin-top:8px">Share this link with your customers. They can book directly - no middleman.</p></div><div class="card"><h3 style="margin:0 0 12px;color:#0f172a">Next Steps</h3><ol style="color:#334155;font-size:14px;padding-left:20px;margin:0"><li style="margin-bottom:8px"><strong>Log in</strong> at Booking Hub with your email</li><li style="margin-bottom:8px"><strong>Add your rooms</strong> and services</li><li style="margin-bottom:8px"><strong>Set your operating hours</strong></li><li><strong>Share your link</strong> and start earning</li></ol></div><a href="http://localhost:5173" class="button">Go to Your Dashboard</a><p style="margin-top:24px">Welcome to the family,<br><strong>The Booking Hub Team</strong></p></div><div class="footer"><p>Booking Hub - First 50 bookings free</p></div></div></body></html>';
+  return '<!DOCTYPE html><html><head><style>body{font-family:"Inter",Arial,sans-serif;line-height:1.6;color:#1e293b;margin:0;padding:0}.container{max-width:600px;margin:0 auto;background:white}.header{background:linear-gradient(135deg,#10b981 0%,#34d399 100%);color:white;padding:40px 30px;text-align:center}.header h1{margin:0;font-size:26px;font-weight:700}.content{padding:30px;background:#f8fafc}.card{background:white;border-radius:12px;padding:24px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)}.button{display:inline-block;background:#4f46e5;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;margin:20px 0}.footer{text-align:center;padding:30px;color:#64748b;font-size:13px;border-top:1px solid #e2e8f0}.badge{background:#d1fae5;color:#065f46;padding:4px 12px;border-radius:30px;font-size:12px;font-weight:600;display:inline-block}</style></head><body><div class="container"><div class="header"><h1>You are Approved!</h1><p style="margin:10px 0 0;opacity:0.9">Your booking page is now live</p></div><div class="content"><p>Dear ' + business.name + ',</p><p>Great news! Your business has been approved. Your booking page is now live and ready to accept reservations.</p><div class="card"><h3 style="margin:0 0 8px;color:#0f172a">Your Status</h3><p style="margin:0"><span class="badge">Approved</span></p></div><div class="card"><h3 style="margin:0 0 8px;color:#0f172a">Your Live Booking Link</h3><p style="font-family:monospace;font-size:16px;color:#4f46e5;font-weight:700;margin:0">http://localhost:5173/book/' + business.slug + '</p><p style="color:#64748b;font-size:14px;margin-top:8px">Share this link with your customers. They can book directly - no middleman.</p></div><div class="card"><h3 style="margin:0 0 12px;color:#0f172a">Next Steps</h3><ol style="color:#334155;font-size:14px;padding-left:20px;margin:0"><li style="margin-bottom:8px"><strong>Log in</strong> at Booking Hub with your email</li><li style="margin-bottom:8px"><strong>Add your rooms</strong> and services</li><li style="margin-bottom:8px"><strong>Set your operating hours</strong></li><li><strong>Share your link</strong> and start earning</li></ol></div><a href="http://localhost:5173" class="button">Go to Your Dashboard</a><p style="margin-top:24px">Welcome to the family,<br><strong>The Booking Hub Team</strong></p></div><div class="footer"><p>Booking Hub - First 50 bookings free</p></div></div></body></html>';
 };
+
+// ============================================================
+// CORE EMAIL SENDING FUNCTION - FIXED
+// ============================================================
 
 async function sendEmail(options) {
   var to = options.to;
@@ -35,29 +50,52 @@ async function sendEmail(options) {
   var html = options.html;
 
   try {
-    var actualTo = VERIFIED_EMAIL;
-    var enhancedSubject = subject + ' [To: ' + to + ']';
+    // FIX: Determine recipient based on environment
+    var actualTo;
+    var finalSubject = subject;
+
+    if (IS_PRODUCTION) {
+      // Production: Send directly to the recipient
+      actualTo = to;
+      console.log('[Email] Production mode - sending to:', to);
+    } else {
+      // Development: Send to verified email, but BCC the original recipient
+      actualTo = VERIFIED_EMAIL;
+      // Add original recipient to subject for visibility
+      finalSubject = subject + ' [To: ' + to + ']';
+      console.log('[Email] Development mode - sending to:', VERIFIED_EMAIL, ' (original: ' + to + ')');
+    }
+
+    // Ensure we have a valid recipient
+    if (!actualTo || !actualTo.includes('@')) {
+      console.error('[Email] Invalid recipient:', actualTo);
+      return { success: false, error: 'Invalid recipient email address' };
+    }
 
     var result = await resend.emails.send({
       from: FROM_EMAIL,
       to: [actualTo],
-      subject: enhancedSubject,
+      subject: finalSubject,
       html: html
     });
 
     if (result.error) {
-      console.error('Resend error:', result.error);
+      console.error('[Email] Resend error:', result.error);
       return { success: false, error: result.error };
     }
 
-    console.log('Email sent successfully:', result.data ? result.data.id : 'unknown');
-    console.log('To: ' + to + ' | Delivered to: ' + actualTo);
+    console.log('[Email] Sent successfully:', result.data ? result.data.id : 'unknown');
+    console.log('[Email] Recipient:', actualTo);
     return { success: true, data: result.data };
   } catch (error) {
-    console.error('Email sending failed:', error.message || error);
+    console.error('[Email] Sending failed:', error.message || error);
     return { success: false, error: error };
   }
 }
+
+// ============================================================
+// EMAIL FUNCTIONS
+// ============================================================
 
 async function sendBookingConfirmation(booking, business) {
   var template, subject;
