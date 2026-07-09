@@ -1,5 +1,8 @@
-﻿import React from 'react';
-import { Upload, X, Image, Loader2 } from 'lucide-react';
+﻿// FILE: client/src/components/forms/ImageUpload.jsx
+// COMPLETE FIX - Better error handling and feedback
+
+import React from 'react';
+import { Upload, X, Image, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import API_BASE from '../../config';
 
 var uniqueIdCounter = 0;
@@ -11,6 +14,7 @@ function ImageUpload(props) {
   var businessId = props.businessId;
   var label = props.label;
   var description = props.description;
+  var isMobile = window.innerWidth < 768;
   
   if (!label) {
     if (type === 'logo') label = 'Business Logo';
@@ -35,12 +39,17 @@ function ImageUpload(props) {
   var _useState3 = React.useState('');
   var error = _useState3[0];
   var setError = _useState3[1];
+  
+  var _useState4 = React.useState('');
+  var successMsg = _useState4[0];
+  var setSuccessMsg = _useState4[1];
 
   var inputId = React.useRef('file-input-' + type + '-' + (++uniqueIdCounter)).current;
 
   React.useEffect(function() {
     if (currentImage && currentImage !== preview) {
       setPreview(currentImage);
+      setError('');
     }
   }, [currentImage]);
 
@@ -48,14 +57,17 @@ function ImageUpload(props) {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { 
       setError('Image must be less than 5MB.'); 
+      setSuccessMsg('');
       return; 
     }
     if (!['image/jpeg', 'image/png', 'image/webp', 'image/jpg'].includes(file.type)) { 
       setError('Only JPG, PNG, and WEBP are supported.'); 
+      setSuccessMsg('');
       return; 
     }
     
     setError('');
+    setSuccessMsg('');
     setUploading(true);
 
     var reader = new FileReader();
@@ -64,9 +76,15 @@ function ImageUpload(props) {
       
       var token = localStorage.getItem('auth_token');
       
-      console.log('Uploading:', { type, businessId, fileName: file.name });
+      if (!token) {
+        setError('Authentication required. Please log in again.');
+        setUploading(false);
+        return;
+      }
       
-      // Step 1: Upload to backend (which uploads to Supabase)
+      console.log('[ImageUpload] Uploading:', { type, businessId, fileName: file.name });
+      
+      // Step 1: Upload to backend
       fetch(API_BASE + '/api/upload-gallery-image', {
         method: 'POST',
         headers: { 
@@ -83,14 +101,16 @@ function ImageUpload(props) {
         .then(function(response) { 
           if (!response.ok) {
             return response.json().then(function(data) {
-              throw new Error(data.error || 'Upload failed');
+              throw new Error(data.error || 'Upload failed with status ' + response.status);
             });
           }
           return response.json(); 
         })
         .then(function(data) {
+          console.log('[ImageUpload] Upload response:', data);
           if (data.success && data.imageUrl) {
             setPreview(data.imageUrl);
+            setSuccessMsg('Image uploaded successfully!');
             
             // Step 2: For logo/cover, save to business profile via PUT
             if (type === 'logo' || type === 'cover') {
@@ -98,7 +118,7 @@ function ImageUpload(props) {
               var updateData = {};
               updateData[updateField] = data.imageUrl;
               
-              console.log('Saving to business profile:', updateData);
+              console.log('[ImageUpload] Saving to business profile:', updateData);
               
               fetch(API_BASE + '/api/businesses/' + businessId, {
                 method: 'PUT',
@@ -108,10 +128,18 @@ function ImageUpload(props) {
                 },
                 body: JSON.stringify(updateData)
               })
-                .then(function(res) { return res.json(); })
+                .then(function(res) { 
+                  if (!res.ok) {
+                    return res.json().then(function(errData) {
+                      throw new Error(errData.error || 'Failed to save to profile');
+                    });
+                  }
+                  return res.json(); 
+                })
                 .then(function(saveData) {
+                  console.log('[ImageUpload] Profile save response:', saveData);
                   if (saveData.success) {
-                    console.log('Saved to business profile successfully');
+                    console.log('[ImageUpload] Saved to business profile successfully');
                     if (onUpload) onUpload(data.imageUrl);
                     setUploading(false);
                   } else {
@@ -120,13 +148,12 @@ function ImageUpload(props) {
                   }
                 })
                 .catch(function(err) {
-                  console.error('Save to profile error:', err);
-                  setError('Image uploaded but failed to save to profile');
+                  console.error('[ImageUpload] Save to profile error:', err);
+                  setError('Image uploaded but failed to save to profile: ' + err.message);
                   setUploading(false);
                 });
-            } 
-            // For gallery: save to gallery table
-            else {
+            } else {
+              // For gallery
               fetch(API_BASE + '/api/businesses/' + businessId + '/gallery', {
                 method: 'POST',
                 headers: {
@@ -138,18 +165,27 @@ function ImageUpload(props) {
                   fileName: file.name
                 })
               })
-                .then(function(res) { return res.json(); })
+                .then(function(res) { 
+                  if (!res.ok) {
+                    return res.json().then(function(errData) {
+                      throw new Error(errData.error || 'Failed to save to gallery');
+                    });
+                  }
+                  return res.json(); 
+                })
                 .then(function(galleryData) {
+                  console.log('[ImageUpload] Gallery save response:', galleryData);
                   if (galleryData.success) {
                     if (onUpload) onUpload(galleryData.image || data.imageUrl);
+                    setUploading(false);
                   } else {
                     setError(galleryData.error || 'Failed to save to gallery');
+                    setUploading(false);
                   }
-                  setUploading(false);
                 })
                 .catch(function(err) {
-                  console.error('Gallery save error:', err);
-                  setError('Image uploaded but failed to save to gallery');
+                  console.error('[ImageUpload] Gallery save error:', err);
+                  setError('Image uploaded but failed to save to gallery: ' + err.message);
                   setUploading(false);
                 });
             }
@@ -159,7 +195,7 @@ function ImageUpload(props) {
           }
         })
         .catch(function(err) {
-          console.error('Upload error:', err);
+          console.error('[ImageUpload] Upload error:', err);
           setError(err.message || 'Upload failed. Please try again.');
           setUploading(false);
         });
@@ -169,55 +205,163 @@ function ImageUpload(props) {
 
   function handleRemove() {
     setPreview(null);
+    setError('');
+    setSuccessMsg('');
     if (onUpload) onUpload('');
   }
 
-  return React.createElement('div', { style: { width: '100%' } },
-    label && React.createElement('label', {
-      style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: '500', color: '#475569', fontSize: '14px' }
-    },
-      React.createElement(Image, { size: 14, color: '#4f46e5' }),
+  // ========== RESPONSIVE STYLES ==========
+  var containerStyle = {
+    width: '100%'
+  };
+
+  var labelStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginBottom: '6px',
+    fontWeight: '500',
+    color: '#475569',
+    fontSize: isMobile ? '13px' : '14px'
+  };
+
+  var previewContainerStyle = {
+    position: 'relative',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    border: '1px solid #e2e8f0',
+    marginBottom: '8px',
+    background: '#f8fafc'
+  };
+
+  var previewImageStyle = {
+    width: '100%',
+    maxHeight: isMobile ? '150px' : '200px',
+    objectFit: 'contain',
+    display: 'block',
+    background: '#f8fafc'
+  };
+
+  var removeButtonStyle = {
+    position: 'absolute',
+    top: '6px',
+    right: '6px',
+    width: isMobile ? '36px' : '32px',
+    height: isMobile ? '36px' : '32px',
+    borderRadius: '8px',
+    background: 'rgba(0,0,0,0.6)',
+    border: 'none',
+    color: 'white',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  };
+
+  var uploadAreaStyle = {
+    border: '2px dashed #cbd5e1',
+    borderRadius: '12px',
+    padding: isMobile ? '24px 16px' : '40px 24px',
+    textAlign: 'center',
+    background: '#f8fafc',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    minHeight: isMobile ? '80px' : 'auto'
+  };
+
+  var errorStyle = {
+    color: '#ef4444',
+    fontSize: isMobile ? '12px' : '13px',
+    marginTop: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px'
+  };
+
+  var successStyle = {
+    color: '#10b981',
+    fontSize: isMobile ? '12px' : '13px',
+    marginTop: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px'
+  };
+
+  return React.createElement('div', { style: containerStyle },
+    label && React.createElement('label', { style: labelStyle },
+      React.createElement(Image, { size: isMobile ? 12 : 14, color: '#4f46e5' }),
       label
     ),
+    
     preview
-      ? React.createElement('div', {
-          style: { position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', marginBottom: '8px' }
-        },
-          React.createElement('img', { src: preview, alt: label, style: { width: '100%', maxHeight: '200px', objectFit: 'cover', display: 'block' } }),
+      ? React.createElement('div', { style: previewContainerStyle },
+          React.createElement('img', { 
+            src: preview, 
+            alt: label, 
+            style: previewImageStyle,
+            onError: function(e) {
+              e.currentTarget.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop';
+            }
+          }),
           React.createElement('button', {
             onClick: handleRemove,
-            style: {
-              position: 'absolute', top: '8px', right: '8px', width: '32px', height: '32px',
-              borderRadius: '8px', background: 'rgba(0,0,0,0.6)', border: 'none', color: 'white',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-            },
+            style: removeButtonStyle,
             onMouseEnter: function(e) { e.currentTarget.style.background = 'rgba(239,68,68,0.9)'; },
             onMouseLeave: function(e) { e.currentTarget.style.background = 'rgba(0,0,0,0.6)'; }
-          }, React.createElement(X, { size: 16 }))
+          }, React.createElement(X, { size: isMobile ? 18 : 16 }))
         )
       : React.createElement('div', {
-          style: {
-            border: '2px dashed #cbd5e1', borderRadius: '14px', padding: '40px 24px',
-            textAlign: 'center', background: '#f8fafc', cursor: 'pointer', transition: 'all 0.2s ease'
-          },
+          style: uploadAreaStyle,
           onClick: function () { document.getElementById(inputId).click(); },
-          onDragOver: function (e) { e.preventDefault(); e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.background = '#eef2ff'; },
-          onDragLeave: function (e) { e.preventDefault(); e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; },
-          onDrop: function (e) { e.preventDefault(); e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]); }
+          onDragOver: function (e) { 
+            e.preventDefault(); 
+            e.currentTarget.style.borderColor = '#4f46e5'; 
+            e.currentTarget.style.background = '#eef2ff'; 
+          },
+          onDragLeave: function (e) { 
+            e.preventDefault(); 
+            e.currentTarget.style.borderColor = '#cbd5e1'; 
+            e.currentTarget.style.background = '#f8fafc'; 
+          },
+          onDrop: function (e) { 
+            e.preventDefault(); 
+            e.currentTarget.style.borderColor = '#cbd5e1'; 
+            e.currentTarget.style.background = '#f8fafc'; 
+            if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]); 
+          }
         },
           uploading
             ? React.createElement('div', null,
-                React.createElement(Loader2, { size: 32, style: { animation: 'spin 0.8s linear infinite', margin: '0 auto 8px', color: '#4f46e5' } }),
-                React.createElement('p', { style: { color: '#64748b', fontSize: '14px', margin: 0 } }, 'Uploading...')
+                React.createElement(Loader2, { size: isMobile ? 24 : 32, style: { animation: 'spin 0.8s linear infinite', margin: '0 auto 6px', color: '#4f46e5' } }),
+                React.createElement('p', { style: { color: '#64748b', fontSize: isMobile ? '13px' : '14px', margin: 0 } }, 'Uploading...')
               )
             : React.createElement('div', null,
-                React.createElement(Upload, { size: 32, style: { margin: '0 auto 8px', color: '#94a3b8' } }),
-                React.createElement('p', { style: { color: '#64748b', fontSize: '14px', margin: 0, fontWeight: '500' } }, description),
-                React.createElement('p', { style: { color: '#94a3b8', fontSize: '12px', marginTop: '4px' } }, 'JPG, PNG, or WEBP — max 5MB')
+                React.createElement(Upload, { size: isMobile ? 24 : 32, style: { margin: '0 auto 6px', color: '#94a3b8' } }),
+                React.createElement('p', { style: { color: '#64748b', fontSize: isMobile ? '13px' : '14px', margin: 0, fontWeight: '500' } }, description),
+                React.createElement('p', { style: { color: '#94a3b8', fontSize: isMobile ? '11px' : '12px', marginTop: '2px' } }, 'JPG, PNG, or WEBP — max 5MB')
               )
         ),
-    React.createElement('input', { id: inputId, type: 'file', accept: 'image/*', style: { display: 'none' }, onChange: function (e) { if (e.target.files[0]) handleFileSelect(e.target.files[0]); } }),
-    error && React.createElement('p', { style: { color: '#ef4444', fontSize: '13px', marginTop: '8px' } }, error)
+    
+    React.createElement('input', { 
+      id: inputId, 
+      type: 'file', 
+      accept: 'image/*', 
+      style: { display: 'none' }, 
+      onChange: function (e) { 
+        if (e.target.files[0]) handleFileSelect(e.target.files[0]); 
+        e.target.value = '';
+      } 
+    }),
+    
+    error && React.createElement('p', { style: errorStyle },
+      React.createElement(AlertCircle, { size: isMobile ? 14 : 14 }),
+      error
+    ),
+    
+    successMsg && !error && React.createElement('p', { style: successStyle },
+      React.createElement(CheckCircle, { size: isMobile ? 14 : 14 }),
+      successMsg
+    )
   );
 }
 
