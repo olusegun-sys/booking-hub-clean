@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/BusinessProfile.jsx
-// COMPLETE FIX - Force refresh of business data after image upload
+// COMPLETE FIX - Includes all styles
 
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Phone, Mail, Globe, Save, Camera, X, CheckCircle, AlertCircle, Edit3, ExternalLink, ArrowLeft, Layers, Image, Sparkles } from 'lucide-react';
@@ -53,7 +53,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
         logo_url: business.logo_url || ''
       });
     }
-  }, [business]); // ← This will re-run when business reference changes
+  }, [business]);
 
   function showMessage(type, text) {
     setMessage({ type: type, text: text });
@@ -117,7 +117,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
           showMessage('success', 'Profile updated successfully');
           setIsEditing(false);
           
-          // CRITICAL FIX: Update localStorage with fresh data
           var currentBusiness = localStorage.getItem('currentBusiness');
           if (currentBusiness) {
             try {
@@ -131,7 +130,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
             }
           }
           
-          // CRITICAL FIX: Call onUpdate with the updated business data
           if (onUpdate) {
             console.log('[BusinessProfile] Calling onUpdate with fresh data');
             onUpdate(data.business);
@@ -151,7 +149,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     console.log('[BusinessProfile] Logo upload callback:', url);
     if (url) {
       handleChange('logo_url', url);
-      // Auto-save after logo upload
       setTimeout(function() { 
         console.log('[BusinessProfile] Auto-saving after logo upload');
         handleSave(); 
@@ -165,7 +162,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     console.log('[BusinessProfile] Cover upload callback:', url);
     if (url) {
       handleChange('cover_image', url);
-      // Auto-save after cover upload
       setTimeout(function() { 
         console.log('[BusinessProfile] Auto-saving after cover upload');
         handleSave(); 
@@ -175,7 +171,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     }
   }
 
-  // CRITICAL FIX: Force refresh business data from API
   function refreshBusinessData() {
     console.log('[BusinessProfile] Refreshing business data from API');
     var token = localStorage.getItem('auth_token');
@@ -192,7 +187,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
         .then(function(data) {
           if (data.success && data.business) {
             console.log('[BusinessProfile] Refreshed business data:', data.business);
-            // Update formData with fresh data
             setFormData(function(prev) {
               var updated = {};
               for (var key in prev) updated[key] = prev[key];
@@ -204,9 +198,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               updated.website = data.business.website || '';
               return updated;
             });
-            // Update localStorage
             localStorage.setItem('currentBusiness', JSON.stringify(data.business));
-            // CRITICAL: Notify parent with fresh data
             if (onUpdate) {
               console.log('[BusinessProfile] Calling onUpdate with fresh API data');
               onUpdate(data.business);
@@ -227,8 +219,208 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     );
   }
 
-  // ========== RESPONSIVE STYLES ==========
-  // ... (styles remain the same as before) ...
+  // ========== STYLES ==========
+  var containerStyle = {
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: isMobile ? '12px' : '32px',
+    background: '#f8fafc',
+    minHeight: '100vh'
+  };
+
+  var headerStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: isMobile ? '20px' : '32px',
+    flexWrap: 'wrap',
+    gap: '12px'
+  };
+
+  var titleStyle = {
+    fontSize: isMobile ? '22px' : '28px',
+    fontWeight: '700',
+    color: '#0f172a',
+    margin: 0
+  };
+
+  var subtitleStyle = {
+    fontSize: isMobile ? '13px' : '14px',
+    color: '#64748b',
+    marginTop: '2px'
+  };
+
+  var backButtonStyle = {
+    padding: isMobile ? '8px 14px' : '10px 20px',
+    backgroundColor: 'white',
+    color: '#475569',
+    border: '1px solid #e2e8f0',
+    borderRadius: '40px',
+    fontSize: isMobile ? '12px' : '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  };
+
+  var editButtonStyle = {
+    padding: isMobile ? '8px 14px' : '10px 20px',
+    background: '#4f46e5',
+    color: 'white',
+    border: 'none',
+    borderRadius: '40px',
+    fontSize: isMobile ? '12px' : '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  };
+
+  var saveButtonStyle = {
+    padding: isMobile ? '8px 14px' : '10px 20px',
+    background: '#10b981',
+    color: 'white',
+    border: 'none',
+    borderRadius: '40px',
+    fontSize: isMobile ? '12px' : '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  };
+
+  var cancelButtonStyle = {
+    padding: isMobile ? '8px 14px' : '10px 20px',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+    border: 'none',
+    borderRadius: '40px',
+    fontSize: isMobile ? '12px' : '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  };
+
+  var gridStyle = {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+    gap: isMobile ? '16px' : '24px'
+  };
+
+  var cardStyle = {
+    backgroundColor: 'white',
+    borderRadius: isMobile ? '16px' : '20px',
+    border: '1px solid #e2e8f0',
+    overflow: 'hidden'
+  };
+
+  var cardHeaderStyle = {
+    padding: isMobile ? '16px 18px' : '20px 24px',
+    borderBottom: '1px solid #f1f5f9',
+    backgroundColor: '#fafbff',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  };
+
+  var cardHeaderIconStyle = {
+    width: isMobile ? '36px' : '40px',
+    height: isMobile ? '36px' : '40px',
+    background: '#eef2ff',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  };
+
+  var cardTitleStyle = {
+    fontSize: isMobile ? '16px' : '18px',
+    fontWeight: '600',
+    color: '#0f172a',
+    margin: 0
+  };
+
+  var cardBodyStyle = {
+    padding: isMobile ? '16px' : '24px'
+  };
+
+  var infoRowStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: isMobile ? '10px 0' : '12px 0',
+    borderBottom: '1px solid #f1f5f9',
+    flexWrap: 'wrap',
+    gap: '6px'
+  };
+
+  var labelStyle = {
+    fontSize: isMobile ? '11px' : '12px',
+    fontWeight: '600',
+    color: '#64748b',
+    minWidth: isMobile ? '80px' : '100px'
+  };
+
+  var valueStyle = {
+    fontSize: isMobile ? '13px' : '14px',
+    color: '#1e293b',
+    flex: 1,
+    wordBreak: 'break-word'
+  };
+
+  var inputStyle = {
+    width: '100%',
+    padding: isMobile ? '10px 12px' : '12px 14px',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '10px',
+    fontSize: isMobile ? '14px' : '14px',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box'
+  };
+
+  var textareaStyle = {
+    width: '100%',
+    padding: isMobile ? '10px 12px' : '12px 14px',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '10px',
+    fontSize: isMobile ? '14px' : '14px',
+    minHeight: isMobile ? '80px' : '100px',
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box'
+  };
+
+  var imageRowStyle = {
+    display: 'grid',
+    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+    gap: isMobile ? '16px' : '24px'
+  };
+
+  var imageCardStyle = {
+    background: '#fafbff',
+    borderRadius: '14px',
+    padding: isMobile ? '16px' : '24px',
+    textAlign: 'center',
+    border: '1px solid #eef2ff'
+  };
+
+  var imageTitleStyle = {
+    fontSize: isMobile ? '14px' : '16px',
+    fontWeight: '600',
+    color: '#0f172a',
+    margin: '0 0 4px 0'
+  };
+
+  var imageHintStyle = {
+    fontSize: isMobile ? '11px' : '12px',
+    color: '#64748b',
+    marginBottom: '12px'
+  };
 
   // ========== RENDER ==========
   return React.createElement('div', { style: containerStyle },
@@ -354,7 +546,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       )
     ),
 
-    // Brand Images Section - WITH onRefresh callback
+    // Brand Images Section
     React.createElement('div', { style: { ...cardStyle, marginTop: '16px' } },
       React.createElement('div', { style: cardHeaderStyle },
         React.createElement('div', { style: cardHeaderIconStyle },
