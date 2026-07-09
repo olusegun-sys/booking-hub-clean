@@ -1,4 +1,7 @@
-﻿﻿import React, { useState, useEffect } from 'react';
+﻿// FILE: client/src/BusinessDashboard.jsx
+// COMPLETE FIX - handleBusinessUpdate creates new object reference to force re-render
+
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Calendar, Users, Settings, LogOut, 
   Hotel, Trophy, Sparkles, Image, Clock,
@@ -50,7 +53,9 @@ function BusinessDashboard() {
   useEffect(() => {
     function handleProfileUpdate(event) {
       if (event.detail && event.detail.business) {
-        setBusiness(event.detail.business);
+        console.log('[BusinessDashboard] Profile update event received:', event.detail.business);
+        // CRITICAL FIX: Create new object reference
+        setBusiness({ ...event.detail.business });
         localStorage.setItem('currentBusiness', JSON.stringify(event.detail.business));
       }
     }
@@ -114,10 +119,22 @@ function BusinessDashboard() {
       .catch(err => console.error('Fetch bookings error:', err));
   }
 
+  // CRITICAL FIX: Create new object reference to force re-render
   function handleBusinessUpdate(updatedBusiness) {
-    setBusiness(updatedBusiness);
+    console.log('[BusinessDashboard] handleBusinessUpdate called with:', updatedBusiness);
+    console.log('[BusinessDashboard] Logo URL:', updatedBusiness?.logo_url);
+    console.log('[BusinessDashboard] Cover URL:', updatedBusiness?.cover_image);
+    
+    // CRITICAL FIX: Create a new object reference to force re-render
+    setBusiness({ ...updatedBusiness });
+    
+    // Update localStorage
     localStorage.setItem('currentBusiness', JSON.stringify(updatedBusiness));
-    const updateEvent = new CustomEvent('profileUpdated', { detail: { business: updatedBusiness } });
+    
+    // Dispatch custom event for other components
+    const updateEvent = new CustomEvent('profileUpdated', { 
+      detail: { business: updatedBusiness } 
+    });
     window.dispatchEvent(updateEvent);
   }
 
@@ -153,7 +170,7 @@ function BusinessDashboard() {
   const usagePercent = (confirmedBookings / bookingLimit) * 100;
   const remainingBookings = bookingLimit - confirmedBookings;
 
-  // FIXED: Logout redirect - goes to /login (not /business-login)
+  // Logout redirect
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('currentBusiness');
@@ -167,7 +184,7 @@ function BusinessDashboard() {
   }
 
   // ============================================================
-  // FIXED LAYOUT STYLES - Sidebar now sticky/fixed
+  // LAYOUT STYLES
   // ============================================================
 
   const containerStyle = {
@@ -177,7 +194,6 @@ function BusinessDashboard() {
     position: 'relative'
   };
 
-  // Desktop sidebar - FIXED position (doesn't scroll)
   const sidebarStyle = {
     width: isDesktop ? '280px' : '0',
     flexShrink: 0,
@@ -192,7 +208,6 @@ function BusinessDashboard() {
     transition: 'width 0.3s ease'
   };
 
-  // Main content - pushed to the right to accommodate fixed sidebar
   const mainContentStyle = {
     flex: 1,
     minWidth: 0,
@@ -202,7 +217,6 @@ function BusinessDashboard() {
     transition: 'margin-left 0.3s ease'
   };
 
-  // Mobile menu overlay
   const mobileMenuOverlay = mobileMenuOpen && !isDesktop ? {
     position: 'fixed',
     top: 0,
@@ -383,7 +397,7 @@ function BusinessDashboard() {
     // Mobile menu overlay
     React.createElement('div', { style: mobileMenuOverlay, onClick: () => setMobileMenuOpen(false) }),
     
-    // Mobile menu (slides in from left)
+    // Mobile menu
     React.createElement('div', { style: mobileMenuStyle },
       React.createElement('div', { style: { padding: '24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
@@ -448,13 +462,13 @@ function BusinessDashboard() {
       )
     ),
     
-    // Desktop Sidebar (fixed position - doesn't scroll)
+    // Desktop Sidebar
     React.createElement('div', { style: sidebarStyle },
       React.createElement('div', { style: { padding: '28px 20px', borderBottom: '1px solid #e2e8f0' } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
           business?.logo_url ? 
             React.createElement('img', { 
-              key: business.logo_url,
+              key: business.logo_url + Date.now(),
               src: business.logo_url, 
               alt: business.name, 
               style: { width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover' } 
@@ -518,9 +532,9 @@ function BusinessDashboard() {
       )
     ),
     
-    // Main Content (shifted right on desktop to accommodate fixed sidebar)
+    // Main Content
     React.createElement('div', { style: mainContentStyle },
-      // Mobile Header (only visible on mobile)
+      // Mobile Header
       !isDesktop && React.createElement('div', { style: { background: 'white', padding: '16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
           business?.logo_url ? 
