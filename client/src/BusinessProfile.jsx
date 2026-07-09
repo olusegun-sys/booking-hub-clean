@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/BusinessProfile.jsx
-// COMPLETE FIX - Use /api/businesses/profile for refresh (uses token)
+// COMPLETE FIX - REMOVE auto-save to prevent race condition
 
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Phone, Mail, Globe, Save, Camera, X, CheckCircle, AlertCircle, Edit3, ExternalLink, ArrowLeft, Layers, Image, Sparkles } from 'lucide-react';
@@ -36,7 +36,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     return function() { window.removeEventListener('resize', handleResize); };
   }, []);
 
-  // CRITICAL: Sync formData when business prop changes
+  // Sync formData when business prop changes
   useEffect(function() {
     console.log('[BusinessProfile] Business prop changed:', business?.id, business?.name);
     console.log('[BusinessProfile] Logo URL from prop:', business?.logo_url);
@@ -135,7 +135,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
             }
           }
           
-          // CRITICAL: Call onUpdate with fresh data
           if (onUpdate) {
             console.log('[BusinessProfile] Calling onUpdate with fresh data');
             onUpdate(data.business);
@@ -151,27 +150,29 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       .finally(function() { setSaving(false); });
   }
 
+  // FIXED: Remove auto-save - the image is already saved by ImageUpload
   function handleLogoUpload(url) {
     console.log('[BusinessProfile] Logo upload callback:', url);
     if (url) {
+      // CRITICAL FIX: Update formData but DO NOT auto-save
+      // The image is already saved by ImageUpload's PUT request
       handleChange('logo_url', url);
-      setTimeout(function() { 
-        console.log('[BusinessProfile] Auto-saving after logo upload');
-        handleSave(); 
-      }, 500);
+      // Refresh data to update UI
+      refreshBusinessData();
     } else {
       showMessage('error', 'Logo upload failed. Please try again.');
     }
   }
 
+  // FIXED: Remove auto-save - the image is already saved by ImageUpload
   function handleCoverUpload(url) {
     console.log('[BusinessProfile] Cover upload callback:', url);
     if (url) {
+      // CRITICAL FIX: Update formData but DO NOT auto-save
+      // The image is already saved by ImageUpload's PUT request
       handleChange('cover_image', url);
-      setTimeout(function() { 
-        console.log('[BusinessProfile] Auto-saving after cover upload');
-        handleSave(); 
-      }, 500);
+      // Refresh data to update UI
+      refreshBusinessData();
     } else {
       showMessage('error', 'Cover image upload failed. Please try again.');
     }
@@ -181,7 +182,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   function refreshBusinessData() {
     console.log('[BusinessProfile] Refreshing business data from API');
     console.log('[BusinessProfile] Current business ID:', business?.id);
-    console.log('[BusinessProfile] Current formData:', formData);
     
     var token = localStorage.getItem('auth_token');
     
@@ -197,7 +197,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       return;
     }
     
-    // CRITICAL FIX: Use /api/businesses/profile (uses token) instead of /api/businesses/${business.id} (doesn't exist)
     fetch(API_BASE + '/api/businesses/profile', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
@@ -216,7 +215,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
           console.log('[BusinessProfile] Logo URL from API:', data.business.logo_url);
           console.log('[BusinessProfile] Cover URL from API:', data.business.cover_image);
           
-          // CRITICAL: Update formData with fresh data
+          // Update formData with fresh data
           setFormData(function(prev) {
             var updated = {};
             for (var key in prev) updated[key] = prev[key];
@@ -230,10 +229,10 @@ function BusinessProfile({ business, onBack, onUpdate }) {
             return updated;
           });
           
-          // CRITICAL: Update localStorage
+          // Update localStorage
           localStorage.setItem('currentBusiness', JSON.stringify(data.business));
           
-          // CRITICAL: Notify parent with fresh data (new object to force re-render)
+          // Notify parent with fresh data
           if (onUpdate) {
             console.log('[BusinessProfile] Calling onUpdate with fresh API data');
             var freshBusiness = {
