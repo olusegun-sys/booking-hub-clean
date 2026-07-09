@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/components/forms/ImageUpload.jsx
-// COMPLETE FIX - Added onRefresh callback to update parent data
+// COMPLETE FIX - Add detailed logging and error handling
 
 import React from 'react';
 import { Upload, X, Image, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
@@ -10,7 +10,7 @@ var uniqueIdCounter = 0;
 function ImageUpload(props) {
   var currentImage = props.currentImage;
   var onUpload = props.onUpload || props.onImageUploaded;
-  var onRefresh = props.onRefresh; // ← NEW: Callback to refresh parent data
+  var onRefresh = props.onRefresh;
   var type = props.type || 'general';
   var businessId = props.businessId;
   var label = props.label;
@@ -83,7 +83,13 @@ function ImageUpload(props) {
         return;
       }
       
-      console.log('[ImageUpload] Uploading:', { type, businessId, fileName: file.name });
+      // LOG: Check businessId
+      console.log('[ImageUpload] Uploading:', { 
+        type, 
+        businessId: businessId, 
+        fileName: file.name,
+        hasToken: !!token
+      });
       
       // Step 1: Upload to backend
       fetch(API_BASE + '/api/upload-gallery-image', {
@@ -119,7 +125,19 @@ function ImageUpload(props) {
               var updateData = {};
               updateData[updateField] = data.imageUrl;
               
-              console.log('[ImageUpload] Saving to business profile:', updateData);
+              console.log('[ImageUpload] Saving to business profile:', {
+                businessId: businessId,
+                updateField: updateField,
+                updateData: updateData
+              });
+              
+              // CRITICAL FIX: Check if businessId is valid
+              if (!businessId) {
+                console.error('[ImageUpload] Invalid businessId:', businessId);
+                setError('Business ID is missing. Please refresh the page and try again.');
+                setUploading(false);
+                return;
+              }
               
               fetch(API_BASE + '/api/businesses/' + businessId, {
                 method: 'PUT',
@@ -130,9 +148,10 @@ function ImageUpload(props) {
                 body: JSON.stringify(updateData)
               })
                 .then(function(res) { 
+                  console.log('[ImageUpload] PUT response status:', res.status);
                   if (!res.ok) {
                     return res.json().then(function(errData) {
-                      throw new Error(errData.error || 'Failed to save to profile');
+                      throw new Error(errData.error || 'Failed to save to profile (status ' + res.status + ')');
                     });
                   }
                   return res.json(); 

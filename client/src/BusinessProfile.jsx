@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/BusinessProfile.jsx
-// COMPLETE FIX - Includes all styles
+// COMPLETE FIX - Proper image persistence with detailed logging
 
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Phone, Mail, Globe, Save, Camera, X, CheckCircle, AlertCircle, Edit3, ExternalLink, ArrowLeft, Layers, Image, Sparkles } from 'lucide-react';
@@ -26,6 +26,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // Handle resize
   useEffect(function() {
     function handleResize() {
       setIsMobile(window.innerWidth < 768);
@@ -35,9 +36,12 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     return function() { window.removeEventListener('resize', handleResize); };
   }, []);
 
-  // CRITICAL FIX: This useEffect must re-run when business changes
+  // CRITICAL: Sync formData when business prop changes
   useEffect(function() {
     console.log('[BusinessProfile] Business prop changed:', business?.id, business?.name);
+    console.log('[BusinessProfile] Logo URL from prop:', business?.logo_url);
+    console.log('[BusinessProfile] Cover URL from prop:', business?.cover_image);
+    
     if (business) {
       setFormData({
         name: business.name || '',
@@ -117,6 +121,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
           showMessage('success', 'Profile updated successfully');
           setIsEditing(false);
           
+          // Update localStorage
           var currentBusiness = localStorage.getItem('currentBusiness');
           if (currentBusiness) {
             try {
@@ -130,6 +135,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
             }
           }
           
+          // CRITICAL: Call onUpdate with fresh data
           if (onUpdate) {
             console.log('[BusinessProfile] Calling onUpdate with fresh data');
             onUpdate(data.business);
@@ -171,44 +177,82 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     }
   }
 
+  // CRITICAL FIX: Force refresh business data from API
   function refreshBusinessData() {
     console.log('[BusinessProfile] Refreshing business data from API');
+    console.log('[BusinessProfile] Current business ID:', business?.id);
+    console.log('[BusinessProfile] Current formData:', formData);
+    
     var token = localStorage.getItem('auth_token');
-    if (token && business?.id) {
-      fetch(API_BASE + '/api/businesses/' + business.id, {
-        headers: { 'Authorization': 'Bearer ' + token }
-      })
-        .then(function(r) { 
-          if (!r.ok) {
-            throw new Error('Failed to fetch business data');
-          }
-          return r.json(); 
-        })
-        .then(function(data) {
-          if (data.success && data.business) {
-            console.log('[BusinessProfile] Refreshed business data:', data.business);
-            setFormData(function(prev) {
-              var updated = {};
-              for (var key in prev) updated[key] = prev[key];
-              updated.logo_url = data.business.logo_url || '';
-              updated.cover_image = data.business.cover_image || '';
-              updated.name = data.business.name || '';
-              updated.description = data.business.description || '';
-              updated.about_text = data.business.about_text || '';
-              updated.website = data.business.website || '';
-              return updated;
-            });
-            localStorage.setItem('currentBusiness', JSON.stringify(data.business));
-            if (onUpdate) {
-              console.log('[BusinessProfile] Calling onUpdate with fresh API data');
-              onUpdate(data.business);
-            }
-          }
-        })
-        .catch(function(err) { 
-          console.error('[BusinessProfile] Refresh error:', err); 
-        });
+    
+    if (!token) {
+      console.error('[BusinessProfile] No auth token found');
+      showMessage('error', 'Authentication required. Please log in again.');
+      return;
     }
+    
+    if (!business || !business.id) {
+      console.error('[BusinessProfile] No business data available');
+      showMessage('error', 'Business data not available');
+      return;
+    }
+    
+    fetch(API_BASE + '/api/businesses/' + business.id, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+      .then(function(r) { 
+        if (!r.ok) {
+          if (r.status === 401) {
+            throw new Error('Session expired. Please log in again.');
+          }
+          throw new Error('Failed to fetch business data (status ' + r.status + ')');
+        }
+        return r.json(); 
+      })
+      .then(function(data) {
+        if (data.success && data.business) {
+          console.log('[BusinessProfile] Refreshed business data:', data.business);
+          console.log('[BusinessProfile] Logo URL from API:', data.business.logo_url);
+          console.log('[BusinessProfile] Cover URL from API:', data.business.cover_image);
+          
+          // CRITICAL: Update formData with fresh data
+          setFormData(function(prev) {
+            var updated = {};
+            for (var key in prev) updated[key] = prev[key];
+            updated.logo_url = data.business.logo_url || '';
+            updated.cover_image = data.business.cover_image || '';
+            updated.name = data.business.name || '';
+            updated.description = data.business.description || '';
+            updated.about_text = data.business.about_text || '';
+            updated.website = data.business.website || '';
+            console.log('[BusinessProfile] Updated formData:', updated);
+            return updated;
+          });
+          
+          // CRITICAL: Update localStorage
+          localStorage.setItem('currentBusiness', JSON.stringify(data.business));
+          
+          // CRITICAL: Notify parent with fresh data (new object to force re-render)
+          if (onUpdate) {
+            console.log('[BusinessProfile] Calling onUpdate with fresh API data');
+            var freshBusiness = {
+              ...data.business,
+              logo_url: data.business.logo_url || '',
+              cover_image: data.business.cover_image || ''
+            };
+            onUpdate(freshBusiness);
+          }
+          
+          showMessage('success', 'Images updated successfully!');
+        } else {
+          console.error('[BusinessProfile] Refresh failed - no business data:', data);
+          showMessage('error', 'Failed to refresh business data');
+        }
+      })
+      .catch(function(err) { 
+        console.error('[BusinessProfile] Refresh error:', err); 
+        showMessage('error', err.message || 'Failed to refresh data. Please refresh the page.');
+      });
   }
 
   // Loading state
@@ -219,7 +263,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     );
   }
 
-  // ========== STYLES ==========
+  // ========== RESPONSIVE STYLES ==========
   var containerStyle = {
     maxWidth: '1200px',
     margin: '0 auto',
