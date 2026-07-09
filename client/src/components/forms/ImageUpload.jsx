@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/components/forms/ImageUpload.jsx
-// COMPLETE FIX - Better error handling and feedback
+// COMPLETE FIX - Added onRefresh callback to update parent data
 
 import React from 'react';
 import { Upload, X, Image, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
@@ -10,6 +10,7 @@ var uniqueIdCounter = 0;
 function ImageUpload(props) {
   var currentImage = props.currentImage;
   var onUpload = props.onUpload || props.onImageUploaded;
+  var onRefresh = props.onRefresh; // ← NEW: Callback to refresh parent data
   var type = props.type || 'general';
   var businessId = props.businessId;
   var label = props.label;
@@ -141,6 +142,11 @@ function ImageUpload(props) {
                   if (saveData.success) {
                     console.log('[ImageUpload] Saved to business profile successfully');
                     if (onUpload) onUpload(data.imageUrl);
+                    // CRITICAL FIX: Refresh parent data after successful save
+                    if (onRefresh) {
+                      console.log('[ImageUpload] Refreshing parent data');
+                      onRefresh();
+                    }
                     setUploading(false);
                   } else {
                     setError(saveData.error || 'Failed to save to profile');
@@ -177,6 +183,7 @@ function ImageUpload(props) {
                   console.log('[ImageUpload] Gallery save response:', galleryData);
                   if (galleryData.success) {
                     if (onUpload) onUpload(galleryData.image || data.imageUrl);
+                    if (onRefresh) onRefresh();
                     setUploading(false);
                   } else {
                     setError(galleryData.error || 'Failed to save to gallery');
