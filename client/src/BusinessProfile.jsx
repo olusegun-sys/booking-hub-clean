@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/BusinessProfile.jsx
-// COMPLETE FIX - Proper image persistence with detailed logging
+// COMPLETE FIX - Use /api/businesses/profile for refresh (uses token)
 
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Phone, Mail, Globe, Save, Camera, X, CheckCircle, AlertCircle, Edit3, ExternalLink, ArrowLeft, Layers, Image, Sparkles } from 'lucide-react';
@@ -177,7 +177,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     }
   }
 
-  // CRITICAL FIX: Force refresh business data from API
+  // CRITICAL FIX: Use /api/businesses/profile (uses token) instead of /api/businesses/${id} (doesn't exist)
   function refreshBusinessData() {
     console.log('[BusinessProfile] Refreshing business data from API');
     console.log('[BusinessProfile] Current business ID:', business?.id);
@@ -197,7 +197,8 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       return;
     }
     
-    fetch(API_BASE + '/api/businesses/' + business.id, {
+    // CRITICAL FIX: Use /api/businesses/profile (uses token) instead of /api/businesses/${business.id} (doesn't exist)
+    fetch(API_BASE + '/api/businesses/profile', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(function(r) { 
