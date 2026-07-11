@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/BusinessDashboard.jsx
-// COMPLETE FIX - handleBusinessUpdate creates new object reference to force re-render
+// COMPLETE FIX - Dynamic labels for hotel/sports/event businesses
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -36,6 +36,48 @@ function BusinessDashboard() {
     return localStorage.getItem('businessId');
   })();
 
+  // ============================================================
+  // DYNAMIC LABELS BASED ON BUSINESS TYPE
+  // ============================================================
+  function getBusinessTypeLabels() {
+    const type = business?.business_type;
+    if (type === 'hotel') {
+      return { 
+        singular: 'Room', 
+        plural: 'Rooms', 
+        action: 'Add Room',
+        icon: Hotel,
+        iconColor: '#4f46e5'
+      };
+    } else if (type === 'sports') {
+      return { 
+        singular: 'Court', 
+        plural: 'Courts', 
+        action: 'Add Court',
+        icon: Trophy,
+        iconColor: '#059669'
+      };
+    } else if (type === 'event') {
+      return { 
+        singular: 'Venue', 
+        plural: 'Venues', 
+        action: 'Add Venue',
+        icon: Sparkles,
+        iconColor: '#d97706'
+      };
+    }
+    return { 
+      singular: 'Item', 
+      plural: 'Items', 
+      action: 'Add Item',
+      icon: Building2,
+      iconColor: '#4f46e5'
+    };
+  }
+
+  const typeLabels = getBusinessTypeLabels();
+  const TypeIcon = typeLabels.icon;
+
   useEffect(() => {
     function handleResize() {
       const desktop = window.innerWidth >= 768;
@@ -54,7 +96,6 @@ function BusinessDashboard() {
     function handleProfileUpdate(event) {
       if (event.detail && event.detail.business) {
         console.log('[BusinessDashboard] Profile update event received:', event.detail.business);
-        // CRITICAL FIX: Create new object reference
         setBusiness({ ...event.detail.business });
         localStorage.setItem('currentBusiness', JSON.stringify(event.detail.business));
       }
@@ -119,19 +160,14 @@ function BusinessDashboard() {
       .catch(err => console.error('Fetch bookings error:', err));
   }
 
-  // CRITICAL FIX: Create new object reference to force re-render
   function handleBusinessUpdate(updatedBusiness) {
     console.log('[BusinessDashboard] handleBusinessUpdate called with:', updatedBusiness);
     console.log('[BusinessDashboard] Logo URL:', updatedBusiness?.logo_url);
     console.log('[BusinessDashboard] Cover URL:', updatedBusiness?.cover_image);
     
-    // CRITICAL FIX: Create a new object reference to force re-render
     setBusiness({ ...updatedBusiness });
-    
-    // Update localStorage
     localStorage.setItem('currentBusiness', JSON.stringify(updatedBusiness));
     
-    // Dispatch custom event for other components
     const updateEvent = new CustomEvent('profileUpdated', { 
       detail: { business: updatedBusiness } 
     });
@@ -140,7 +176,7 @@ function BusinessDashboard() {
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'rooms', label: 'Rooms', icon: Hotel },
+    { id: 'rooms', label: typeLabels.plural, icon: typeLabels.icon },
     { id: 'bookings', label: 'Bookings', icon: Calendar },
     { id: 'profile', label: 'Profile', icon: Building2 },
     { id: 'staff', label: 'Staff', icon: Users },
@@ -243,6 +279,9 @@ function BusinessDashboard() {
   };
 
   const renderOverview = () => {
+    const labels = getBusinessTypeLabels();
+    const Icon = labels.icon;
+    
     return React.createElement('div', null,
       // Stats Grid
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', gap: '20px', marginBottom: '32px' } },
@@ -270,13 +309,13 @@ function BusinessDashboard() {
         ),
         React.createElement('div', { style: { background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #eef2ff' } },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } },
-            React.createElement('span', { style: { fontSize: '13px', fontWeight: '500', color: '#64748b' } }, 'Active Rooms'),
+            React.createElement('span', { style: { fontSize: '13px', fontWeight: '500', color: '#64748b' } }, 'Active ' + labels.plural),
             React.createElement('div', { style: { width: '36px', height: '36px', background: '#eef2ff', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(Hotel, { size: 18, color: '#4f46e5' })
+              React.createElement(Icon, { size: 18, color: '#4f46e5' })
             )
           ),
           React.createElement('h2', { style: { fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 } }, rooms.length),
-          React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } }, 'Total rooms/units')
+          React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } }, 'Total ' + labels.plural.toLowerCase())
         ),
         React.createElement('div', { style: { background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #eef2ff' } },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } },
@@ -299,10 +338,11 @@ function BusinessDashboard() {
           React.createElement('h3', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 'Quick Actions')
         ),
         React.createElement('div', { style: { padding: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap' } },
+          // CRITICAL FIX: Dynamic label for "Add Room/Court/Venue"
           React.createElement('button', { 
             onClick: () => setActiveTab('rooms'), 
             style: { padding: '12px 24px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }
-          }, React.createElement(Plus, { size: 16 }), 'Add Room'),
+          }, React.createElement(Plus, { size: 16 }), labels.action),
           React.createElement('button', { 
             onClick: () => setActiveTab('profile'), 
             style: { padding: '12px 24px', background: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }
