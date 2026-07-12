@@ -1,15 +1,41 @@
 ﻿// FILE: server/src/services/brevoService.js
 // Brevo (Sendinblue) email service - No domain verification required!
 
-// Try to load nodemailer with better error handling
+// Try multiple ways to load nodemailer
 let nodemailer = null;
+let loadError = null;
 
+// Try 1: Normal require
 try {
   nodemailer = require('nodemailer');
-  console.log('[Brevo] ✅ nodemailer loaded successfully');
+  console.log('[Brevo] ✅ nodemailer loaded via normal require');
 } catch (err) {
-  console.error('[Brevo] ❌ nodemailer not available:', err.message);
-  console.error('[Brevo] Please run: npm install nodemailer --save in the server folder');
+  loadError = err;
+  console.log('[Brevo] ⚠️ Normal require failed, trying alternative paths...');
+  
+  // Try 2: Relative path from this file (going up to root)
+  try {
+    const path = require('path');
+    // Go up from: server/src/services/brevoService.js
+    // To: server/node_modules/nodemailer
+    const nodemailerPath = path.join(__dirname, '..', '..', 'node_modules', 'nodemailer');
+    nodemailer = require(nodemailerPath);
+    console.log('[Brevo] ✅ nodemailer loaded via relative path:', nodemailerPath);
+  } catch (err2) {
+    try {
+      // Try 3: Go up to root level
+      const path = require('path');
+      const nodemailerPath = path.join(__dirname, '..', '..', '..', 'node_modules', 'nodemailer');
+      nodemailer = require(nodemailerPath);
+      console.log('[Brevo] ✅ nodemailer loaded via root path:', nodemailerPath);
+    } catch (err3) {
+      console.error('[Brevo] ❌ nodemailer not available in any location');
+      console.error('[Brevo] - Error 1:', err.message);
+      console.error('[Brevo] - Error 2:', err2.message);
+      console.error('[Brevo] - Error 3:', err3.message);
+      console.error('[Brevo] Please ensure nodemailer is installed');
+    }
+  }
 }
 
 // Email configuration from environment variables
