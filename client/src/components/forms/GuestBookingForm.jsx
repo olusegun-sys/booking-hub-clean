@@ -1,8 +1,8 @@
 ﻿// FILE: client/src/components/forms/GuestBookingForm.jsx
-// COMPLETE FIX - With proper API_BASE and error handling
+// COMPLETE FIX - With prominent "Pay at Venue" option
 
 import React, { useState } from 'react';
-import { X, Loader2, CheckCircle, AlertCircle, ArrowLeft, User, Mail, Phone, Edit3 } from 'lucide-react';
+import { X, Loader2, ArrowLeft, User, Mail, Phone, Edit3, MapPin, CreditCard, Wallet } from 'lucide-react';
 import API_BASE from '../../config';
 import { showError, showSuccess } from '../../toast';
 
@@ -20,6 +20,7 @@ function GuestBookingForm({
     phone: '',
     specialRequests: ''
   });
+  const [paymentMethod, setPaymentMethod] = useState('pay_at_venue');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -49,12 +50,8 @@ function GuestBookingForm({
     
     try {
       console.log('[GuestBookingForm] Submitting booking...');
-      console.log('[GuestBookingForm] API_BASE:', API_BASE);
-      console.log('[GuestBookingForm] businessId:', businessId);
-      console.log('[GuestBookingForm] serviceDetails:', serviceDetails);
-      console.log('[GuestBookingForm] totalAmount:', totalAmount);
+      console.log('[GuestBookingForm] Payment method:', paymentMethod);
       
-      // Build the booking data
       const bookingData = {
         businessId: businessId,
         customerName: formData.fullName,
@@ -62,12 +59,11 @@ function GuestBookingForm({
         customerPhone: formData.phone,
         specialRequests: formData.specialRequests,
         totalAmount: totalAmount,
-        paymentMethod: 'pay_at_venue',
+        paymentMethod: paymentMethod,
         bookingDetails: {
           ...serviceDetails,
           serviceType: serviceType
         },
-        // For compatibility with the backend
         checkIn: serviceDetails?.date || serviceDetails?.checkIn || new Date().toISOString().split('T')[0],
         checkOut: serviceDetails?.date || serviceDetails?.checkOut || new Date().toISOString().split('T')[0],
         guests: serviceDetails?.attendees || serviceDetails?.guests || 1
@@ -83,17 +79,12 @@ function GuestBookingForm({
         body: JSON.stringify(bookingData)
       });
 
-      console.log('[GuestBookingForm] Response status:', response.status);
-      
       let data;
       try {
         data = await response.json();
       } catch (parseError) {
-        console.error('[GuestBookingForm] Parse error:', parseError);
         throw new Error('Server returned an invalid response');
       }
-      
-      console.log('[GuestBookingForm] Response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || `Server error: ${response.status}`);
@@ -244,6 +235,88 @@ function GuestBookingForm({
     marginTop: '4px'
   };
 
+  // ============================================================
+  // PAYMENT OPTIONS - "Pay at Venue" PROMINENT
+  // ============================================================
+  const paymentOptionsStyle = {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
+    marginTop: '8px'
+  };
+
+  const paymentOptionPrimaryStyle = {
+    padding: '20px 16px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    textAlign: 'center',
+    transition: 'all 0.3s ease',
+    background: 'white',
+    position: 'relative'
+  };
+
+  const paymentOptionPrimarySelectedStyle = {
+    padding: '20px 16px',
+    border: '2px solid #4F46E5',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    textAlign: 'center',
+    background: '#EEF2FF',
+    boxShadow: '0 0 0 3px rgba(79,70,229,0.08)',
+    position: 'relative'
+  };
+
+  const paymentOptionSecondaryStyle = {
+    padding: '16px 12px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    textAlign: 'center',
+    transition: 'all 0.3s ease',
+    background: 'white'
+  };
+
+  const paymentOptionSecondarySelectedStyle = {
+    padding: '16px 12px',
+    border: '2px solid #4F46E5',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    textAlign: 'center',
+    background: '#EEF2FF'
+  };
+
+  const paymentOptionIconStyle = {
+    display: 'block',
+    margin: '0 auto 6px'
+  };
+
+  const paymentOptionLabelStyle = {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#0f172a',
+    display: 'block'
+  };
+
+  const paymentOptionDescStyle = {
+    fontSize: '10px',
+    color: '#94a3b8',
+    display: 'block',
+    marginTop: '2px'
+  };
+
+  const recommendedBadgeStyle = {
+    marginTop: '8px',
+    padding: '4px 14px',
+    background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
+    borderRadius: '20px',
+    display: 'inline-block',
+    fontSize: '10px',
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: '0.3px'
+  };
+
   const buttonRowStyle = {
     display: 'flex',
     gap: '12px',
@@ -269,7 +342,7 @@ function GuestBookingForm({
   const submitButtonStyle = {
     flex: 2,
     padding: '12px',
-    background: submitting ? '#94a3b8' : '#4f46e5',
+    background: submitting ? '#94a3b8' : '#10b981',
     color: 'white',
     border: 'none',
     borderRadius: '10px',
@@ -282,6 +355,9 @@ function GuestBookingForm({
     gap: '8px'
   };
 
+  // ============================================================
+  // RENDER
+  // ============================================================
   return React.createElement('div', { style: overlayStyle, onClick: (e) => { if (e.target === e.currentTarget) onBack(); } },
     React.createElement('div', { style: modalStyle },
       // Header
@@ -313,6 +389,7 @@ function GuestBookingForm({
 
       // Form
       React.createElement('form', { onSubmit: handleSubmit },
+        // Name
         React.createElement('div', { style: formGroupStyle },
           React.createElement('label', { style: labelStyle },
             React.createElement(User, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
@@ -330,6 +407,7 @@ function GuestBookingForm({
           errors.fullName && React.createElement('span', { style: errorTextStyle }, errors.fullName)
         ),
 
+        // Email
         React.createElement('div', { style: formGroupStyle },
           React.createElement('label', { style: labelStyle },
             React.createElement(Mail, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
@@ -347,6 +425,7 @@ function GuestBookingForm({
           errors.email && React.createElement('span', { style: errorTextStyle }, errors.email)
         ),
 
+        // Phone
         React.createElement('div', { style: formGroupStyle },
           React.createElement('label', { style: labelStyle },
             React.createElement(Phone, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
@@ -364,6 +443,7 @@ function GuestBookingForm({
           errors.phone && React.createElement('span', { style: errorTextStyle }, errors.phone)
         ),
 
+        // Special Requests
         React.createElement('div', { style: formGroupStyle },
           React.createElement('label', { style: labelStyle },
             React.createElement(Edit3, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
@@ -380,6 +460,66 @@ function GuestBookingForm({
           })
         ),
 
+        // Payment Method - "Pay at Venue" PROMINENT
+        React.createElement('div', { style: { ...formGroupStyle, marginTop: '8px' } },
+          React.createElement('label', { style: { ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' } },
+            React.createElement(Wallet, { size: 14, color: '#4f46e5' }),
+            'Payment Method'
+          ),
+          React.createElement('div', { style: paymentOptionsStyle },
+            // Pay at Venue - PRIMARY (prominent)
+            React.createElement('div', {
+              style: paymentMethod === 'pay_at_venue' ? paymentOptionPrimarySelectedStyle : paymentOptionPrimaryStyle,
+              onClick: () => setPaymentMethod('pay_at_venue'),
+              onMouseEnter: (e) => {
+                if (paymentMethod !== 'pay_at_venue') {
+                  e.currentTarget.style.borderColor = '#94a3b8';
+                }
+              },
+              onMouseLeave: (e) => {
+                if (paymentMethod !== 'pay_at_venue') {
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }
+              }
+            },
+              React.createElement(MapPin, { 
+                size: 24, 
+                color: paymentMethod === 'pay_at_venue' ? '#4F46E5' : '#64748b', 
+                style: paymentOptionIconStyle
+              }),
+              React.createElement('span', { style: { ...paymentOptionLabelStyle, fontSize: '15px' } }, 'Pay at Venue'),
+              React.createElement('span', { style: { ...paymentOptionDescStyle, fontSize: '11px' } }, 'Pay when you arrive'),
+              paymentMethod === 'pay_at_venue' && React.createElement('div', {
+                style: recommendedBadgeStyle
+              }, '✓ RECOMMENDED')
+            ),
+            // Pay with Card - SECONDARY
+            React.createElement('div', {
+              style: paymentMethod === 'paystack' ? paymentOptionSecondarySelectedStyle : paymentOptionSecondaryStyle,
+              onClick: () => setPaymentMethod('paystack'),
+              onMouseEnter: (e) => {
+                if (paymentMethod !== 'paystack') {
+                  e.currentTarget.style.borderColor = '#94a3b8';
+                }
+              },
+              onMouseLeave: (e) => {
+                if (paymentMethod !== 'paystack') {
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }
+              }
+            },
+              React.createElement(CreditCard, { 
+                size: 20, 
+                color: paymentMethod === 'paystack' ? '#4F46E5' : '#64748b', 
+                style: paymentOptionIconStyle
+              }),
+              React.createElement('span', { style: paymentOptionLabelStyle }, 'Pay with Card'),
+              React.createElement('span', { style: paymentOptionDescStyle }, 'Secure online payment')
+            )
+          )
+        ),
+
+        // Buttons
         React.createElement('div', { style: buttonRowStyle },
           React.createElement('button', {
             type: 'button',
@@ -392,8 +532,8 @@ function GuestBookingForm({
             type: 'submit',
             disabled: submitting,
             style: submitButtonStyle,
-            onMouseEnter: (e) => { if (!submitting) e.currentTarget.style.background = '#4338CA'; },
-            onMouseLeave: (e) => { e.currentTarget.style.background = submitting ? '#94a3b8' : '#4f46e5'; }
+            onMouseEnter: (e) => { if (!submitting) e.currentTarget.style.background = '#059669'; },
+            onMouseLeave: (e) => { e.currentTarget.style.background = submitting ? '#94a3b8' : '#10b981'; }
           },
             submitting ? React.createElement(Loader2, { size: 18, style: { animation: 'spin 1s linear infinite' } }) : null,
             submitting ? 'Processing...' : 'Confirm Booking'
