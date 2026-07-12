@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/RoomPage.jsx
-// Complete fix - dynamic labels for hotel/sports/event
+// COMPLETE FIX - Dynamic price labels for hotel/sports/event
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -37,6 +37,8 @@ function RoomPage({ business, onBack }) {
         icon: Hotel,
         typeLabel: 'Room Type',
         capacityLabel: 'Sleeps',
+        priceLabel: 'Price per night',
+        priceUnit: '/ night',
         typeOptions: ['Standard', 'Deluxe', 'Suite', 'Executive', 'Presidential', 'Family']
       };
     } else if (type === 'sports') {
@@ -46,6 +48,8 @@ function RoomPage({ business, onBack }) {
         icon: Trophy,
         typeLabel: 'Court Type',
         capacityLabel: 'Players',
+        priceLabel: 'Price per hour',
+        priceUnit: '/ hour',
         typeOptions: ['Hard Court', 'Clay Court', 'Grass Court', 'Basketball', 'Football', 'Tennis']
       };
     } else if (type === 'event') {
@@ -55,6 +59,8 @@ function RoomPage({ business, onBack }) {
         icon: Sparkles,
         typeLabel: 'Venue Type',
         capacityLabel: 'Capacity',
+        priceLabel: 'Base Price',
+        priceUnit: '/ event',
         typeOptions: ['Banquet Hall', 'Conference Room', 'Outdoor Space', 'Ballroom', 'Theater', 'Boardroom']
       };
     }
@@ -64,6 +70,8 @@ function RoomPage({ business, onBack }) {
       icon: Hotel,
       typeLabel: 'Type',
       capacityLabel: 'Capacity',
+      priceLabel: 'Price',
+      priceUnit: '',
       typeOptions: ['Standard']
     };
   }
@@ -236,7 +244,7 @@ function RoomPage({ business, onBack }) {
                   labels.capacityLabel + ': ' + (room.capacity || 2)
                 ),
                 React.createElement('span', { style: { fontSize: '12px', fontWeight: '600', color: '#4f46e5' } },
-                  '₦' + (room.price_per_night || 0).toLocaleString() + '/night'
+                  '₦' + (room.price_per_night || 0).toLocaleString() + labels.priceUnit
                 )
               )
             ),
@@ -269,6 +277,7 @@ function RoomPage({ business, onBack }) {
         ),
         // Form
         React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
+          // Name
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.singular + ' Name *'),
             React.createElement('input', {
@@ -279,6 +288,7 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
           ),
+          // Type
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.typeLabel),
             React.createElement('select', {
@@ -289,6 +299,7 @@ function RoomPage({ business, onBack }) {
               React.createElement('option', { key: opt, value: opt }, opt)
             ))
           ),
+          // Capacity
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.capacityLabel),
             React.createElement('input', {
@@ -299,17 +310,25 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
           ),
+          // PRICE - FIXED: Dynamic label
           React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 'Price per night (₦) *'),
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
+              labels.priceLabel + ' (₦) *'
+            ),
             React.createElement('input', {
               type: 'number',
               value: formData.price_per_night,
               onChange: (e) => handleChange('price_per_night', parseFloat(e.target.value) || 0),
               min: 0,
               step: 500,
+              placeholder: 'e.g., 5000',
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
-            })
+            }),
+            React.createElement('div', { style: { fontSize: '11px', color: '#94a3b8', marginTop: '4px' } },
+              'This is the ' + labels.priceLabel.toLowerCase() + ' for this ' + labels.singular.toLowerCase()
+            )
           ),
+          // Description
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 'Description'),
             React.createElement('textarea', {
@@ -320,6 +339,7 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }
             })
           ),
+          // Submit
           React.createElement('button', {
             onClick: handleSave,
             disabled: saving,
