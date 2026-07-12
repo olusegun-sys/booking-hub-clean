@@ -1,6 +1,7 @@
 ﻿// FILE: server/src/services/emailService.js
 // COMPLETE FIX - Force production mode with multiple detection methods
 // ENHANCED: Send booking confirmations to BOTH customer AND business owner
+// DEBUG: Added comprehensive logging for email flow
 
 var Resend = require('resend').Resend;
 
@@ -124,13 +125,25 @@ var approvalTemplate = function (business) {
 };
 
 // ============================================================
-// CORE EMAIL SENDING FUNCTION - FIXED
+// CORE EMAIL SENDING FUNCTION - WITH DEBUG LOGGING
 // ============================================================
 
 async function sendEmail(options) {
   var to = options.to;
   var subject = options.subject;
   var html = options.html;
+
+  // ============================================================
+  // DEBUG LOGGING - Step 1: Show what was requested
+  // ============================================================
+  console.log('[Email] 🔍 ========== DEBUG EMAIL FLOW ==========');
+  console.log('[Email] 🔍 sendEmail called with:');
+  console.log('[Email] 🔍 - to:', to);
+  console.log('[Email] 🔍 - subject:', subject);
+  console.log('[Email] 🔍 - IS_PRODUCTION:', IS_PRODUCTION);
+  console.log('[Email] 🔍 - VERIFIED_EMAIL:', VERIFIED_EMAIL);
+  console.log('[Email] 🔍 - RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
+  console.log('[Email] 🔍 ========================================');
 
   try {
     // Determine recipient based on environment
@@ -140,19 +153,29 @@ async function sendEmail(options) {
     if (IS_PRODUCTION) {
       // Production: Send directly to the recipient
       actualTo = to;
-      console.log('[Email] Production mode - sending to:', to);
+      console.log('[Email] 🔍 Production mode: actualTo =', actualTo);
     } else {
       // Development: Send to verified email
       actualTo = VERIFIED_EMAIL;
       finalSubject = subject + ' [To: ' + to + ']';
-      console.log('[Email] Development mode - sending to:', VERIFIED_EMAIL, ' (original: ' + to + ')');
+      console.log('[Email] 🔍 Development mode: actualTo =', actualTo, '(original:', to, ')');
     }
 
     // Validate recipient
     if (!actualTo || !actualTo.includes('@')) {
-      console.error('[Email] Invalid recipient:', actualTo);
+      console.error('[Email] ❌ Invalid recipient:', actualTo);
       return { success: false, error: 'Invalid recipient email address' };
     }
+
+    // ============================================================
+    // DEBUG LOGGING - Step 2: Show what will be sent
+    // ============================================================
+    console.log('[Email] 🔍 Sending email via Resend:');
+    console.log('[Email] 🔍 - FROM:', FROM_EMAIL);
+    console.log('[Email] 🔍 - TO:', actualTo);
+    console.log('[Email] 🔍 - SUBJECT:', finalSubject);
+    console.log('[Email] 🔍 - HTML length:', html ? html.length : 0);
+    console.log('[Email] 🔍 ========================================');
 
     var result = await resend.emails.send({
       from: FROM_EMAIL,
@@ -161,16 +184,24 @@ async function sendEmail(options) {
       html: html
     });
 
+    // ============================================================
+    // DEBUG LOGGING - Step 3: Show the result
+    // ============================================================
     if (result.error) {
-      console.error('[Email] Resend error:', result.error);
+      console.error('[Email] ❌ Resend error:', result.error);
+      console.error('[Email] ❌ Error details:', JSON.stringify(result.error, null, 2));
       return { success: false, error: result.error };
     }
 
-    console.log('[Email] Sent successfully:', result.data ? result.data.id : 'unknown');
-    console.log('[Email] Recipient:', actualTo);
+    console.log('[Email] ✅ Sent successfully!');
+    console.log('[Email] ✅ - ID:', result.data ? result.data.id : 'unknown');
+    console.log('[Email] ✅ - Recipient:', actualTo);
+    console.log('[Email] ✅ ========================================');
+
     return { success: true, data: result.data };
   } catch (error) {
-    console.error('[Email] Sending failed:', error.message || error);
+    console.error('[Email] ❌ Sending failed:', error.message || error);
+    console.error('[Email] ❌ Error stack:', error.stack);
     return { success: false, error: error };
   }
 }
@@ -186,6 +217,22 @@ async function sendEmail(options) {
  * @returns {object} Results of both email sends
  */
 async function sendBookingConfirmation(booking, business) {
+  // ============================================================
+  // DEBUG LOGGING - Show what we're working with
+  // ============================================================
+  console.log('[Email] 🔍 ========== SEND BOOKING CONFIRMATION ==========');
+  console.log('[Email] 🔍 Booking received:');
+  console.log('[Email] 🔍 - booking_reference:', booking.booking_reference);
+  console.log('[Email] 🔍 - customer_email:', booking.customer_email);
+  console.log('[Email] 🔍 - customer_name:', booking.customer_name);
+  console.log('[Email] 🔍 - total_amount:', booking.total_amount);
+  console.log('[Email] 🔍 Business received:');
+  console.log('[Email] 🔍 - business.id:', business ? business.id : 'MISSING');
+  console.log('[Email] 🔍 - business.name:', business ? business.name : 'MISSING');
+  console.log('[Email] 🔍 - business.email:', business ? business.email : 'MISSING');
+  console.log('[Email] 🔍 - business.business_type:', business ? business.business_type : 'MISSING');
+  console.log('[Email] 🔍 ========================================');
+
   // Step 1: Select the right template based on business type
   var template, subject;
   
@@ -207,7 +254,7 @@ async function sendBookingConfirmation(booking, business) {
   var results = {};
 
   // Step 2: Send to the customer
-  console.log('[Email] Sending booking confirmation to customer:', booking.customer_email);
+  console.log('[Email] 🔍 Step 2: Sending to CUSTOMER:', booking.customer_email);
   
   var customerResult = await sendEmail({
     to: booking.customer_email,
@@ -216,6 +263,7 @@ async function sendBookingConfirmation(booking, business) {
   });
   
   results.customer = customerResult;
+  console.log('[Email] 🔍 Customer email result:', customerResult.success ? '✅ SUCCESS' : '❌ FAILED');
 
   // Step 3: Send to the business owner (if they have a valid email and it's different from customer)
   if (business && business.email && typeof business.email === 'string' && business.email.includes('@')) {
@@ -225,7 +273,7 @@ async function sendBookingConfirmation(booking, business) {
       // Use a different subject for the business owner so they know it's a new booking
       var ownerSubject = '📋 New Booking: ' + booking.booking_reference + ' - ' + booking.customer_name;
       
-      console.log('[Email] Sending booking notification to business owner:', business.email);
+      console.log('[Email] 🔍 Step 3: Sending to BUSINESS OWNER:', business.email);
       
       var ownerResult = await sendEmail({
         to: business.email,
@@ -234,13 +282,17 @@ async function sendBookingConfirmation(booking, business) {
       });
       
       results.owner = ownerResult;
+      console.log('[Email] 🔍 Business owner email result:', ownerResult.success ? '✅ SUCCESS' : '❌ FAILED');
     } else {
-      console.log('[Email] Customer is also the business owner - skipping duplicate email');
+      console.log('[Email] 🔍 Customer is also the business owner - skipping duplicate email');
     }
   } else {
-    console.log('[Email] No valid business email found - skipping business owner notification');
+    console.log('[Email] 🔍 No valid business email found - skipping business owner notification');
+    console.log('[Email] 🔍 - business exists:', !!business);
+    console.log('[Email] 🔍 - business.email:', business ? business.email : 'MISSING');
   }
 
+  console.log('[Email] 🔍 ========== BOOKING CONFIRMATION COMPLETE ==========');
   return results;
 }
 
@@ -253,10 +305,12 @@ async function sendReminderEmail(booking, business) {
 }
 
 async function sendWelcomeEmail(business) {
+  console.log('[Email] 🔍 Sending WELCOME email to:', business.email);
   return sendEmail({ to: business.email, subject: 'Welcome to Booking Hub, ' + business.name + '!', html: welcomeTemplate(business) });
 }
 
 async function sendApprovalEmail(business) {
+  console.log('[Email] 🔍 Sending APPROVAL email to:', business.email);
   return sendEmail({ to: business.email, subject: 'You are Approved! Your Booking Page is Live', html: approvalTemplate(business) });
 }
 
