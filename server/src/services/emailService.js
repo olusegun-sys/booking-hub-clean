@@ -1,102 +1,72 @@
 ﻿// FILE: server/src/services/emailService.js
-// COMPLETE FIX - Force production mode with multiple detection methods
-// ENHANCED: Send booking confirmations to BOTH customer AND business owner
-// DEBUG: Added comprehensive logging for email flow
-
-var Resend = require('resend').Resend;
-
-var resend = new Resend(process.env.RESEND_API_KEY);
+// COMPLETE FIX - Using Brevo (Sendinblue) for email delivery
+// No domain verification required! ✅
 
 // ============================================================
-// ENVIRONMENT DETECTION - FORCE PRODUCTION ON RENDER
+// EMAIL SERVICE - Brevo (Sendinblue) Integration
 // ============================================================
+// Brevo provides 300 free emails per day
+// No domain verification required
+// Works immediately with SMTP key
+
+// Load Brevo service
+const brevoService = require('./brevoService');
+console.log('[Email] ✅ Brevo service loaded');
+
+// Environment detection for logging only
 var IS_PRODUCTION = false;
 
 // ============================================================
-// METHOD 0: MANUAL FORCE (MOST RELIABLE)
+// ENVIRONMENT DETECTION - FOR LOGGING ONLY
 // ============================================================
-// Add FORCE_PRODUCTION=true to your Render environment variables
-// This is the most reliable method - it always works
-if (process.env.FORCE_PRODUCTION === 'true') {
-  IS_PRODUCTION = true;
-  console.log('[Email] ✅ FORCE PRODUCTION: Manual override (FORCE_PRODUCTION=true)');
-}
-
-// ============================================================
-// METHOD 1: HOSTNAME DETECTION
-// ============================================================
-// Check if we're on a server (not localhost)
-var os = require('os');
-var hostname = os.hostname();
-
-if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
-  // Check if hostname looks like a server (Render, AWS, etc.)
-  if (hostname.includes('render') || hostname.includes('ec2') || hostname.includes('heroku')) {
-    IS_PRODUCTION = true;
-    console.log('[Email] ✅ FORCE PRODUCTION: Server hostname detected (' + hostname + ')');
-  }
-}
-
-// ============================================================
-// METHOD 2: Render specific variables
-// ============================================================
-// Check for any Render-specific environment variables
-if (process.env.RENDER === 'true' || process.env.RENDER_GIT_COMMIT !== undefined) {
-  IS_PRODUCTION = true;
-  console.log('[Email] ✅ FORCE PRODUCTION: RENDER environment detected');
-}
-
-// Check for Render's external URL
-if (process.env.RENDER_EXTERNAL_URL) {
-  IS_PRODUCTION = true;
-  console.log('[Email] ✅ FORCE PRODUCTION: RENDER_EXTERNAL_URL detected');
-}
-
-// Check for Render's external hostname
-if (process.env.RENDER_EXTERNAL_HOSTNAME && process.env.RENDER_EXTERNAL_HOSTNAME.includes('.onrender.com')) {
-  IS_PRODUCTION = true;
-  console.log('[Email] ✅ FORCE PRODUCTION: .onrender.com domain detected');
-}
-
-// ============================================================
-// METHOD 3: NODE_ENV and PORT (FALLBACK)
-// ============================================================
-// Check NODE_ENV
+// Method 1: Check NODE_ENV
 if (process.env.NODE_ENV === 'production') {
   IS_PRODUCTION = true;
-  console.log('[Email] ✅ Production detected via NODE_ENV');
 }
 
-// Check PORT (Render uses dynamic ports)
-if (process.env.PORT && process.env.PORT !== '5000' && process.env.PORT !== '3000') {
+// Method 2: Check Render specific variables
+if (process.env.RENDER === 'true' || process.env.RENDER_GIT_COMMIT !== undefined) {
   IS_PRODUCTION = true;
-  console.log('[Email] ✅ Production detected via PORT (' + process.env.PORT + ')');
 }
 
-// ============================================================
-// METHOD 4: SUPABASE_URL contains 'render'
-// ============================================================
+// Method 3: Check if we're on a deployed URL
+if (process.env.RENDER_EXTERNAL_URL || process.env.RENDER_EXTERNAL_HOSTNAME) {
+  IS_PRODUCTION = true;
+}
+
+// Method 4: Force production if SUPABASE_URL contains 'render'
 if (process.env.SUPABASE_URL && process.env.SUPABASE_URL.includes('render')) {
   IS_PRODUCTION = true;
-  console.log('[Email] ✅ Production detected via SUPABASE_URL');
 }
 
-// ============================================================
-// FINAL CHECK - Log the result
-// ============================================================
+// Method 5: Check if PORT is not default development port
+if (process.env.PORT && process.env.PORT !== '5000' && process.env.PORT !== '3000') {
+  IS_PRODUCTION = true;
+}
+
+// Method 6: Check for manual override
+if (process.env.FORCE_PRODUCTION === 'true') {
+  IS_PRODUCTION = true;
+}
+
+// Log environment
 console.log('[Email] ========================================');
 console.log('[Email] Environment detection results:');
-console.log('[Email] - FORCE_PRODUCTION:', process.env.FORCE_PRODUCTION || 'not set');
 console.log('[Email] - NODE_ENV:', process.env.NODE_ENV || 'not set');
 console.log('[Email] - RENDER:', process.env.RENDER || 'not set');
 console.log('[Email] - PORT:', process.env.PORT || 'not set');
-console.log('[Email] - HOSTNAME:', hostname || 'not set');
-console.log('[Email] - FINAL IS_PRODUCTION:', IS_PRODUCTION);
+console.log('[Email] - IS_PRODUCTION:', IS_PRODUCTION);
+console.log('[Email] - EMAIL PROVIDER: Brevo (Sendinblue)');
 console.log('[Email] ========================================');
 
 // Email configuration
 var VERIFIED_EMAIL = process.env.VERIFIED_EMAIL || 'olusegun@luminara.io';
-var FROM_EMAIL = process.env.FROM_EMAIL || 'Booking Hub <onboarding@resend.dev>';
+var FROM_EMAIL = process.env.FROM_EMAIL || 'bookinghub@noreply.com';
+var FROM_NAME = process.env.FROM_NAME || 'Booking Hub';
+
+console.log('[Email] - From Email:', FROM_EMAIL);
+console.log('[Email] - From Name:', FROM_NAME);
+console.log('[Email] ========================================');
 
 // ============================================================
 // EMAIL TEMPLATES
@@ -125,84 +95,55 @@ var approvalTemplate = function (business) {
 };
 
 // ============================================================
-// CORE EMAIL SENDING FUNCTION - WITH DEBUG LOGGING
+// CORE EMAIL SENDING FUNCTION - Using Brevo
 // ============================================================
 
 async function sendEmail(options) {
   var to = options.to;
   var subject = options.subject;
   var html = options.html;
+  var from = options.from || FROM_EMAIL;
 
-  // ============================================================
-  // DEBUG LOGGING - Step 1: Show what was requested
-  // ============================================================
   console.log('[Email] 🔍 ========== DEBUG EMAIL FLOW ==========');
   console.log('[Email] 🔍 sendEmail called with:');
   console.log('[Email] 🔍 - to:', to);
   console.log('[Email] 🔍 - subject:', subject);
   console.log('[Email] 🔍 - IS_PRODUCTION:', IS_PRODUCTION);
-  console.log('[Email] 🔍 - VERIFIED_EMAIL:', VERIFIED_EMAIL);
-  console.log('[Email] 🔍 - RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
   console.log('[Email] 🔍 ========================================');
 
-  try {
-    // Determine recipient based on environment
-    var actualTo;
-    var finalSubject = subject;
+  // Validate inputs
+  if (!to || !to.includes('@')) {
+    console.error('[Email] ❌ Invalid recipient:', to);
+    return { success: false, error: 'Invalid recipient email address' };
+  }
 
-    if (IS_PRODUCTION) {
-      // Production: Send directly to the recipient
-      actualTo = to;
-      console.log('[Email] 🔍 Production mode: actualTo =', actualTo);
-    } else {
-      // Development: Send to verified email
-      actualTo = VERIFIED_EMAIL;
-      finalSubject = subject + ' [To: ' + to + ']';
-      console.log('[Email] 🔍 Development mode: actualTo =', actualTo, '(original:', to, ')');
-    }
+  if (!subject) {
+    console.error('[Email] ❌ Subject is required');
+    return { success: false, error: 'Subject is required' };
+  }
 
-    // Validate recipient
-    if (!actualTo || !actualTo.includes('@')) {
-      console.error('[Email] ❌ Invalid recipient:', actualTo);
-      return { success: false, error: 'Invalid recipient email address' };
-    }
+  if (!html) {
+    console.error('[Email] ❌ HTML content is required');
+    return { success: false, error: 'HTML content is required' };
+  }
 
-    // ============================================================
-    // DEBUG LOGGING - Step 2: Show what will be sent
-    // ============================================================
-    console.log('[Email] 🔍 Sending email via Resend:');
-    console.log('[Email] 🔍 - FROM:', FROM_EMAIL);
-    console.log('[Email] 🔍 - TO:', actualTo);
-    console.log('[Email] 🔍 - SUBJECT:', finalSubject);
-    console.log('[Email] 🔍 - HTML length:', html ? html.length : 0);
-    console.log('[Email] 🔍 ========================================');
+  // Send via Brevo
+  console.log('[Email] 🔍 Attempting to send via Brevo...');
+  const result = await brevoService.sendEmail({
+    to: to,
+    subject: subject,
+    html: html,
+    from: from
+  });
 
-    var result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [actualTo],
-      subject: finalSubject,
-      html: html
-    });
-
-    // ============================================================
-    // DEBUG LOGGING - Step 3: Show the result
-    // ============================================================
-    if (result.error) {
-      console.error('[Email] ❌ Resend error:', result.error);
-      console.error('[Email] ❌ Error details:', JSON.stringify(result.error, null, 2));
-      return { success: false, error: result.error };
-    }
-
-    console.log('[Email] ✅ Sent successfully!');
-    console.log('[Email] ✅ - ID:', result.data ? result.data.id : 'unknown');
-    console.log('[Email] ✅ - Recipient:', actualTo);
-    console.log('[Email] ✅ ========================================');
-
-    return { success: true, data: result.data };
-  } catch (error) {
-    console.error('[Email] ❌ Sending failed:', error.message || error);
-    console.error('[Email] ❌ Error stack:', error.stack);
-    return { success: false, error: error };
+  if (result.success) {
+    console.log('[Email] ✅ Sent via Brevo successfully!');
+    console.log('[Email] ✅ - Message ID:', result.data?.messageId);
+    console.log('[Email] ✅ - Recipient:', to);
+    return result;
+  } else {
+    console.error('[Email] ❌ Brevo failed:', result.error);
+    return result;
   }
 }
 
@@ -212,28 +153,18 @@ async function sendEmail(options) {
 
 /**
  * sendBookingConfirmation - Sends booking confirmation to customer AND business owner
- * @param {object} booking - The booking object
- * @param {object} business - The business object
- * @returns {object} Results of both email sends
  */
 async function sendBookingConfirmation(booking, business) {
-  // ============================================================
-  // DEBUG LOGGING - Show what we're working with
-  // ============================================================
   console.log('[Email] 🔍 ========== SEND BOOKING CONFIRMATION ==========');
-  console.log('[Email] 🔍 Booking received:');
-  console.log('[Email] 🔍 - booking_reference:', booking.booking_reference);
+  console.log('[Email] 🔍 Booking:', booking.booking_reference);
   console.log('[Email] 🔍 - customer_email:', booking.customer_email);
   console.log('[Email] 🔍 - customer_name:', booking.customer_name);
-  console.log('[Email] 🔍 - total_amount:', booking.total_amount);
-  console.log('[Email] 🔍 Business received:');
-  console.log('[Email] 🔍 - business.id:', business ? business.id : 'MISSING');
-  console.log('[Email] 🔍 - business.name:', business ? business.name : 'MISSING');
+  console.log('[Email] 🔍 Business:', business ? business.name : 'MISSING');
   console.log('[Email] 🔍 - business.email:', business ? business.email : 'MISSING');
   console.log('[Email] 🔍 - business.business_type:', business ? business.business_type : 'MISSING');
   console.log('[Email] 🔍 ========================================');
 
-  // Step 1: Select the right template based on business type
+  // Step 1: Select the right template
   var template, subject;
   
   if (booking.room_id || business.business_type === 'hotel') {
@@ -265,12 +196,9 @@ async function sendBookingConfirmation(booking, business) {
   results.customer = customerResult;
   console.log('[Email] 🔍 Customer email result:', customerResult.success ? '✅ SUCCESS' : '❌ FAILED');
 
-  // Step 3: Send to the business owner (if they have a valid email and it's different from customer)
+  // Step 3: Send to the business owner
   if (business && business.email && typeof business.email === 'string' && business.email.includes('@')) {
-    
-    // Check if business owner email is different from customer email to avoid duplicates
     if (business.email !== booking.customer_email) {
-      // Use a different subject for the business owner so they know it's a new booking
       var ownerSubject = '📋 New Booking: ' + booking.booking_reference + ' - ' + booking.customer_name;
       
       console.log('[Email] 🔍 Step 3: Sending to BUSINESS OWNER:', business.email);
@@ -284,12 +212,10 @@ async function sendBookingConfirmation(booking, business) {
       results.owner = ownerResult;
       console.log('[Email] 🔍 Business owner email result:', ownerResult.success ? '✅ SUCCESS' : '❌ FAILED');
     } else {
-      console.log('[Email] 🔍 Customer is also the business owner - skipping duplicate email');
+      console.log('[Email] 🔍 Customer is also the business owner - skipping duplicate');
     }
   } else {
     console.log('[Email] 🔍 No valid business email found - skipping business owner notification');
-    console.log('[Email] 🔍 - business exists:', !!business);
-    console.log('[Email] 🔍 - business.email:', business ? business.email : 'MISSING');
   }
 
   console.log('[Email] 🔍 ========== BOOKING CONFIRMATION COMPLETE ==========');
