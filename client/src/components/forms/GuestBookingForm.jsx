@@ -4,8 +4,8 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, User, Mail, Phone, Calendar, Users, Wallet, CreditCard, MapPin, Loader2, Check } from 'lucide-react';
-import { showSuccess, showError } from '../toast';
-import API_BASE from '../config';
+import { showSuccess, showError } from '../../toast';
+import API_BASE from '../../config';
 
 function GuestBookingForm({
   businessId,
