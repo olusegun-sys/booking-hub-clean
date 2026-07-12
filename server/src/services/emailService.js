@@ -1,5 +1,6 @@
 ﻿// FILE: server/src/services/emailService.js
 // COMPLETE FIX - Force production mode on Render with multiple detection methods
+// ENHANCED: Send booking confirmations to BOTH customer AND business owner
 
 var Resend = require('resend').Resend;
 
@@ -134,11 +135,19 @@ async function sendEmail(options) {
 }
 
 // ============================================================
-// EMAIL FUNCTIONS
+// EMAIL FUNCTIONS - ENHANCED with Business Owner Notification
 // ============================================================
 
+/**
+ * sendBookingConfirmation - Sends booking confirmation to customer AND business owner
+ * @param {object} booking - The booking object
+ * @param {object} business - The business object
+ * @returns {object} Results of both email sends
+ */
 async function sendBookingConfirmation(booking, business) {
+  // Step 1: Select the right template based on business type
   var template, subject;
+  
   if (booking.room_id || business.business_type === 'hotel') {
     template = templates.hotel;
     subject = 'Booking Confirmed - ' + booking.booking_reference;
@@ -152,7 +161,46 @@ async function sendBookingConfirmation(booking, business) {
     template = templates.hotel;
     subject = 'Booking Confirmed - ' + booking.booking_reference;
   }
-  return sendEmail({ to: booking.customer_email, subject: subject, html: template(booking, business) });
+
+  var htmlContent = template(booking, business);
+  var results = {};
+
+  // Step 2: Send to the customer
+  console.log('[Email] Sending booking confirmation to customer:', booking.customer_email);
+  
+  var customerResult = await sendEmail({
+    to: booking.customer_email,
+    subject: subject,
+    html: htmlContent
+  });
+  
+  results.customer = customerResult;
+
+  // Step 3: Send to the business owner (if they have a valid email and it's different from customer)
+  if (business && business.email && typeof business.email === 'string' && business.email.includes('@')) {
+    
+    // Check if business owner email is different from customer email to avoid duplicates
+    if (business.email !== booking.customer_email) {
+      // Use a different subject for the business owner so they know it's a new booking
+      var ownerSubject = '📋 New Booking: ' + booking.booking_reference + ' - ' + booking.customer_name;
+      
+      console.log('[Email] Sending booking notification to business owner:', business.email);
+      
+      var ownerResult = await sendEmail({
+        to: business.email,
+        subject: ownerSubject,
+        html: htmlContent
+      });
+      
+      results.owner = ownerResult;
+    } else {
+      console.log('[Email] Customer is also the business owner - skipping duplicate email');
+    }
+  } else {
+    console.log('[Email] No valid business email found - skipping business owner notification');
+  }
+
+  return results;
 }
 
 async function sendReminderEmail(booking, business) {
