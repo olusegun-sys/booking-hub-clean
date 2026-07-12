@@ -9,37 +9,73 @@ var resend = new Resend(process.env.RESEND_API_KEY);
 // ============================================================
 // ENVIRONMENT DETECTION - FORCE PRODUCTION ON RENDER
 // ============================================================
-// Check multiple ways to detect production environment
 var IS_PRODUCTION = false;
 
+// ============================================================
+// METHOD 0: FORCE PRODUCTION ON RENDER (MOST RELIABLE)
+// ============================================================
+// Render uses dynamic PORT numbers (not 5000 or 3000)
+// This is the most reliable way to detect Render
+if (process.env.PORT && process.env.PORT !== '5000' && process.env.PORT !== '3000') {
+  IS_PRODUCTION = true;
+  console.log('[Email] ✅ FORCE PRODUCTION: PORT is dynamic (' + process.env.PORT + ')');
+}
+
+// Check for Render's internal environment variable
+if (process.env.RENDER && process.env.RENDER === 'true') {
+  IS_PRODUCTION = true;
+  console.log('[Email] ✅ FORCE PRODUCTION: RENDER=true detected');
+}
+
+// Check for Render's external URL
+if (process.env.RENDER_EXTERNAL_URL) {
+  IS_PRODUCTION = true;
+  console.log('[Email] ✅ FORCE PRODUCTION: RENDER_EXTERNAL_URL detected');
+}
+
+// Check for Render's external hostname
+if (process.env.RENDER_EXTERNAL_HOSTNAME && process.env.RENDER_EXTERNAL_HOSTNAME.includes('.onrender.com')) {
+  IS_PRODUCTION = true;
+  console.log('[Email] ✅ FORCE PRODUCTION: .onrender.com domain detected');
+}
+
+// ============================================================
+// METHOD 1-6: STANDARD DETECTION (FALLBACK)
+// ============================================================
 // Method 1: Check NODE_ENV
 if (process.env.NODE_ENV === 'production') {
   IS_PRODUCTION = true;
+  console.log('[Email] ✅ Production detected via NODE_ENV');
 }
 
 // Method 2: Check Render specific variables
-if (process.env.RENDER === 'true' || process.env.RENDER_GIT_COMMIT !== undefined) {
+if (process.env.RENDER_GIT_COMMIT !== undefined) {
   IS_PRODUCTION = true;
+  console.log('[Email] ✅ Production detected via RENDER_GIT_COMMIT');
 }
 
 // Method 3: Check if we're on a deployed URL (not localhost)
 if (process.env.RENDER_EXTERNAL_URL || process.env.RENDER_EXTERNAL_HOSTNAME) {
   IS_PRODUCTION = true;
+  console.log('[Email] ✅ Production detected via RENDER_EXTERNAL_*');
 }
 
 // Method 4: Force production if SUPABASE_URL contains 'render'
 if (process.env.SUPABASE_URL && process.env.SUPABASE_URL.includes('render')) {
   IS_PRODUCTION = true;
+  console.log('[Email] ✅ Production detected via SUPABASE_URL');
 }
 
 // Method 5: Check if PORT is not default development port
-if (process.env.PORT && process.env.PORT !== '5000') {
+if (process.env.PORT && process.env.PORT !== '5000' && process.env.PORT !== '3000') {
   IS_PRODUCTION = true;
+  console.log('[Email] ✅ Production detected via PORT');
 }
 
 // Method 6: Check if there's a Render URL in the environment
 if (process.env.RENDER_SERVICE_NAME || process.env.RENDER_SERVICE_TYPE) {
   IS_PRODUCTION = true;
+  console.log('[Email] ✅ Production detected via RENDER_SERVICE_*');
 }
 
 // Log the detection result for debugging
@@ -49,7 +85,7 @@ console.log('[Email] - NODE_ENV:', process.env.NODE_ENV || 'not set');
 console.log('[Email] - RENDER:', process.env.RENDER || 'not set');
 console.log('[Email] - RENDER_EXTERNAL_URL:', process.env.RENDER_EXTERNAL_URL || 'not set');
 console.log('[Email] - PORT:', process.env.PORT || 'not set');
-console.log('[Email] - IS_PRODUCTION:', IS_PRODUCTION);
+console.log('[Email] - FINAL IS_PRODUCTION:', IS_PRODUCTION);
 console.log('[Email] ========================================');
 
 // Email configuration
