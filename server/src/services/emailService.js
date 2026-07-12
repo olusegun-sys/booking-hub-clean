@@ -9,9 +9,16 @@
 // No domain verification required
 // Works immediately with SMTP key
 
-// Load Brevo service
-const brevoService = require('./brevoService');
-console.log('[Email] ✅ Brevo service loaded');
+// Load Brevo service with try/catch for safety
+let brevoService = null;
+
+try {
+  brevoService = require('./brevoService');
+  console.log('[Email] ✅ Brevo service loaded');
+} catch (err) {
+  console.error('[Email] ❌ Failed to load Brevo service:', err.message);
+  console.error('[Email] Please ensure brevoService.js exists and nodemailer is installed');
+}
 
 // Environment detection for logging only
 var IS_PRODUCTION = false;
@@ -57,6 +64,7 @@ console.log('[Email] - RENDER:', process.env.RENDER || 'not set');
 console.log('[Email] - PORT:', process.env.PORT || 'not set');
 console.log('[Email] - IS_PRODUCTION:', IS_PRODUCTION);
 console.log('[Email] - EMAIL PROVIDER: Brevo (Sendinblue)');
+console.log('[Email] - Brevo Service Loaded:', !!brevoService);
 console.log('[Email] ========================================');
 
 // Email configuration
@@ -109,6 +117,7 @@ async function sendEmail(options) {
   console.log('[Email] 🔍 - to:', to);
   console.log('[Email] 🔍 - subject:', subject);
   console.log('[Email] 🔍 - IS_PRODUCTION:', IS_PRODUCTION);
+  console.log('[Email] 🔍 - Brevo Service:', !!brevoService);
   console.log('[Email] 🔍 ========================================');
 
   // Validate inputs
@@ -125,6 +134,12 @@ async function sendEmail(options) {
   if (!html) {
     console.error('[Email] ❌ HTML content is required');
     return { success: false, error: 'HTML content is required' };
+  }
+
+  // Check if Brevo service is available
+  if (!brevoService) {
+    console.error('[Email] ❌ Brevo service not available - cannot send email');
+    return { success: false, error: 'Email service not available' };
   }
 
   // Send via Brevo

@@ -1,7 +1,16 @@
 ﻿// FILE: server/src/services/brevoService.js
 // Brevo (Sendinblue) email service - No domain verification required!
 
-const nodemailer = require('nodemailer');
+// Try to load nodemailer with better error handling
+let nodemailer = null;
+
+try {
+  nodemailer = require('nodemailer');
+  console.log('[Brevo] ✅ nodemailer loaded successfully');
+} catch (err) {
+  console.error('[Brevo] ❌ nodemailer not available:', err.message);
+  console.error('[Brevo] Please run: npm install nodemailer --save in the server folder');
+}
 
 // Email configuration from environment variables
 const BREVO_SMTP_KEY = process.env.BREVO_SMTP_KEY;
@@ -12,14 +21,17 @@ let transporter = null;
 
 /**
  * Get or create the SMTP transporter
- * Uses singleton pattern for efficiency
  */
 function getTransporter() {
   if (transporter) {
     return transporter;
   }
 
-  // Validate SMTP key
+  if (!nodemailer) {
+    console.error('[Brevo] ❌ nodemailer is not available - check installation');
+    return null;
+  }
+
   if (!BREVO_SMTP_KEY) {
     console.error('[Brevo] ❌ BREVO_SMTP_KEY is not set!');
     console.error('[Brevo] Please add BREVO_SMTP_KEY to your Render environment variables.');
@@ -49,12 +61,6 @@ function getTransporter() {
 
 /**
  * Send an email via Brevo
- * @param {object} options - Email options
- * @param {string} options.to - Recipient email address
- * @param {string} options.subject - Email subject
- * @param {string} options.html - HTML content
- * @param {string} options.from - Optional custom from address
- * @returns {object} { success: boolean, data: result, error: error }
  */
 async function sendEmail({ to, subject, html, from }) {
   const transporter = getTransporter();
@@ -64,19 +70,16 @@ async function sendEmail({ to, subject, html, from }) {
     return { success: false, error: 'Email service not configured' };
   }
 
-  // Validate recipient
   if (!to || !to.includes('@')) {
     console.error('[Brevo] ❌ Invalid recipient:', to);
     return { success: false, error: 'Invalid recipient email address' };
   }
 
-  // Validate subject
   if (!subject) {
     console.error('[Brevo] ❌ Subject is required');
     return { success: false, error: 'Subject is required' };
   }
 
-  // Validate HTML content
   if (!html) {
     console.error('[Brevo] ❌ HTML content is required');
     return { success: false, error: 'HTML content is required' };
