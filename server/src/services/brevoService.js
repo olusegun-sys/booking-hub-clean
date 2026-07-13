@@ -1,19 +1,15 @@
 ﻿// FILE: server/src/services/brevoService.js
-// Email service using Brevo HTTP API (works over HTTPS)
-// No SMTP ports required - works on Render's free tier
+// Email service using Mailgun API (FREE, WORKS IMMEDIATELY)
 
 const axios = require('axios');
+const qs = require('qs');
 
-// API key MUST be set in environment variables
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || process.env.GMAIL_USER || 'olusegun@luminara.io';
+const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
+const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || 'sandbox.mailgun.org';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'postmaster@' + MAILGUN_DOMAIN;
 const FROM_NAME = process.env.FROM_NAME || 'Booking Hub';
 
-/**
- * Send an email via Brevo HTTP API
- * Works over HTTPS (port 443) - allowed on Render's free tier
- */
-async function sendEmail({ to, subject, html, from }) {
+async function sendEmail({ to, subject, html }) {
   // Validate recipient
   if (!to || !to.includes('@')) {
     console.error('[Email] ❌ Invalid recipient:', to);
@@ -33,54 +29,46 @@ async function sendEmail({ to, subject, html, from }) {
   }
 
   // Check if API key is set
-  if (!BREVO_API_KEY) {
-    console.error('[Email] ❌ BREVO_API_KEY is not set!');
-    console.error('[Email] Please add BREVO_API_KEY to your Render environment variables.');
+  if (!MAILGUN_API_KEY) {
+    console.error('[Email] ❌ MAILGUN_API_KEY is not set!');
+    console.error('[Email] Please add MAILGUN_API_KEY to your Render environment variables.');
     return { success: false, error: 'Email service not configured' };
   }
 
-  const fromAddress = from || `${FROM_NAME} <${FROM_EMAIL}>`;
-
-  console.log('[Email] 📧 Sending email via Brevo API (HTTPS):');
+  console.log('[Email] 📧 Sending via Mailgun:');
   console.log('[Email] - To:', to);
   console.log('[Email] - Subject:', subject);
-  console.log('[Email] - From:', fromAddress);
+  console.log('[Email] - Domain:', MAILGUN_DOMAIN);
 
   try {
     const response = await axios.post(
-      'https://api.brevo.com/v3/smtp/email',
-      {
-        sender: {
-          name: FROM_NAME,
-          email: FROM_EMAIL
-        },
-        to: [
-          {
-            email: to,
-            name: to.split('@')[0]
-          }
-        ],
+      `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`,
+      qs.stringify({
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        to: to,
         subject: subject,
-        htmlContent: html
-      },
+        html: html
+      }),
       {
+        auth: {
+          username: 'api',
+          password: MAILGUN_API_KEY
+        },
         headers: {
-          'Content-Type': 'application/json',
-          'api-key': BREVO_API_KEY
+          'Content-Type': 'application/x-www-form-urlencoded'
         },
         timeout: 30000
       }
     );
 
-    console.log('[Email] ✅ Email sent successfully via Brevo API!');
-    console.log('[Email] - Message ID:', response.data.messageId);
-    console.log('[Email] - Response Code:', response.status);
+    console.log('[Email] ✅ Email sent successfully via Mailgun!');
+    console.log('[Email] - Message ID:', response.data.id);
     console.log('[Email] - Recipient:', to);
 
     return {
       success: true,
       data: {
-        messageId: response.data.messageId,
+        messageId: response.data.id,
         status: response.status
       }
     };
