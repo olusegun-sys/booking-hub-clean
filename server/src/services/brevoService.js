@@ -1,6 +1,6 @@
 ﻿// FILE: server/src/services/brevoService.js
 // Email service using Gmail SMTP (reliable on Render)
-// No domain verification required!
+// FORCE IPv4 - Render does not support IPv6
 
 const nodemailer = require('nodemailer');
 
@@ -38,17 +38,35 @@ function getTransporter() {
   }
 
   try {
+    // CRITICAL FIX: Use explicit SMTP config with IPv4
+    // This avoids Node.js trying IPv6 first (which fails on Render)
     transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // TLS
       auth: {
         user: GMAIL_USER,
         pass: GMAIL_APP_PASSWORD.replace(/\s/g, '') // Remove any spaces
+      },
+      // Connection timeouts
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      socketTimeout: 30000,
+      // Force IPv4 using DNS family
+      dns: {
+        family: 4 // Force IPv4 only
+      },
+      // TLS settings
+      tls: {
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false
       }
     });
 
-    console.log('[Email] ✅ Gmail SMTP transporter initialized successfully');
+    console.log('[Email] ✅ Gmail SMTP transporter initialized successfully (IPv4 forced)');
     console.log('[Email] - From Email:', GMAIL_USER);
     console.log('[Email] - From Name:', FROM_NAME);
+    console.log('[Email] - SMTP Host: smtp.gmail.com:587');
     return transporter;
   } catch (error) {
     console.error('[Email] ❌ Failed to initialize transporter:', error.message);
@@ -57,7 +75,7 @@ function getTransporter() {
 }
 
 /**
- * Send an email via Gmail SMTP
+ * Send an email via Gmail SMTP with IPv4 forced
  * @param {object} options - Email options
  * @param {string} options.to - Recipient email address
  * @param {string} options.subject - Email subject
@@ -91,11 +109,10 @@ async function sendEmail({ to, subject, html, from }) {
     return { success: false, error: 'HTML content is required' };
   }
 
-  // CRITICAL FIX: Use GMAIL_USER as the from address, not a custom domain
-  // Gmail requires the from address to match the authenticated user
+  // Use GMAIL_USER as the from address (Gmail requires this)
   const fromAddress = `${FROM_NAME} <${GMAIL_USER}>`;
 
-  console.log('[Email] 📧 Sending email via Gmail:');
+  console.log('[Email] 📧 Sending email via Gmail (IPv4 forced):');
   console.log('[Email] - To:', to);
   console.log('[Email] - Subject:', subject);
   console.log('[Email] - From:', fromAddress);
@@ -126,8 +143,8 @@ async function sendEmail({ to, subject, html, from }) {
   } catch (error) {
     console.error('[Email] ❌ Email failed:');
     console.error('[Email] - Error:', error.message);
-    console.error('[Email] - Code:', error.code);
-    console.error('[Email] - Command:', error.command);
+    console.error('[Email] - Code:', error.code || 'N/A');
+    console.error('[Email] - Command:', error.command || 'N/A');
     if (error.response) {
       console.error('[Email] - Response:', error.response);
     }
