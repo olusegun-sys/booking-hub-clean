@@ -2,14 +2,9 @@
 // Email service using Brevo HTTP API (works over HTTPS)
 // No SMTP ports required - works on Render's free tier
 
-// Email configuration from environment variables
-// On Render, set:
-// BREVO_API_KEY = your Brevo API key
-// FROM_EMAIL = olusegun@luminara.io (or any email)
-// FROM_NAME = Booking Hub (optional)
-
 const axios = require('axios');
 
+// API key MUST be set in environment variables
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || process.env.GMAIL_USER || 'olusegun@luminara.io';
 const FROM_NAME = process.env.FROM_NAME || 'Booking Hub';
@@ -73,7 +68,7 @@ async function sendEmail({ to, subject, html, from }) {
           'Content-Type': 'application/json',
           'api-key': BREVO_API_KEY
         },
-        timeout: 30000 // 30 second timeout
+        timeout: 30000
       }
     );
 
