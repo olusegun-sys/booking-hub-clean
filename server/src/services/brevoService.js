@@ -1,122 +1,103 @@
 ﻿// FILE: server/src/services/brevoService.js
-// Brevo (Sendinblue) email service - No domain verification required!
+// Email service using Gmail SMTP (reliable on Render)
+// No domain verification required!
 
-// Try multiple ways to load nodemailer
-let nodemailer = null;
-let loadError = null;
-
-// Try 1: Normal require
-try {
-  nodemailer = require('nodemailer');
-  console.log('[Brevo] ✅ nodemailer loaded via normal require');
-} catch (err) {
-  loadError = err;
-  console.log('[Brevo] ⚠️ Normal require failed, trying alternative paths...');
-  
-  // Try 2: Relative path from this file (going up to root)
-  try {
-    const path = require('path');
-    // Go up from: server/src/services/brevoService.js
-    // To: server/node_modules/nodemailer
-    const nodemailerPath = path.join(__dirname, '..', '..', 'node_modules', 'nodemailer');
-    nodemailer = require(nodemailerPath);
-    console.log('[Brevo] ✅ nodemailer loaded via relative path:', nodemailerPath);
-  } catch (err2) {
-    try {
-      // Try 3: Go up to root level
-      const path = require('path');
-      const nodemailerPath = path.join(__dirname, '..', '..', '..', 'node_modules', 'nodemailer');
-      nodemailer = require(nodemailerPath);
-      console.log('[Brevo] ✅ nodemailer loaded via root path:', nodemailerPath);
-    } catch (err3) {
-      console.error('[Brevo] ❌ nodemailer not available in any location');
-      console.error('[Brevo] - Error 1:', err.message);
-      console.error('[Brevo] - Error 2:', err2.message);
-      console.error('[Brevo] - Error 3:', err3.message);
-      console.error('[Brevo] Please ensure nodemailer is installed');
-    }
-  }
-}
+const nodemailer = require('nodemailer');
 
 // Email configuration from environment variables
-const BREVO_SMTP_KEY = process.env.BREVO_SMTP_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'bookinghub@noreply.com';
+// On Render, set:
+// GMAIL_USER = olusegun@luminara.io
+// GMAIL_APP_PASSWORD = aksa itye odzi dozu (your app password)
+// FROM_NAME = Booking Hub (optional)
+const GMAIL_USER = process.env.GMAIL_USER || process.env.FROM_EMAIL;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 const FROM_NAME = process.env.FROM_NAME || 'Booking Hub';
 
 let transporter = null;
 
 /**
- * Get or create the SMTP transporter
+ * Get or create the Gmail SMTP transporter
+ * Uses singleton pattern for efficiency
  */
 function getTransporter() {
   if (transporter) {
     return transporter;
   }
 
-  if (!nodemailer) {
-    console.error('[Brevo] ❌ nodemailer is not available - check installation');
+  // Validate credentials
+  if (!GMAIL_USER) {
+    console.error('[Email] ❌ GMAIL_USER is not set!');
+    console.error('[Email] Please add GMAIL_USER to your Render environment variables.');
     return null;
   }
 
-  if (!BREVO_SMTP_KEY) {
-    console.error('[Brevo] ❌ BREVO_SMTP_KEY is not set!');
-    console.error('[Brevo] Please add BREVO_SMTP_KEY to your Render environment variables.');
+  if (!GMAIL_APP_PASSWORD) {
+    console.error('[Email] ❌ GMAIL_APP_PASSWORD is not set!');
+    console.error('[Email] Please add GMAIL_APP_PASSWORD to your Render environment variables.');
     return null;
   }
 
   try {
     transporter = nodemailer.createTransport({
-      host: 'smtp-relay.brevo.com',
-      port: 587,
-      secure: false, // TLS
+      service: 'gmail',
       auth: {
-        user: FROM_EMAIL,
-        pass: BREVO_SMTP_KEY
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD.replace(/\s/g, '') // Remove any spaces
       }
     });
 
-    console.log('[Brevo] ✅ SMTP transporter initialized successfully');
-    console.log('[Brevo] - From Email:', FROM_EMAIL);
-    console.log('[Brevo] - From Name:', FROM_NAME);
+    console.log('[Email] ✅ Gmail SMTP transporter initialized successfully');
+    console.log('[Email] - From Email:', GMAIL_USER);
+    console.log('[Email] - From Name:', FROM_NAME);
     return transporter;
   } catch (error) {
-    console.error('[Brevo] ❌ Failed to initialize transporter:', error.message);
+    console.error('[Email] ❌ Failed to initialize transporter:', error.message);
     return null;
   }
 }
 
 /**
- * Send an email via Brevo
+ * Send an email via Gmail SMTP
+ * @param {object} options - Email options
+ * @param {string} options.to - Recipient email address
+ * @param {string} options.subject - Email subject
+ * @param {string} options.html - HTML content
+ * @param {string} options.from - Optional custom from address
+ * @returns {object} { success: boolean, data: result, error: error }
  */
 async function sendEmail({ to, subject, html, from }) {
   const transporter = getTransporter();
 
   if (!transporter) {
-    console.error('[Brevo] ❌ Transporter not available');
+    console.error('[Email] ❌ Transporter not available');
     return { success: false, error: 'Email service not configured' };
   }
 
+  // Validate recipient
   if (!to || !to.includes('@')) {
-    console.error('[Brevo] ❌ Invalid recipient:', to);
+    console.error('[Email] ❌ Invalid recipient:', to);
     return { success: false, error: 'Invalid recipient email address' };
   }
 
+  // Validate subject
   if (!subject) {
-    console.error('[Brevo] ❌ Subject is required');
+    console.error('[Email] ❌ Subject is required');
     return { success: false, error: 'Subject is required' };
   }
 
+  // Validate HTML content
   if (!html) {
-    console.error('[Brevo] ❌ HTML content is required');
+    console.error('[Email] ❌ HTML content is required');
     return { success: false, error: 'HTML content is required' };
   }
 
-  const fromAddress = from || `${FROM_NAME} <${FROM_EMAIL}>`;
+  // Use custom from address or default
+  const fromAddress = from || `${FROM_NAME} <${GMAIL_USER}>`;
 
-  console.log('[Brevo] 📧 Sending email:');
-  console.log('[Brevo] - To:', to);
-  console.log('[Brevo] - Subject:', subject);
-  console.log('[Brevo] - From:', fromAddress);
+  console.log('[Email] 📧 Sending email via Gmail:');
+  console.log('[Email] - To:', to);
+  console.log('[Email] - Subject:', subject);
+  console.log('[Email] - From:', fromAddress);
 
   try {
     const result = await transporter.sendMail({
@@ -126,9 +107,9 @@ async function sendEmail({ to, subject, html, from }) {
       html: html
     });
 
-    console.log('[Brevo] ✅ Email sent successfully!');
-    console.log('[Brevo] - Message ID:', result.messageId);
-    console.log('[Brevo] - Response:', result.response);
+    console.log('[Email] ✅ Email sent successfully via Gmail!');
+    console.log('[Email] - Message ID:', result.messageId);
+    console.log('[Email] - Response:', result.response);
 
     return {
       success: true,
@@ -138,10 +119,10 @@ async function sendEmail({ to, subject, html, from }) {
       }
     };
   } catch (error) {
-    console.error('[Brevo] ❌ Email failed:');
-    console.error('[Brevo] - Error:', error.message);
+    console.error('[Email] ❌ Email failed:');
+    console.error('[Email] - Error:', error.message);
     if (error.response) {
-      console.error('[Brevo] - Response:', error.response);
+      console.error('[Email] - Response:', error.response);
     }
     return {
       success: false,
