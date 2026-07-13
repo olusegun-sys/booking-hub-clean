@@ -1,16 +1,15 @@
 ﻿// FILE: server/src/services/emailService.js
-// COMPLETE FIX - Using Brevo HTTP API for email delivery
-// Works over HTTPS (port 443) - allowed on Render's free tier!
-// No domain verification required! ✅
+// COMPLETE FIX - Using Mailtrap for email delivery
+// Works immediately, no domain verification required! ✅
 
 // ============================================================
-// EMAIL SERVICE - Brevo HTTP API Integration
+// EMAIL SERVICE - Mailtrap Integration
 // ============================================================
-// Brevo API works over HTTPS (port 443)
-// Render blocks outbound SMTP ports (25, 465, 587)
-// This solution bypasses those restrictions
+// Mailtrap provides 500 free emails per day
+// No domain verification required
+// Works from any location
 
-// Load Brevo service with try/catch for safety
+// Load Brevo/Mailtrap service with try/catch for safety
 let brevoService = null;
 
 try {
@@ -18,7 +17,7 @@ try {
   console.log('[Email] ✅ Brevo service loaded');
 } catch (err) {
   console.error('[Email] ❌ Failed to load Brevo service:', err.message);
-  console.error('[Email] Please ensure brevoService.js exists and axios is installed');
+  console.error('[Email] Please ensure brevoService.js exists and nodemailer is installed');
 }
 
 // Environment detection for logging only
@@ -64,13 +63,13 @@ console.log('[Email] - NODE_ENV:', process.env.NODE_ENV || 'not set');
 console.log('[Email] - RENDER:', process.env.RENDER || 'not set');
 console.log('[Email] - PORT:', process.env.PORT || 'not set');
 console.log('[Email] - IS_PRODUCTION:', IS_PRODUCTION);
-console.log('[Email] - EMAIL PROVIDER: Brevo HTTP API');
+console.log('[Email] - EMAIL PROVIDER: Mailtrap');
 console.log('[Email] - Brevo Service Loaded:', !!brevoService);
 console.log('[Email] ========================================');
 
-// Email configuration - Use environment variables
+// Email configuration
 var VERIFIED_EMAIL = process.env.VERIFIED_EMAIL || 'olusegun@luminara.io';
-var FROM_EMAIL = process.env.FROM_EMAIL || process.env.GMAIL_USER || 'olusegun@luminara.io';
+var FROM_EMAIL = process.env.FROM_EMAIL || 'bookinghub@noreply.com';
 var FROM_NAME = process.env.FROM_NAME || 'Booking Hub';
 
 console.log('[Email] - From Email:', FROM_EMAIL);
@@ -104,7 +103,7 @@ var approvalTemplate = function (business) {
 };
 
 // ============================================================
-// CORE EMAIL SENDING FUNCTION - Using Brevo HTTP API
+// CORE EMAIL SENDING FUNCTION - Using Mailtrap
 // ============================================================
 
 async function sendEmail(options) {
@@ -143,8 +142,8 @@ async function sendEmail(options) {
     return { success: false, error: 'Email service not available' };
   }
 
-  // Send via Brevo HTTP API
-  console.log('[Email] 🔍 Attempting to send via Brevo HTTP API...');
+  // Send via Mailtrap
+  console.log('[Email] 🔍 Attempting to send via Mailtrap...');
   console.log('[Email] 🔍 - Recipient:', to);
   console.log('[Email] 🔍 - Subject:', subject);
 
@@ -156,7 +155,7 @@ async function sendEmail(options) {
   });
 
   // Log the detailed result
-  console.log('[Email] 🔍 Result received from Brevo API:');
+  console.log('[Email] 🔍 Result received from Mailtrap:');
   console.log('[Email] 🔍 - Success:', result.success);
   console.log('[Email] 🔍 - Error:', result.error || 'None');
   if (result.data) {
@@ -164,13 +163,12 @@ async function sendEmail(options) {
   }
 
   if (result.success) {
-    console.log('[Email] ✅ Sent via Brevo API successfully!');
+    console.log('[Email] ✅ Sent via Mailtrap successfully!');
     console.log('[Email] ✅ - Message ID:', result.data?.messageId);
     console.log('[Email] ✅ - Recipient:', to);
     return result;
   } else {
-    console.error('[Email] ❌ Brevo API failed:', result.error);
-    console.error('[Email] ❌ Status:', result.status || 'N/A');
+    console.error('[Email] ❌ Mailtrap failed:', result.error);
     return result;
   }
 }
@@ -181,6 +179,7 @@ async function sendEmail(options) {
 
 /**
  * sendBookingConfirmation - Sends booking confirmation to customer AND business owner
+ * With 2-second delay to avoid Mailtrap rate limit
  */
 async function sendBookingConfirmation(booking, business) {
   console.log('[Email] 🔍 ========== SEND BOOKING CONFIRMATION ==========');
@@ -223,6 +222,11 @@ async function sendBookingConfirmation(booking, business) {
   
   results.customer = customerResult;
   console.log('[Email] 🔍 Customer email result:', customerResult.success ? '✅ SUCCESS' : '❌ FAILED');
+
+  // ✅ FIX: Add 2-second delay to avoid Mailtrap rate limit
+  // Mailtrap free tier has a "too many emails per second" limit
+  console.log('[Email] 🔍 Waiting 2 seconds before sending business owner email...');
+  await new Promise(resolve => setTimeout(resolve, 2000));
 
   // Step 3: Send to the business owner
   if (business && business.email && typeof business.email === 'string' && business.email.includes('@')) {
