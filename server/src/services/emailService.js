@@ -179,7 +179,7 @@ async function sendEmail(options) {
 
 /**
  * sendBookingConfirmation - Sends booking confirmation to customer AND business owner
- * With 2-second delay to avoid Mailtrap rate limit
+ * With 10-second delay to avoid Mailtrap rate limit
  */
 async function sendBookingConfirmation(booking, business) {
   console.log('[Email] 🔍 ========== SEND BOOKING CONFIRMATION ==========');
@@ -223,10 +223,11 @@ async function sendBookingConfirmation(booking, business) {
   results.customer = customerResult;
   console.log('[Email] 🔍 Customer email result:', customerResult.success ? '✅ SUCCESS' : '❌ FAILED');
 
-  // ✅ FIX: Add 2-second delay to avoid Mailtrap rate limit
-  // Mailtrap free tier has a "too many emails per second" limit
-  console.log('[Email] 🔍 Waiting 2 seconds before sending business owner email...');
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // ✅ FIX: Add 10-second delay to avoid Mailtrap rate limit
+  // Mailtrap free tier has a strict "too many emails per second" limit
+  // 10 seconds ensures the rate limit resets completely
+  console.log('[Email] 🔍 Waiting 10 seconds before sending business owner email...');
+  await new Promise(resolve => setTimeout(resolve, 10000));
 
   // Step 3: Send to the business owner
   if (business && business.email && typeof business.email === 'string' && business.email.includes('@')) {
