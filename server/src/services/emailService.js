@@ -1,80 +1,107 @@
 ﻿// FILE: server/src/services/emailService.js
-// COMPLETE FIX - Using Mailtrap for email delivery
-// Works immediately, no domain verification required! ✅
+// COMPLETE FIX - Resend API built directly into this file
+// NO external dependencies, NO module loading issues
+// Emails go to REAL inboxes!
+
+const axios = require('axios');
 
 // ============================================================
-// EMAIL SERVICE - Mailtrap Integration
+// RESEND CONFIGURATION - HARDCODED
 // ============================================================
-// Mailtrap provides 500 free emails per day
-// No domain verification required
-// Works from any location
+const RESEND_API_KEY = 're_HKNwSoQN_EMxpAYEKreWgqSrLJci3Dif5';
+const FROM_EMAIL = 'onboarding@resend.dev';
+const FROM_NAME = 'Booking Hub';
 
-// Load Brevo/Mailtrap service with try/catch for safety
-let brevoService = null;
+console.log('[Email] ✅ Resend configured directly');
 
-try {
-  brevoService = require('./brevoService');
-  console.log('[Email] ✅ Brevo service loaded');
-} catch (err) {
-  console.error('[Email] ❌ Failed to load Brevo service:', err.message);
-  console.error('[Email] Please ensure brevoService.js exists and nodemailer is installed');
-}
-
-// Environment detection for logging only
+// ============================================================
+// ENVIRONMENT DETECTION
+// ============================================================
 var IS_PRODUCTION = false;
 
-// ============================================================
-// ENVIRONMENT DETECTION - FOR LOGGING ONLY
-// ============================================================
-// Method 1: Check NODE_ENV
-if (process.env.NODE_ENV === 'production') {
-  IS_PRODUCTION = true;
-}
+if (process.env.NODE_ENV === 'production') IS_PRODUCTION = true;
+if (process.env.RENDER === 'true' || process.env.RENDER_GIT_COMMIT !== undefined) IS_PRODUCTION = true;
+if (process.env.RENDER_EXTERNAL_URL || process.env.RENDER_EXTERNAL_HOSTNAME) IS_PRODUCTION = true;
+if (process.env.SUPABASE_URL && process.env.SUPABASE_URL.includes('render')) IS_PRODUCTION = true;
+if (process.env.PORT && process.env.PORT !== '5000' && process.env.PORT !== '3000') IS_PRODUCTION = true;
+if (process.env.FORCE_PRODUCTION === 'true') IS_PRODUCTION = true;
 
-// Method 2: Check Render specific variables
-if (process.env.RENDER === 'true' || process.env.RENDER_GIT_COMMIT !== undefined) {
-  IS_PRODUCTION = true;
-}
-
-// Method 3: Check if we're on a deployed URL
-if (process.env.RENDER_EXTERNAL_URL || process.env.RENDER_EXTERNAL_HOSTNAME) {
-  IS_PRODUCTION = true;
-}
-
-// Method 4: Force production if SUPABASE_URL contains 'render'
-if (process.env.SUPABASE_URL && process.env.SUPABASE_URL.includes('render')) {
-  IS_PRODUCTION = true;
-}
-
-// Method 5: Check if PORT is not default development port
-if (process.env.PORT && process.env.PORT !== '5000' && process.env.PORT !== '3000') {
-  IS_PRODUCTION = true;
-}
-
-// Method 6: Check for manual override
-if (process.env.FORCE_PRODUCTION === 'true') {
-  IS_PRODUCTION = true;
-}
-
-// Log environment
 console.log('[Email] ========================================');
-console.log('[Email] Environment detection results:');
-console.log('[Email] - NODE_ENV:', process.env.NODE_ENV || 'not set');
-console.log('[Email] - RENDER:', process.env.RENDER || 'not set');
-console.log('[Email] - PORT:', process.env.PORT || 'not set');
+console.log('[Email] Environment:');
 console.log('[Email] - IS_PRODUCTION:', IS_PRODUCTION);
-console.log('[Email] - EMAIL PROVIDER: Mailtrap');
-console.log('[Email] - Brevo Service Loaded:', !!brevoService);
-console.log('[Email] ========================================');
-
-// Email configuration
-var VERIFIED_EMAIL = process.env.VERIFIED_EMAIL || 'olusegun@luminara.io';
-var FROM_EMAIL = process.env.FROM_EMAIL || 'bookinghub@noreply.com';
-var FROM_NAME = process.env.FROM_NAME || 'Booking Hub';
-
 console.log('[Email] - From Email:', FROM_EMAIL);
 console.log('[Email] - From Name:', FROM_NAME);
 console.log('[Email] ========================================');
+
+// ============================================================
+// CORE EMAIL SENDING FUNCTION
+// ============================================================
+
+async function sendEmail({ to, subject, html }) {
+  // Validate inputs
+  if (!to || !to.includes('@')) {
+    console.error('[Email] ❌ Invalid recipient:', to);
+    return { success: false, error: 'Invalid recipient email address' };
+  }
+
+  if (!subject) {
+    console.error('[Email] ❌ Subject is required');
+    return { success: false, error: 'Subject is required' };
+  }
+
+  if (!html) {
+    console.error('[Email] ❌ HTML content is required');
+    return { success: false, error: 'HTML content is required' };
+  }
+
+  console.log('[Email] 📧 Sending via Resend:');
+  console.log('[Email] - To:', to);
+  console.log('[Email] - Subject:', subject);
+  console.log('[Email] - From:', `${FROM_NAME} <${FROM_EMAIL}>`);
+
+  try {
+    const response = await axios.post(
+      'https://api.resend.com/emails',
+      {
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        to: [to],
+        subject: subject,
+        html: html
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${RESEND_API_KEY}`
+        },
+        timeout: 30000
+      }
+    );
+
+    console.log('[Email] ✅ Email sent successfully!');
+    console.log('[Email] - Message ID:', response.data.id);
+    console.log('[Email] - Recipient:', to);
+
+    return {
+      success: true,
+      data: { messageId: response.data.id }
+    };
+  } catch (error) {
+    console.error('[Email] ❌ Email failed:');
+    if (error.response) {
+      console.error('[Email] - Status:', error.response.status);
+      console.error('[Email] - Data:', JSON.stringify(error.response.data, null, 2));
+    } else if (error.request) {
+      console.error('[Email] - No response received:', error.message);
+    } else {
+      console.error('[Email] - Error:', error.message);
+    }
+    return {
+      success: false,
+      error: error.message,
+      status: error.response?.status
+    };
+  }
+}
 
 // ============================================================
 // EMAIL TEMPLATES
@@ -103,84 +130,9 @@ var approvalTemplate = function (business) {
 };
 
 // ============================================================
-// CORE EMAIL SENDING FUNCTION - Using Mailtrap
+// SEND BOOKING CONFIRMATION
 // ============================================================
 
-async function sendEmail(options) {
-  var to = options.to;
-  var subject = options.subject;
-  var html = options.html;
-  var from = options.from || FROM_EMAIL;
-
-  console.log('[Email] 🔍 ========== DEBUG EMAIL FLOW ==========');
-  console.log('[Email] 🔍 sendEmail called with:');
-  console.log('[Email] 🔍 - to:', to);
-  console.log('[Email] 🔍 - subject:', subject);
-  console.log('[Email] 🔍 - IS_PRODUCTION:', IS_PRODUCTION);
-  console.log('[Email] 🔍 - Brevo Service:', !!brevoService);
-  console.log('[Email] 🔍 ========================================');
-
-  // Validate inputs
-  if (!to || !to.includes('@')) {
-    console.error('[Email] ❌ Invalid recipient:', to);
-    return { success: false, error: 'Invalid recipient email address' };
-  }
-
-  if (!subject) {
-    console.error('[Email] ❌ Subject is required');
-    return { success: false, error: 'Subject is required' };
-  }
-
-  if (!html) {
-    console.error('[Email] ❌ HTML content is required');
-    return { success: false, error: 'HTML content is required' };
-  }
-
-  // Check if Brevo service is available
-  if (!brevoService) {
-    console.error('[Email] ❌ Brevo service not available - cannot send email');
-    return { success: false, error: 'Email service not available' };
-  }
-
-  // Send via Mailtrap
-  console.log('[Email] 🔍 Attempting to send via Mailtrap...');
-  console.log('[Email] 🔍 - Recipient:', to);
-  console.log('[Email] 🔍 - Subject:', subject);
-
-  const result = await brevoService.sendEmail({
-    to: to,
-    subject: subject,
-    html: html,
-    from: from
-  });
-
-  // Log the detailed result
-  console.log('[Email] 🔍 Result received from Mailtrap:');
-  console.log('[Email] 🔍 - Success:', result.success);
-  console.log('[Email] 🔍 - Error:', result.error || 'None');
-  if (result.data) {
-    console.log('[Email] 🔍 - Message ID:', result.data.messageId);
-  }
-
-  if (result.success) {
-    console.log('[Email] ✅ Sent via Mailtrap successfully!');
-    console.log('[Email] ✅ - Message ID:', result.data?.messageId);
-    console.log('[Email] ✅ - Recipient:', to);
-    return result;
-  } else {
-    console.error('[Email] ❌ Mailtrap failed:', result.error);
-    return result;
-  }
-}
-
-// ============================================================
-// EMAIL FUNCTIONS - ENHANCED with Business Owner Notification
-// ============================================================
-
-/**
- * sendBookingConfirmation - Sends booking confirmation to customer AND business owner
- * With 10-second delay to avoid Mailtrap rate limit
- */
 async function sendBookingConfirmation(booking, business) {
   console.log('[Email] 🔍 ========== SEND BOOKING CONFIRMATION ==========');
   console.log('[Email] 🔍 Booking:', booking.booking_reference);
@@ -191,7 +143,6 @@ async function sendBookingConfirmation(booking, business) {
   console.log('[Email] 🔍 - business.business_type:', business ? business.business_type : 'MISSING');
   console.log('[Email] 🔍 ========================================');
 
-  // Step 1: Select the right template
   var template, subject;
   
   if (booking.room_id || business.business_type === 'hotel') {
@@ -211,37 +162,27 @@ async function sendBookingConfirmation(booking, business) {
   var htmlContent = template(booking, business);
   var results = {};
 
-  // Step 2: Send to the customer
+  // Send to customer
   console.log('[Email] 🔍 Step 2: Sending to CUSTOMER:', booking.customer_email);
-  
   var customerResult = await sendEmail({
     to: booking.customer_email,
     subject: subject,
     html: htmlContent
   });
-  
   results.customer = customerResult;
   console.log('[Email] 🔍 Customer email result:', customerResult.success ? '✅ SUCCESS' : '❌ FAILED');
 
-  // ✅ FIX: Add 10-second delay to avoid Mailtrap rate limit
-  // Mailtrap free tier has a strict "too many emails per second" limit
-  // 10 seconds ensures the rate limit resets completely
-  console.log('[Email] 🔍 Waiting 10 seconds before sending business owner email...');
-  await new Promise(resolve => setTimeout(resolve, 10000));
-
-  // Step 3: Send to the business owner
+  // Send to business owner
   if (business && business.email && typeof business.email === 'string' && business.email.includes('@')) {
     if (business.email !== booking.customer_email) {
       var ownerSubject = '📋 New Booking: ' + booking.booking_reference + ' - ' + booking.customer_name;
       
       console.log('[Email] 🔍 Step 3: Sending to BUSINESS OWNER:', business.email);
-      
       var ownerResult = await sendEmail({
         to: business.email,
         subject: ownerSubject,
         html: htmlContent
       });
-      
       results.owner = ownerResult;
       console.log('[Email] 🔍 Business owner email result:', ownerResult.success ? '✅ SUCCESS' : '❌ FAILED');
     } else {
@@ -251,9 +192,12 @@ async function sendBookingConfirmation(booking, business) {
     console.log('[Email] 🔍 No valid business email found - skipping business owner notification');
   }
 
-  console.log('[Email] 🔍 ========== BOOKING CONFIRMATION COMPLETE ==========');
   return results;
 }
+
+// ============================================================
+// OTHER EMAIL FUNCTIONS
+// ============================================================
 
 async function sendReminderEmail(booking, business) {
   return sendEmail({
@@ -273,4 +217,14 @@ async function sendApprovalEmail(business) {
   return sendEmail({ to: business.email, subject: 'You are Approved! Your Booking Page is Live', html: approvalTemplate(business) });
 }
 
-module.exports = { sendEmail, sendBookingConfirmation, sendReminderEmail, sendWelcomeEmail, sendApprovalEmail };
+// ============================================================
+// EXPORTS
+// ============================================================
+
+module.exports = { 
+  sendEmail, 
+  sendBookingConfirmation, 
+  sendReminderEmail, 
+  sendWelcomeEmail, 
+  sendApprovalEmail 
+};
