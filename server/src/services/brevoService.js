@@ -1,96 +1,24 @@
 ﻿// FILE: server/src/services/brevoService.js
-// Email service using Gmail SMTP (reliable on Render)
-// FORCE IPv4 - Render does not support IPv6
-
-const nodemailer = require('nodemailer');
+// Email service using Brevo HTTP API (works over HTTPS)
+// No SMTP ports required - works on Render's free tier
 
 // Email configuration from environment variables
 // On Render, set:
-// GMAIL_USER = olusegun@luminara.io
-// GMAIL_APP_PASSWORD = aksa itye odzi dozu (your app password)
+// BREVO_API_KEY = your Brevo API key
+// FROM_EMAIL = olusegun@luminara.io (or any email)
 // FROM_NAME = Booking Hub (optional)
-const GMAIL_USER = process.env.GMAIL_USER || process.env.FROM_EMAIL;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+
+const axios = require('axios');
+
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const FROM_EMAIL = process.env.FROM_EMAIL || process.env.GMAIL_USER || 'olusegun@luminara.io';
 const FROM_NAME = process.env.FROM_NAME || 'Booking Hub';
 
-let transporter = null;
-
 /**
- * Get or create the Gmail SMTP transporter
- * Uses singleton pattern for efficiency
- */
-function getTransporter() {
-  if (transporter) {
-    return transporter;
-  }
-
-  // Validate credentials
-  if (!GMAIL_USER) {
-    console.error('[Email] ❌ GMAIL_USER is not set!');
-    console.error('[Email] Please add GMAIL_USER to your Render environment variables.');
-    return null;
-  }
-
-  if (!GMAIL_APP_PASSWORD) {
-    console.error('[Email] ❌ GMAIL_APP_PASSWORD is not set!');
-    console.error('[Email] Please add GMAIL_APP_PASSWORD to your Render environment variables.');
-    return null;
-  }
-
-  try {
-    // CRITICAL FIX: Use explicit SMTP config with IPv4
-    // This avoids Node.js trying IPv6 first (which fails on Render)
-    transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // TLS
-      auth: {
-        user: GMAIL_USER,
-        pass: GMAIL_APP_PASSWORD.replace(/\s/g, '') // Remove any spaces
-      },
-      // Connection timeouts
-      connectionTimeout: 30000,
-      greetingTimeout: 30000,
-      socketTimeout: 30000,
-      // Force IPv4 using DNS family
-      dns: {
-        family: 4 // Force IPv4 only
-      },
-      // TLS settings
-      tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false
-      }
-    });
-
-    console.log('[Email] ✅ Gmail SMTP transporter initialized successfully (IPv4 forced)');
-    console.log('[Email] - From Email:', GMAIL_USER);
-    console.log('[Email] - From Name:', FROM_NAME);
-    console.log('[Email] - SMTP Host: smtp.gmail.com:587');
-    return transporter;
-  } catch (error) {
-    console.error('[Email] ❌ Failed to initialize transporter:', error.message);
-    return null;
-  }
-}
-
-/**
- * Send an email via Gmail SMTP with IPv4 forced
- * @param {object} options - Email options
- * @param {string} options.to - Recipient email address
- * @param {string} options.subject - Email subject
- * @param {string} options.html - HTML content
- * @param {string} options.from - Optional custom from address
- * @returns {object} { success: boolean, data: result, error: error }
+ * Send an email via Brevo HTTP API
+ * Works over HTTPS (port 443) - allowed on Render's free tier
  */
 async function sendEmail({ to, subject, html, from }) {
-  const transporter = getTransporter();
-
-  if (!transporter) {
-    console.error('[Email] ❌ Transporter not available');
-    return { success: false, error: 'Email service not configured' };
-  }
-
   // Validate recipient
   if (!to || !to.includes('@')) {
     console.error('[Email] ❌ Invalid recipient:', to);
@@ -109,49 +37,72 @@ async function sendEmail({ to, subject, html, from }) {
     return { success: false, error: 'HTML content is required' };
   }
 
-  // Use GMAIL_USER as the from address (Gmail requires this)
-  const fromAddress = `${FROM_NAME} <${GMAIL_USER}>`;
+  // Check if API key is set
+  if (!BREVO_API_KEY) {
+    console.error('[Email] ❌ BREVO_API_KEY is not set!');
+    console.error('[Email] Please add BREVO_API_KEY to your Render environment variables.');
+    return { success: false, error: 'Email service not configured' };
+  }
 
-  console.log('[Email] 📧 Sending email via Gmail (IPv4 forced):');
+  const fromAddress = from || `${FROM_NAME} <${FROM_EMAIL}>`;
+
+  console.log('[Email] 📧 Sending email via Brevo API (HTTPS):');
   console.log('[Email] - To:', to);
   console.log('[Email] - Subject:', subject);
   console.log('[Email] - From:', fromAddress);
 
   try {
-    const result = await transporter.sendMail({
-      from: fromAddress,
-      to: to,
-      subject: subject,
-      html: html
-    });
+    const response = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: {
+          name: FROM_NAME,
+          email: FROM_EMAIL
+        },
+        to: [
+          {
+            email: to,
+            name: to.split('@')[0]
+          }
+        ],
+        subject: subject,
+        htmlContent: html
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': BREVO_API_KEY
+        },
+        timeout: 30000 // 30 second timeout
+      }
+    );
 
-    console.log('[Email] ✅ Email sent successfully via Gmail!');
-    console.log('[Email] - Message ID:', result.messageId);
-    console.log('[Email] - Response:', result.response);
-    console.log('[Email] - Accepted:', result.accepted);
-    console.log('[Email] - Rejected:', result.rejected);
+    console.log('[Email] ✅ Email sent successfully via Brevo API!');
+    console.log('[Email] - Message ID:', response.data.messageId);
+    console.log('[Email] - Response Code:', response.status);
+    console.log('[Email] - Recipient:', to);
 
     return {
       success: true,
       data: {
-        messageId: result.messageId,
-        response: result.response,
-        accepted: result.accepted,
-        rejected: result.rejected
+        messageId: response.data.messageId,
+        status: response.status
       }
     };
   } catch (error) {
     console.error('[Email] ❌ Email failed:');
-    console.error('[Email] - Error:', error.message);
-    console.error('[Email] - Code:', error.code || 'N/A');
-    console.error('[Email] - Command:', error.command || 'N/A');
     if (error.response) {
-      console.error('[Email] - Response:', error.response);
+      console.error('[Email] - Status:', error.response.status);
+      console.error('[Email] - Data:', JSON.stringify(error.response.data, null, 2));
+    } else if (error.request) {
+      console.error('[Email] - No response received:', error.message);
+    } else {
+      console.error('[Email] - Error:', error.message);
     }
     return {
       success: false,
       error: error.message,
-      code: error.code
+      status: error.response?.status
     };
   }
 }

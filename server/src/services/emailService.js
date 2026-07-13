@@ -1,15 +1,16 @@
 ﻿// FILE: server/src/services/emailService.js
-// COMPLETE FIX - Using Gmail SMTP for email delivery
+// COMPLETE FIX - Using Brevo HTTP API for email delivery
+// Works over HTTPS (port 443) - allowed on Render's free tier!
 // No domain verification required! ✅
 
 // ============================================================
-// EMAIL SERVICE - Gmail SMTP Integration
+// EMAIL SERVICE - Brevo HTTP API Integration
 // ============================================================
-// Gmail provides 500 free emails per day
-// No domain verification required
-// Works with Gmail App Password
+// Brevo API works over HTTPS (port 443)
+// Render blocks outbound SMTP ports (25, 465, 587)
+// This solution bypasses those restrictions
 
-// Load Brevo/Gmail service with try/catch for safety
+// Load Brevo service with try/catch for safety
 let brevoService = null;
 
 try {
@@ -17,7 +18,7 @@ try {
   console.log('[Email] ✅ Brevo service loaded');
 } catch (err) {
   console.error('[Email] ❌ Failed to load Brevo service:', err.message);
-  console.error('[Email] Please ensure brevoService.js exists and nodemailer is installed');
+  console.error('[Email] Please ensure brevoService.js exists and axios is installed');
 }
 
 // Environment detection for logging only
@@ -63,14 +64,13 @@ console.log('[Email] - NODE_ENV:', process.env.NODE_ENV || 'not set');
 console.log('[Email] - RENDER:', process.env.RENDER || 'not set');
 console.log('[Email] - PORT:', process.env.PORT || 'not set');
 console.log('[Email] - IS_PRODUCTION:', IS_PRODUCTION);
-console.log('[Email] - EMAIL PROVIDER: Gmail SMTP');
+console.log('[Email] - EMAIL PROVIDER: Brevo HTTP API');
 console.log('[Email] - Brevo Service Loaded:', !!brevoService);
 console.log('[Email] ========================================');
 
-// Email configuration - Use GMAIL_USER for from address
-// Gmail requires the from address to match the authenticated user
+// Email configuration - Use environment variables
 var VERIFIED_EMAIL = process.env.VERIFIED_EMAIL || 'olusegun@luminara.io';
-var FROM_EMAIL = process.env.GMAIL_USER || process.env.FROM_EMAIL || 'olusegun@luminara.io';
+var FROM_EMAIL = process.env.FROM_EMAIL || process.env.GMAIL_USER || 'olusegun@luminara.io';
 var FROM_NAME = process.env.FROM_NAME || 'Booking Hub';
 
 console.log('[Email] - From Email:', FROM_EMAIL);
@@ -104,14 +104,13 @@ var approvalTemplate = function (business) {
 };
 
 // ============================================================
-// CORE EMAIL SENDING FUNCTION - Using Gmail SMTP
+// CORE EMAIL SENDING FUNCTION - Using Brevo HTTP API
 // ============================================================
 
 async function sendEmail(options) {
   var to = options.to;
   var subject = options.subject;
   var html = options.html;
-  // Always use GMAIL_USER as from address (Gmail requires this)
   var from = options.from || FROM_EMAIL;
 
   console.log('[Email] 🔍 ========== DEBUG EMAIL FLOW ==========');
@@ -144,8 +143,11 @@ async function sendEmail(options) {
     return { success: false, error: 'Email service not available' };
   }
 
-  // Send via Brevo (which now uses Gmail SMTP)
-  console.log('[Email] 🔍 Attempting to send via Gmail...');
+  // Send via Brevo HTTP API
+  console.log('[Email] 🔍 Attempting to send via Brevo HTTP API...');
+  console.log('[Email] 🔍 - Recipient:', to);
+  console.log('[Email] 🔍 - Subject:', subject);
+
   const result = await brevoService.sendEmail({
     to: to,
     subject: subject,
@@ -153,15 +155,22 @@ async function sendEmail(options) {
     from: from
   });
 
+  // Log the detailed result
+  console.log('[Email] 🔍 Result received from Brevo API:');
+  console.log('[Email] 🔍 - Success:', result.success);
+  console.log('[Email] 🔍 - Error:', result.error || 'None');
+  if (result.data) {
+    console.log('[Email] 🔍 - Message ID:', result.data.messageId);
+  }
+
   if (result.success) {
-    console.log('[Email] ✅ Sent via Gmail successfully!');
+    console.log('[Email] ✅ Sent via Brevo API successfully!');
     console.log('[Email] ✅ - Message ID:', result.data?.messageId);
     console.log('[Email] ✅ - Recipient:', to);
-    console.log('[Email] ✅ - Accepted:', result.data?.accepted?.join(', ') || 'N/A');
     return result;
   } else {
-    console.error('[Email] ❌ Gmail failed:', result.error);
-    console.error('[Email] ❌ Error code:', result.code || 'N/A');
+    console.error('[Email] ❌ Brevo API failed:', result.error);
+    console.error('[Email] ❌ Status:', result.status || 'N/A');
     return result;
   }
 }
