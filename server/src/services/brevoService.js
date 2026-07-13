@@ -91,8 +91,9 @@ async function sendEmail({ to, subject, html, from }) {
     return { success: false, error: 'HTML content is required' };
   }
 
-  // Use custom from address or default
-  const fromAddress = from || `${FROM_NAME} <${GMAIL_USER}>`;
+  // CRITICAL FIX: Use GMAIL_USER as the from address, not a custom domain
+  // Gmail requires the from address to match the authenticated user
+  const fromAddress = `${FROM_NAME} <${GMAIL_USER}>`;
 
   console.log('[Email] 📧 Sending email via Gmail:');
   console.log('[Email] - To:', to);
@@ -110,23 +111,30 @@ async function sendEmail({ to, subject, html, from }) {
     console.log('[Email] ✅ Email sent successfully via Gmail!');
     console.log('[Email] - Message ID:', result.messageId);
     console.log('[Email] - Response:', result.response);
+    console.log('[Email] - Accepted:', result.accepted);
+    console.log('[Email] - Rejected:', result.rejected);
 
     return {
       success: true,
       data: {
         messageId: result.messageId,
-        response: result.response
+        response: result.response,
+        accepted: result.accepted,
+        rejected: result.rejected
       }
     };
   } catch (error) {
     console.error('[Email] ❌ Email failed:');
     console.error('[Email] - Error:', error.message);
+    console.error('[Email] - Code:', error.code);
+    console.error('[Email] - Command:', error.command);
     if (error.response) {
       console.error('[Email] - Response:', error.response);
     }
     return {
       success: false,
-      error: error.message
+      error: error.message,
+      code: error.code
     };
   }
 }
