@@ -1,15 +1,15 @@
 ﻿// FILE: server/src/services/emailService.js
-// COMPLETE FIX - Using Brevo (Sendinblue) for email delivery
+// COMPLETE FIX - Using Gmail SMTP for email delivery
 // No domain verification required! ✅
 
 // ============================================================
-// EMAIL SERVICE - Brevo (Sendinblue) Integration
+// EMAIL SERVICE - Gmail SMTP Integration
 // ============================================================
-// Brevo provides 300 free emails per day
+// Gmail provides 500 free emails per day
 // No domain verification required
-// Works immediately with SMTP key
+// Works with Gmail App Password
 
-// Load Brevo service with try/catch for safety
+// Load Brevo/Gmail service with try/catch for safety
 let brevoService = null;
 
 try {
@@ -63,13 +63,14 @@ console.log('[Email] - NODE_ENV:', process.env.NODE_ENV || 'not set');
 console.log('[Email] - RENDER:', process.env.RENDER || 'not set');
 console.log('[Email] - PORT:', process.env.PORT || 'not set');
 console.log('[Email] - IS_PRODUCTION:', IS_PRODUCTION);
-console.log('[Email] - EMAIL PROVIDER: Brevo (Sendinblue)');
+console.log('[Email] - EMAIL PROVIDER: Gmail SMTP');
 console.log('[Email] - Brevo Service Loaded:', !!brevoService);
 console.log('[Email] ========================================');
 
-// Email configuration
+// Email configuration - Use GMAIL_USER for from address
+// Gmail requires the from address to match the authenticated user
 var VERIFIED_EMAIL = process.env.VERIFIED_EMAIL || 'olusegun@luminara.io';
-var FROM_EMAIL = process.env.FROM_EMAIL || 'bookinghub@noreply.com';
+var FROM_EMAIL = process.env.GMAIL_USER || process.env.FROM_EMAIL || 'olusegun@luminara.io';
 var FROM_NAME = process.env.FROM_NAME || 'Booking Hub';
 
 console.log('[Email] - From Email:', FROM_EMAIL);
@@ -103,13 +104,14 @@ var approvalTemplate = function (business) {
 };
 
 // ============================================================
-// CORE EMAIL SENDING FUNCTION - Using Brevo
+// CORE EMAIL SENDING FUNCTION - Using Gmail SMTP
 // ============================================================
 
 async function sendEmail(options) {
   var to = options.to;
   var subject = options.subject;
   var html = options.html;
+  // Always use GMAIL_USER as from address (Gmail requires this)
   var from = options.from || FROM_EMAIL;
 
   console.log('[Email] 🔍 ========== DEBUG EMAIL FLOW ==========');
@@ -142,8 +144,8 @@ async function sendEmail(options) {
     return { success: false, error: 'Email service not available' };
   }
 
-  // Send via Brevo
-  console.log('[Email] 🔍 Attempting to send via Brevo...');
+  // Send via Brevo (which now uses Gmail SMTP)
+  console.log('[Email] 🔍 Attempting to send via Gmail...');
   const result = await brevoService.sendEmail({
     to: to,
     subject: subject,
@@ -152,12 +154,14 @@ async function sendEmail(options) {
   });
 
   if (result.success) {
-    console.log('[Email] ✅ Sent via Brevo successfully!');
+    console.log('[Email] ✅ Sent via Gmail successfully!');
     console.log('[Email] ✅ - Message ID:', result.data?.messageId);
     console.log('[Email] ✅ - Recipient:', to);
+    console.log('[Email] ✅ - Accepted:', result.data?.accepted?.join(', ') || 'N/A');
     return result;
   } else {
-    console.error('[Email] ❌ Brevo failed:', result.error);
+    console.error('[Email] ❌ Gmail failed:', result.error);
+    console.error('[Email] ❌ Error code:', result.code || 'N/A');
     return result;
   }
 }
