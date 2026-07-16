@@ -1,4 +1,4 @@
-﻿// client/src/UnifiedBookingPage.jsx
+// client/src/UnifiedBookingPage.jsx
 // =============================================
 // UNIFIED BOOKING PAGE - PREMIUM DESIGN INTEGRATION
 // Integrated: HotelBooking design system
@@ -1825,7 +1825,7 @@ function UnifiedBookingPage() {
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(79,70,229,0.2)';
           }
         },
-          business.business_type === 'sports' ? 'Book a Court →' : 'Plan Your Event →'
+          business.business_type === 'sports' ? 'Book a Court ?' : 'Plan Your Event ?'
         ),
         React.createElement('p', { 
           style: { 
@@ -1852,7 +1852,7 @@ function UnifiedBookingPage() {
         },
         onMouseEnter: function(e) { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; },
         onMouseLeave: function(e) { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }
-      }, '‹'),
+      }, '�'),
       React.createElement('img', {
         src: galleryImages[lightboxIndex]?.image_url || galleryImages[lightboxIndex] || '',
         alt: 'Gallery',
@@ -1866,7 +1866,7 @@ function UnifiedBookingPage() {
         },
         onMouseEnter: function(e) { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; },
         onMouseLeave: function(e) { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }
-      }, '›'),
+      }, '�'),
       React.createElement('button', {
         style: styles.lightboxClose,
         onClick: function(e) {
