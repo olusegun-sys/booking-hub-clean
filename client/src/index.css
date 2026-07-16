@@ -306,3 +306,38 @@ html {
 .booking-date-input { color-scheme: light !important; } 
 input[type="date"].booking-date-input { color: #0f172a !important; } 
 input[type="date"].booking-date-input::-webkit-datetime-edit { color: #0f172a !important; } 
+ 
+/* ============================================================ 
+   FIX: Date picker text visibility on mobile 
+   ============================================================ */ 
+.booking-date-input { 
+  color: #0f172a !important; 
+  background: transparent !important; 
+} 
+.booking-date-input::-webkit-datetime-edit { 
+  color: #0f172a !important; 
+} 
+.booking-date-input::-webkit-datetime-edit-fields-wrapper { 
+  color: #0f172a !important; 
+} 
+.booking-date-input::-webkit-datetime-edit-text { 
+  color: #0f172a !important; 
+} 
+.booking-date-input::-webkit-datetime-edit-month-field { 
+  color: #0f172a !important; 
+} 
+.booking-date-input::-webkit-datetime-edit-day-field { 
+  color: #0f172a !important; 
+} 
+.booking-date-input::-webkit-datetime-edit-year-field { 
+  color: #0f172a !important; 
+} 
+.booking-date-input { 
+  color-scheme: light !important; 
+} 
+input[type="date"].booking-date-input { 
+  color: #0f172a !important; 
+} 
+input[type="date"].booking-date-input::-webkit-datetime-edit { 
+  color: #0f172a !important; 
+} 
