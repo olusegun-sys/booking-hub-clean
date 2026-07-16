@@ -1,6 +1,6 @@
 ﻿// FILE: server.js
-// COMPLETE PRODUCTION-READY VERSION - Fixed verification code length
-// ADDED: Booking limit check and admin subscription routes
+// COMPLETE PRODUCTION-READY VERSION WITH SUBSCRIPTION SYSTEM
+// DEPLOY TO RENDER: Replace your server.js with this
 
 require('dotenv').config();
 const express = require('express');
@@ -603,7 +603,7 @@ app.post('/api/staff/login', async function(req, res) {
 // ADMIN ROUTES
 // ============================================================
 
-app.get('/api/admin/businesses', async function(req, res) {
+app.get('/api/admin/businesses', authenticateAdmin, async function(req, res) {
   try {
     var { data, error } = await supabase
       .from('businesses')
@@ -618,7 +618,7 @@ app.get('/api/admin/businesses', async function(req, res) {
   }
 });
 
-app.put('/api/admin/businesses/:id/status', async function(req, res) {
+app.put('/api/admin/businesses/:id/status', authenticateAdmin, async function(req, res) {
   try {
     var { data, error } = await supabase
       .from('businesses')
@@ -640,7 +640,7 @@ app.put('/api/admin/businesses/:id/status', async function(req, res) {
   }
 });
 
-app.delete('/api/admin/businesses/:id', async function(req, res) {
+app.delete('/api/admin/businesses/:id', authenticateAdmin, async function(req, res) {
   try {
     var { id } = req.params;
     
@@ -671,7 +671,7 @@ app.delete('/api/admin/businesses/:id', async function(req, res) {
   }
 });
 
-app.get('/api/admin/stats', async function(req, res) {
+app.get('/api/admin/stats', authenticateAdmin, async function(req, res) {
   try {
     var { count: totalBusinesses } = await supabase
       .from('businesses')
@@ -709,84 +709,224 @@ app.get('/api/admin/stats', async function(req, res) {
 });
 
 // ============================================================
-// ADMIN SUBSCRIPTION ROUTES
+// SUBSCRIPTION ROUTES - COMPLETE
 // ============================================================
 
-// Upgrade business to premium (unlimited bookings)
-app.put('/api/admin/businesses/:id/upgrade', authenticateAdmin, async function(req, res) {
+// GET: Check if business can accept bookings
+app.get('/api/businesses/:businessId/can-book', async function(req, res) {
   try {
-    const { id } = req.params;
+    const { businessId } = req.params;
     
-    // First, get the business to log the upgrade
-    const { data: business, error: fetchError } = await supabase
+    const { data: business, error } = await supabase
       .from('businesses')
-      .select('name, current_booking_count, booking_limit')
-      .eq('id', id)
+      .select('current_booking_count, booking_limit, subscription_status, name')
+      .eq('id', businessId)
       .single();
     
-    if (fetchError || !business) {
+    if (error || !business) {
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
     
-    // Update the business with unlimited bookings
-    const { data, error } = await supabase
-      .from('businesses')
-      .update({ 
-        booking_limit: 999999,
-        current_booking_count: 0,
-        subscription_status: 'premium',
-        subscribed_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
+    const canBook = business.current_booking_count < business.booking_limit;
+    const remaining = Math.max(0, business.booking_limit - business.current_booking_count);
+    const usage = Math.min(100, (business.current_booking_count / business.booking_limit) * 100);
     
-    if (error) throw error;
-    
-    console.log('[Admin] ✅ Upgraded business:', business.name);
-    console.log('[Admin] - Previous limit:', business.booking_limit);
-    console.log('[Admin] - Previous count:', business.current_booking_count);
-    console.log('[Admin] - New limit: 999999 (unlimited)');
-    
-    res.json({ 
-      success: true, 
-      business: data,
-      message: 'Business upgraded successfully to premium'
+    res.json({
+      success: true,
+      data: {
+        canBook: canBook,
+        currentCount: business.current_booking_count,
+        limit: business.booking_limit,
+        remaining: remaining,
+        usagePercent: Math.round(usage),
+        isPremium: business.subscription_status === 'premium' || business.subscription_status === 'pro',
+        message: canBook ? 'You can accept bookings' : 'Booking limit reached. Please upgrade to continue.'
+      }
     });
   } catch (error) {
-    console.error('[Admin] Upgrade error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Can book check error:', error);
+    res.status(500).json({ success: false, error: 'Failed to check booking capacity' });
   }
 });
 
-// Reset free limit (for testing or reactivation)
-app.put('/api/admin/businesses/:id/reset-limit', authenticateAdmin, async function(req, res) {
+// GET: Business subscription status
+app.get('/api/businesses/:businessId/subscription', authenticateBusiness, async function(req, res) {
   try {
-    const { id } = req.params;
+    const { businessId } = req.params;
     
-    const { data, error } = await supabase
+    const { data: business, error } = await supabase
       .from('businesses')
-      .update({ 
-        current_booking_count: 0,
-        booking_limit: 50,
-        subscription_status: 'free'
+      .select('booking_limit, current_booking_count, subscription_status, subscribed_at')
+      .eq('id', businessId)
+      .single();
+    
+    if (error || !business) {
+      return res.status(404).json({ success: false, error: 'Business not found' });
+    }
+    
+    const limit = business.booking_limit || 50;
+    const used = business.current_booking_count || 0;
+    const remaining = Math.max(0, limit - used);
+    const percentage = limit > 0 ? Math.round((used / limit) * 100) : 0;
+    
+    res.json({
+      success: true,
+      data: {
+        plan: business.subscription_status || 'free',
+        limit: limit,
+        used: used,
+        remaining: remaining,
+        percentage: Math.min(percentage, 100),
+        isPremium: business.subscription_status === 'premium' || business.subscription_status === 'pro'
+      }
+    });
+  } catch (error) {
+    console.error('Subscription status error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch subscription status' });
+  }
+});
+
+// POST: Create upgrade request
+app.post('/api/businesses/:businessId/upgrade-request', authenticateBusiness, async function(req, res) {
+  try {
+    const { businessId } = req.params;
+    const { plan, paymentReference, notes } = req.body;
+    
+    if (!plan || !['starter', 'pro'].includes(plan)) {
+      return res.status(400).json({ success: false, error: 'Invalid plan selected' });
+    }
+    
+    // Generate payment reference if not provided
+    const ref = paymentReference || `UPG-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
+    
+    const { data: upgrade, error } = await supabase
+      .from('subscription_upgrades')
+      .insert({
+        business_id: businessId,
+        plan: plan,
+        amount: plan === 'starter' ? 30000 : 50000,
+        payment_reference: ref,
+        status: 'pending',
+        notes: notes || '',
+        created_at: new Date().toISOString()
       })
-      .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
     
-    console.log('[Admin] 🔄 Reset limit for business:', id);
-    
-    res.json({ 
-      success: true, 
-      business: data,
-      message: 'Booking limit reset to 50'
+    res.json({
+      success: true,
+      data: {
+        id: upgrade.id,
+        plan: upgrade.plan,
+        amount: upgrade.amount,
+        reference: upgrade.payment_reference,
+        status: upgrade.status,
+        bankDetails: {
+          bankName: 'GTBank',
+          accountNumber: '0123456789',
+          accountName: 'Booking Hub Limited'
+        }
+      },
+      message: 'Upgrade request created. Transfer the amount and we\'ll verify within 24 hours.'
     });
   } catch (error) {
-    console.error('[Admin] Reset error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Upgrade request error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create upgrade request' });
+  }
+});
+
+// POST: Admin verify and activate upgrade
+app.post('/api/admin/subscription/verify', authenticateAdmin, async function(req, res) {
+  try {
+    const { upgradeId } = req.body;
+    
+    if (!upgradeId) {
+      return res.status(400).json({ success: false, error: 'Upgrade ID is required' });
+    }
+    
+    // Get the upgrade request
+    const { data: upgrade, error: fetchError } = await supabase
+      .from('subscription_upgrades')
+      .select('*')
+      .eq('id', upgradeId)
+      .single();
+    
+    if (fetchError || !upgrade) {
+      return res.status(404).json({ success: false, error: 'Upgrade request not found' });
+    }
+    
+    if (upgrade.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Upgrade already processed' });
+    }
+    
+    // Update upgrade status
+    await supabase
+      .from('subscription_upgrades')
+      .update({ 
+        status: 'approved',
+        verified_at: new Date().toISOString(),
+        verified_by: req.adminId
+      })
+      .eq('id', upgradeId);
+    
+    // Update business subscription
+    const newLimit = upgrade.plan === 'starter' ? 100 : 999999;
+    const newStatus = upgrade.plan === 'starter' ? 'starter' : 'pro';
+    
+    const { data: business, error: updateError } = await supabase
+      .from('businesses')
+      .update({
+        booking_limit: newLimit,
+        subscription_status: newStatus,
+        current_booking_count: 0,
+        subscribed_at: new Date().toISOString()
+      })
+      .eq('id', upgrade.business_id)
+      .select()
+      .single();
+    
+    if (updateError) throw updateError;
+    
+    res.json({
+      success: true,
+      message: `Business upgraded to ${upgrade.plan} plan successfully`,
+      business: business
+    });
+  } catch (error) {
+    console.error('Admin verify error:', error);
+    res.status(500).json({ success: false, error: 'Failed to verify upgrade' });
+  }
+});
+
+// GET: Admin pending upgrades
+app.get('/api/admin/pending-upgrades', authenticateAdmin, async function(req, res) {
+  try {
+    const { data: upgrades, error } = await supabase
+      .from('subscription_upgrades')
+      .select(`
+        *,
+        businesses:business_id (
+          id,
+          name,
+          email,
+          phone,
+          status
+        )
+      `)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    res.json({
+      success: true,
+      data: upgrades || []
+    });
+  } catch (error) {
+    console.error('Pending upgrades error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch pending upgrades' });
   }
 });
 
@@ -1131,9 +1271,40 @@ app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness,
 });
 
 // ============================================================
-// PUBLIC BOOKING ROUTES
+// PUBLIC BOOKING ROUTES WITH LIMIT CHECK
 // ============================================================
 
+// GET: Check if booking can be made (public)
+app.get('/api/businesses/:businessId/booking-capacity', async function(req, res) {
+  try {
+    const { businessId } = req.params;
+    
+    const { data: business, error } = await supabase
+      .from('businesses')
+      .select('current_booking_count, booking_limit, subscription_status, name')
+      .eq('id', businessId)
+      .single();
+    
+    if (error || !business) {
+      return res.status(404).json({ success: false, error: 'Business not found' });
+    }
+    
+    const canBook = business.current_booking_count < business.booking_limit;
+    const remaining = Math.max(0, business.booking_limit - business.current_booking_count);
+    
+    res.json({
+      success: true,
+      canBook: canBook,
+      remaining: remaining,
+      isPremium: business.subscription_status === 'premium' || business.subscription_status === 'pro'
+    });
+  } catch (error) {
+    console.error('Capacity check error:', error);
+    res.status(500).json({ success: false, error: 'Failed to check capacity' });
+  }
+});
+
+// POST: Create booking with limit check
 app.post('/api/bookings', async function(req, res) {
   try {
     console.log('Booking request received:', req.body);
@@ -1181,15 +1352,19 @@ app.post('/api/bookings', async function(req, res) {
     }
 
     // ============================================================
-    // 🔴 CHECK BOOKING LIMIT
+    // 🔴 CHECK BOOKING LIMIT - CRITICAL
     // ============================================================
     const currentCount = business.current_booking_count || 0;
     const limit = business.booking_limit || 50;
 
+    // If limit reached, block booking
     if (currentCount >= limit) {
       console.log('[Booking] ⛔ Limit reached for:', business.name);
       console.log('[Booking] - Current count:', currentCount);
       console.log('[Booking] - Limit:', limit);
+      
+      // Calculate how many more bookings they can take
+      const remaining = limit - currentCount;
       
       return res.status(403).json({
         success: false,
@@ -1197,8 +1372,10 @@ app.post('/api/bookings', async function(req, res) {
         limitReached: true,
         currentCount: currentCount,
         limit: limit,
+        remaining: remaining,
         businessId: business.id,
-        businessName: business.name
+        businessName: business.name,
+        upgradeUrl: '/upgrade/' + business.id
       });
     }
 
@@ -1291,11 +1468,21 @@ app.post('/api/bookings', async function(req, res) {
 
     console.log('Booking created successfully:', bookingRef);
 
+    // Return success with limit info
+    const newCount = (bookingCount || 0) + 1;
+    const remainingBookings = Math.max(0, limit - newCount);
+    
     res.json({ 
       success: true, 
       booking: {
         ...booking,
         room_name: roomName
+      },
+      usageInfo: {
+        used: newCount,
+        limit: limit,
+        remaining: remainingBookings,
+        isNearLimit: remainingBookings <= 5
       },
       message: 'Booking confirmed! A confirmation email has been sent.'
     });
@@ -1596,7 +1783,7 @@ app.put('/api/businesses/:businessId/gallery/reorder', authenticateBusiness, asy
 });
 
 // ============================================================
-// CUSTOM DOMAIN VERIFICATION - FIXED
+// CUSTOM DOMAIN VERIFICATION
 // ============================================================
 
 app.post('/api/businesses/generate-verification', authenticateBusiness, async function(req, res) {
@@ -1810,6 +1997,53 @@ async function ensureAdminUser() {
 }
 
 // ============================================================
+// ENSURE SUBSCRIPTION TABLE EXISTS
+// ============================================================
+async function ensureSubscriptionTable() {
+  try {
+    // Check if subscription_upgrades table exists
+    const { error: checkError } = await supabase
+      .from('subscription_upgrades')
+      .select('id')
+      .limit(1);
+    
+    if (checkError && checkError.message.includes('does not exist')) {
+      console.log('Creating subscription_upgrades table...');
+      
+      // Create the table using raw SQL through Supabase
+      const { error: createError } = await supabase.rpc('create_subscription_table');
+      
+      if (createError) {
+        console.log('Please create subscription_upgrades table manually in Supabase SQL Editor:');
+        console.log(`
+          CREATE TABLE subscription_upgrades (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+            plan VARCHAR(50) NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            payment_reference VARCHAR(255) UNIQUE NOT NULL,
+            status VARCHAR(50) DEFAULT 'pending',
+            notes TEXT,
+            verified_at TIMESTAMP,
+            verified_by UUID,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+          
+          CREATE INDEX idx_subscription_business ON subscription_upgrades(business_id);
+          CREATE INDEX idx_subscription_status ON subscription_upgrades(status);
+          CREATE INDEX idx_subscription_reference ON subscription_upgrades(payment_reference);
+        `);
+      }
+    } else {
+      console.log('Subscription upgrades table exists');
+    }
+  } catch (error) {
+    console.log('Subscription table check skipped:', error.message);
+  }
+}
+
+// ============================================================
 // START SERVER
 // ============================================================
 app.listen(PORT, '0.0.0.0', async function() {
@@ -1828,4 +2062,5 @@ app.listen(PORT, '0.0.0.0', async function() {
   console.log('Allowed CORS origins: ' + ALLOWED_ORIGINS.join(', '));
 
   await ensureAdminUser();
+  await ensureSubscriptionTable();
 });
