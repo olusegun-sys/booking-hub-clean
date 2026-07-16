@@ -97,14 +97,7 @@ function createStyles(isMobile) {
       zIndex: 50,
       boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
     },
-    headerContent: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: isMobile ? '0.4rem' : '0.75rem',
-      justifyContent: 'flex-start',
-      width: 'auto',
-      maxWidth: '100%'
-    },
+    headerContent: { display: 'flex', alignItems: 'center', gap: isMobile ? '0.25rem' : '0.75rem', justifyContent: 'flex-start', flexWrap: 'nowrap', width: isMobile ? 'auto' : '100%', maxWidth: '100%', overflow: 'hidden', flex: isMobile ? '0 1 auto' : '1 1 auto' },
     backButton: {
       whiteSpace: 'nowrap',
       background: 'rgba(79,70,229,0.08)',
@@ -122,22 +115,8 @@ function createStyles(isMobile) {
       flexShrink: 0,
       lineHeight: 1
     },
-    logo: {
-      width: isMobile ? '28px' : '36px',
-      height: isMobile ? '28px' : '36px',
-      borderRadius: '8px',
-      objectFit: 'cover',
-      background: 'white',
-      padding: '0.1rem',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-      flexShrink: 0
-    },
-    businessNameContainer: {
-      minWidth: 0,
-      flex: '0 1 auto',
-      overflow: 'hidden',
-      maxWidth: isMobile ? '140px' : '200px'
-    },
+    logo: { width: isMobile ? '24px' : '36px', height: isMobile ? '24px' : '36px', borderRadius: '6px', objectFit: 'cover', background: 'white', padding: '0.1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', flexShrink: 0 },
+    businessNameContainer: { minWidth: 0, flex: isMobile ? '0 1 auto' : '0 1 auto', overflow: 'hidden', maxWidth: isMobile ? '120px' : '200px', flexShrink: 1 },
     businessName: {
       margin: 0,
       fontSize: isMobile ? '0.8rem' : '1rem',
