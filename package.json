@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "booking-hub",
   "version": "1.0.0",
   "description": "Booking Hub - Multi-tenant booking platform",
@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "node-fetch": "^2.7.0",
     "nodemon": "^3.1.14"
   },
   "keywords": [

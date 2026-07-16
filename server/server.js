@@ -1,5 +1,6 @@
 ﻿// FILE: server.js
 // COMPLETE PRODUCTION-READY VERSION - Fixed verification code length
+// ADDED: Booking limit check and admin subscription routes
 
 require('dotenv').config();
 const express = require('express');
@@ -480,7 +481,8 @@ app.post('/api/businesses/register', async function(req, res) {
         custom_domain: customDomain || null,
         status: 'pending',
         booking_limit: 50,
-        current_booking_count: 0
+        current_booking_count: 0,
+        subscription_status: 'free'
       })
       .select()
       .single();
@@ -707,6 +709,88 @@ app.get('/api/admin/stats', async function(req, res) {
 });
 
 // ============================================================
+// ADMIN SUBSCRIPTION ROUTES
+// ============================================================
+
+// Upgrade business to premium (unlimited bookings)
+app.put('/api/admin/businesses/:id/upgrade', authenticateAdmin, async function(req, res) {
+  try {
+    const { id } = req.params;
+    
+    // First, get the business to log the upgrade
+    const { data: business, error: fetchError } = await supabase
+      .from('businesses')
+      .select('name, current_booking_count, booking_limit')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError || !business) {
+      return res.status(404).json({ success: false, error: 'Business not found' });
+    }
+    
+    // Update the business with unlimited bookings
+    const { data, error } = await supabase
+      .from('businesses')
+      .update({ 
+        booking_limit: 999999,
+        current_booking_count: 0,
+        subscription_status: 'premium',
+        subscribed_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    console.log('[Admin] ✅ Upgraded business:', business.name);
+    console.log('[Admin] - Previous limit:', business.booking_limit);
+    console.log('[Admin] - Previous count:', business.current_booking_count);
+    console.log('[Admin] - New limit: 999999 (unlimited)');
+    
+    res.json({ 
+      success: true, 
+      business: data,
+      message: 'Business upgraded successfully to premium'
+    });
+  } catch (error) {
+    console.error('[Admin] Upgrade error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Reset free limit (for testing or reactivation)
+app.put('/api/admin/businesses/:id/reset-limit', authenticateAdmin, async function(req, res) {
+  try {
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('businesses')
+      .update({ 
+        current_booking_count: 0,
+        booking_limit: 50,
+        subscription_status: 'free'
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    console.log('[Admin] 🔄 Reset limit for business:', id);
+    
+    res.json({ 
+      success: true, 
+      business: data,
+      message: 'Booking limit reset to 50'
+    });
+  } catch (error) {
+    console.error('[Admin] Reset error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================
 // AUTHENTICATED BUSINESS ROUTES
 // ============================================================
 
@@ -721,7 +805,7 @@ app.get('/api/businesses/profile', authenticateBusiness, async function(req, res
 
     var { data, error } = await supabase
       .from('businesses')
-      .select('id, name, email, phone, city, state, logo_url, cover_image, business_type, slug, description, about_text, website, status, booking_limit, current_booking_count')
+      .select('id, name, email, phone, city, state, logo_url, cover_image, business_type, slug, description, about_text, website, status, booking_limit, current_booking_count, subscription_status, subscribed_at')
       .eq('id', businessId)
       .single();
 
@@ -1082,10 +1166,9 @@ app.post('/api/bookings', async function(req, res) {
       return res.status(400).json({ success: false, error: 'Valid total amount is required' });
     }
 
-    var timestamp = Date.now();
-    var randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
-    var bookingRef = 'BK-' + timestamp + '-' + randomStr;
-
+    // ============================================================
+    // FETCH BUSINESS AND CHECK LIMIT
+    // ============================================================
     var { data: business, error: businessError } = await supabase
       .from('businesses')
       .select('*')
@@ -1096,6 +1179,35 @@ app.post('/api/bookings', async function(req, res) {
       console.error('Business not found:', businessId);
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
+
+    // ============================================================
+    // 🔴 CHECK BOOKING LIMIT
+    // ============================================================
+    const currentCount = business.current_booking_count || 0;
+    const limit = business.booking_limit || 50;
+
+    if (currentCount >= limit) {
+      console.log('[Booking] ⛔ Limit reached for:', business.name);
+      console.log('[Booking] - Current count:', currentCount);
+      console.log('[Booking] - Limit:', limit);
+      
+      return res.status(403).json({
+        success: false,
+        error: 'Booking limit reached. Please upgrade your plan to continue accepting bookings.',
+        limitReached: true,
+        currentCount: currentCount,
+        limit: limit,
+        businessId: business.id,
+        businessName: business.name
+      });
+    }
+
+    // ============================================================
+    // CREATE BOOKING
+    // ============================================================
+    var timestamp = Date.now();
+    var randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    var bookingRef = 'BK-' + timestamp + '-' + randomStr;
 
     var roomName = 'Room';
     if (roomId) {
@@ -1148,6 +1260,7 @@ app.post('/api/bookings', async function(req, res) {
       });
     }
 
+    // Update booking count
     var { count: bookingCount } = await supabase
       .from('bookings')
       .select('*', { count: 'exact', head: true })
@@ -1494,8 +1607,6 @@ app.post('/api/businesses/generate-verification', authenticateBusiness, async fu
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
 
-    // Generate SHORT verification code (24 characters - fits in VARCHAR(50))
-    // Using 12 bytes = 24 hex characters - cryptographically secure
     var crypto = require('crypto');
     var verificationCode = crypto.randomBytes(12).toString('hex');
     
@@ -1519,7 +1630,6 @@ app.post('/api/businesses/generate-verification', authenticateBusiness, async fu
     if (error) {
       console.error('[DNS] Database error:', error);
       
-      // Check if the error is about missing columns
       if (error.message && error.message.includes('column') && error.message.includes('does not exist')) {
         return res.status(500).json({ 
           success: false, 
@@ -1566,7 +1676,6 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async funct
       return res.status(400).json({ success: false, error: 'Custom domain is required' });
     }
 
-    // Validate domain format
     var domainPattern = /^([a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+[a-zA-Z]{2,}$/;
     var isValidDomainFormat = domainPattern.test(custom_domain);
 
@@ -1577,7 +1686,6 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async funct
       });
     }
 
-    // Get the business to retrieve verification code
     var { data: business, error: fetchError } = await supabase
       .from('businesses')
       .select('domain_verification_code, domain_verification_expires, name')
@@ -1588,7 +1696,6 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async funct
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
 
-    // Check if verification code exists
     if (!business.domain_verification_code) {
       return res.status(400).json({
         success: false,
@@ -1596,7 +1703,6 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async funct
       });
     }
 
-    // Check if verification code has expired
     if (business.domain_verification_expires) {
       var expiryDate = new Date(business.domain_verification_expires);
       if (new Date() > expiryDate) {
@@ -1611,7 +1717,6 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async funct
     console.log('[DNS] Domain:', custom_domain);
     console.log('[DNS] Expected code:', business.domain_verification_code);
 
-    // ACTUAL DNS VERIFICATION
     var result = await verifyDomainTxtRecord(custom_domain, business.domain_verification_code);
 
     console.log('[DNS] Verification result:', result);
@@ -1624,7 +1729,6 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async funct
       });
     }
 
-    // DNS verification successful - update business
     var { error: updateError } = await supabase
       .from('businesses')
       .update({
@@ -1638,7 +1742,6 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async funct
 
     if (updateError) throw updateError;
 
-    // Get updated business data
     var { data: updatedBusiness } = await supabase
       .from('businesses')
       .select('*')

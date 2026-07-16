@@ -1,7 +1,7 @@
 ﻿// client/src/BusinessDashboard.jsx
 // =============================================
-// COMPLETE BUSINESS DASHBOARD - FIXED ₦ SYMBOL
-// All currency values now display with ₦ Naira symbol
+// COMPLETE BUSINESS DASHBOARD - PRODUCTION VERSION
+// Uses proper components: BookingsManager, RoomPage, BusinessProfile, etc.
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -12,21 +12,13 @@ import {
   Building2, TrendingUp, Plus, ExternalLink,
   CheckCircle, Crown, Star, Zap, AlertTriangle
 } from 'lucide-react';
-import RoomPage from './RoomPage';
-import BookingsManager from './BookingsManager';
-import BusinessProfile from './BusinessProfile';
-import BusinessSettings from './BusinessSettings';
-import StaffManagement from './StaffManagement';
+import RoomPage from './pages/RoomPage';
+import BookingsManager from './pages/BookingsManager';
+import BusinessProfile from './pages/BusinessProfile';
+import BusinessSettings from './pages/BusinessSettings';
+import StaffManagement from './pages/StaffManagement';
 import UpgradeModal from './components/UpgradeModal';
 import API_BASE from './config';
-
-// ============================================================
-// HELPER: Format currency with ₦ symbol
-// ============================================================
-function formatNaira(amount) {
-  if (!amount && amount !== 0) return '₦0';
-  return '₦' + Number(amount).toLocaleString();
-}
 
 // ============================================================
 // SUBSCRIPTION TIERS CONFIGURATION
@@ -305,7 +297,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         ),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
           React.createElement('span', { style: { fontSize: '14px', opacity: 0.8 } },
-            currentTierData.price === 0 ? 'Free' : formatNaira(currentTierData.price) + '/month'
+            currentTierData.price === 0 ? 'Free' : '₦' + currentTierData.price.toLocaleString() + '/month'
           ),
           currentTierData.id !== 'pro' && React.createElement('button', {
             onClick: () => setActiveTab('subscription'),
@@ -323,7 +315,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         )
       ),
 
-      // Stats Grid - FIXED ₦ symbol
+      // Stats Grid
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', gap: '20px', marginBottom: '32px' } },
         React.createElement('div', { style: { background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #eef2ff' } },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } },
@@ -333,7 +325,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             )
           ),
           React.createElement('h2', { style: { fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 } }, 
-            formatNaira(totalRevenue)
+            '₦' + totalRevenue.toLocaleString()
           ),
           React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } }, 'Lifetime revenue')
         ),
@@ -397,7 +389,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         )
       ),
       
-      // Recent Bookings - FIXED ₦ symbol
+      // Recent Bookings
       React.createElement('div', { style: { background: 'white', borderRadius: '20px', border: '1px solid #eef2ff', overflow: 'hidden' } },
         React.createElement('div', { style: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#fafbff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
           React.createElement('h3', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 'Recent Bookings'),
@@ -414,7 +406,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
                 React.createElement('p', { style: { fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' } }, booking.booking_reference)
               ),
               React.createElement('div', { style: { textAlign: 'right' } },
-                React.createElement('p', { style: { fontWeight: '600', color: '#4f46e5', margin: 0 } }, formatNaira(booking.total_amount)),
+                React.createElement('p', { style: { fontWeight: '600', color: '#4f46e5', margin: 0 } }, '₦' + (booking.total_amount || 0).toLocaleString()),
                 React.createElement('span', { 
                   style: { 
                     fontSize: '11px', 

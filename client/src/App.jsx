@@ -1,9 +1,15 @@
-﻿import React from 'react';
+﻿// client/src/App.jsx
+// =============================================
+// COMPLETE APP - FIXED IMPORT
+// =============================================
+
+import React from 'react';
 import { Toaster } from 'react-hot-toast';
 import './styles.css';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import HomePage from './HomePage';
 import BusinessLogin from './BusinessLogin';
+// FIXED: Import from ./BusinessDashboard (NOT ./pages/)
 import BusinessDashboard from './BusinessDashboard';
 import UnifiedBookingPage from './UnifiedBookingPage';
 import AdminDashboard from './AdminDashboard';
