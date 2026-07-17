@@ -11,14 +11,14 @@ import {
   DollarSign, ChevronRight, Menu, X,
   Building2, TrendingUp, Plus, ExternalLink,
   CheckCircle, Crown, Star, Zap, AlertTriangle,
-  Sparkle, Gem, Rocket, Infinity, Shield, Award
+  Sparkle, Gem, Rocket, Infinity, Shield, Award,
+  Copy, Check, ArrowRight, Wallet, Building, Phone, Mail
 } from 'lucide-react';
 import RoomPage from './RoomPage';
 import BookingsManager from './BookingsManager';
 import BusinessProfile from './BusinessProfile';
 import BusinessSettings from './BusinessSettings';
 import StaffManagement from './StaffManagement';
-import BookingLimitBanner from './components/BookingLimitBanner';
 import UpgradeModal from './components/UpgradeModal';
 import API_BASE from './config';
 
@@ -108,6 +108,10 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState(null);
   const [hoveredTier, setHoveredTier] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [paymentStep, setPaymentStep] = useState('select'); // 'select' | 'payment' | 'success'
+  const [paymentData, setPaymentData] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // ============================================================
   // TOKEN & BUSINESS ID
@@ -231,8 +235,82 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       });
   }
 
-  function handleUpgradeClick() {
+  function handleUpgradeClick(tierId) {
+    setSelectedTier(tierId);
+    setPaymentStep('payment');
     setShowUpgradeModal(true);
+    
+    // Generate payment data immediately
+    const tier = SUBSCRIPTION_TIERS[tierId];
+    const reference = `UPG-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
+    
+    setPaymentData({
+      plan: tierId,
+      planName: tier.name,
+      amount: tier.price,
+      reference: reference,
+      bankName: 'GTBank',
+      accountNumber: '0123456789',
+      accountName: 'Booking Hub Limited'
+    });
+  }
+
+  function handleCopyReference() {
+    if (paymentData?.reference) {
+      navigator.clipboard.writeText(paymentData.reference);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    }
+  }
+
+  async function handleConfirmPayment() {
+    if (!businessId) {
+      alert('Business ID not found. Please refresh and try again.');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      if (!token) {
+        alert('Please login again.');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/businesses/${businessId}/upgrade-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          plan: selectedTier,
+          paymentReference: paymentData.reference,
+          notes: `Upgrade to ${selectedTier} plan - ${new Date().toLocaleDateString('en-NG')}`
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create upgrade request');
+      }
+
+      setPaymentStep('success');
+      
+      setTimeout(() => {
+        setShowUpgradeModal(false);
+        setPaymentStep('select');
+        setSelectedTier(null);
+        setPaymentData(null);
+      }, 5000);
+      
+    } catch (error) {
+      alert(error.message || 'Failed to submit upgrade request');
+      console.error('Upgrade error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   }
 
   function getBusinessTypeLabels() {
@@ -300,16 +378,14 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     localStorage.setItem('currentBusiness', JSON.stringify(updatedBusiness));
   }
 
-  const handleUpgrade = (tierId) => {
-    setSelectedTier(tierId);
-    setShowUpgradeModal(true);
-  };
-
   const handleUpgradeComplete = async (tierId) => {
     await fetchBusinessData();
     await fetchBookings();
     await fetchSubscriptionStatus();
     setShowUpgradeModal(false);
+    setPaymentStep('select');
+    setSelectedTier(null);
+    setPaymentData(null);
   };
 
   const handleLogout = () => {
@@ -365,7 +441,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     };
     
     return React.createElement('div', null,
-      // Premium Plan Banner with Glass Effect
+      // Premium Plan Banner with Glass Effect - UPDATED: White text
       React.createElement('div', {
         style: {
           background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4f46e5 100%)',
@@ -426,7 +502,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           ),
           React.createElement('div', null,
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
-              React.createElement('h2', { style: { fontSize: '22px', fontWeight: '700', margin: 0 } }, currentTierData.name + ' Plan'),
+              React.createElement('h2', { style: { fontSize: '22px', fontWeight: '700', margin: 0, color: 'white' } }, currentTierData.name + ' Plan'),
               React.createElement('span', {
                 style: {
                   background: 'rgba(255,255,255,0.2)',
@@ -434,11 +510,12 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
                   borderRadius: '20px',
                   fontSize: '11px',
                   fontWeight: '500',
-                  letterSpacing: '0.5px'
+                  letterSpacing: '0.5px',
+                  color: 'white'
                 }
               }, currentTierData.badge)
             ),
-            React.createElement('p', { style: { opacity: 0.85, fontSize: '14px', margin: '4px 0 0 0' } },
+            React.createElement('p', { style: { opacity: 0.9, fontSize: '14px', margin: '4px 0 0 0', color: 'white' } },
               currentTierData.bookings === 999999 
                 ? '♾️ Unlimited bookings' 
                 : currentTierData.bookings + ' bookings per month'
@@ -447,13 +524,13 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         ),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px', position: 'relative', zIndex: 1 } },
           React.createElement('div', { style: { textAlign: 'right' } },
-            React.createElement('span', { style: { fontSize: '14px', opacity: 0.7 } }, 'Price'),
-            React.createElement('div', { style: { fontSize: '20px', fontWeight: '700' } },
+            React.createElement('span', { style: { fontSize: '14px', opacity: 0.7, color: 'white' } }, 'Price'),
+            React.createElement('div', { style: { fontSize: '20px', fontWeight: '700', color: 'white' } },
               currentTierData.price === 0 ? 'Free' : formatNaira(currentTierData.price) + '/mo'
             )
           ),
           currentTierData.id !== 'pro' && React.createElement('button', {
-            onClick: handleUpgradeClick,
+            onClick: () => setActiveTab('subscription'),
             style: {
               padding: '12px 28px',
               background: 'white',
@@ -471,13 +548,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           }, '⬆ Upgrade Now')
         )
       ),
-
-      // Booking Limit Banner
-      React.createElement(BookingLimitBanner, {
-        subscription: subData,
-        onUpgrade: handleUpgradeClick,
-        isMobile: !isDesktop
-      }),
 
       // Stats Grid - Premium Glass Cards
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', gap: '20px', marginBottom: '32px' } },
@@ -693,7 +763,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         },
         onMouseEnter: () => setHoveredTier(tierId),
         onMouseLeave: () => setHoveredTier(null),
-        onClick: () => !isCurrent && handleUpgrade(tier.id)
+        onClick: () => !isCurrent && handleUpgradeClick(tier.id)
       },
         // Premium Badge
         tier.badge && React.createElement('div', {
@@ -787,7 +857,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
 
         // Action Button
         React.createElement('button', {
-          onClick: (e) => { e.stopPropagation(); if (!isCurrent) handleUpgrade(tier.id); },
+          onClick: (e) => { e.stopPropagation(); if (!isCurrent) handleUpgradeClick(tier.id); },
           disabled: isCurrent,
           style: {
             width: '100%',
@@ -927,6 +997,486 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           React.createElement('p', {
             style: { fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }
           }, 'Upgrades take effect within 24 hours after payment verification. Cancel or downgrade anytime from Settings.')
+        )
+      )
+    );
+  };
+
+  // ============================================================
+  // RENDER UPGRADE MODAL - DIRECT PAYMENT (NO PLAN SELECTION)
+  // ============================================================
+  const renderUpgradeModal = () => {
+    if (!showUpgradeModal) return null;
+
+    const tier = selectedTier ? SUBSCRIPTION_TIERS[selectedTier] : null;
+    if (!tier) return null;
+
+    const isSuccess = paymentStep === 'success';
+    const isProcessingState = isProcessing;
+
+    // ============================================================
+    // SUCCESS STEP
+    // ============================================================
+    if (isSuccess) {
+      return React.createElement('div', {
+        style: {
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        },
+        onClick: () => {
+          setShowUpgradeModal(false);
+          setPaymentStep('select');
+          setSelectedTier(null);
+          setPaymentData(null);
+        }
+      },
+        React.createElement('div', {
+          style: {
+            background: 'white',
+            borderRadius: '32px',
+            maxWidth: '480px',
+            width: '100%',
+            padding: '48px 40px',
+            textAlign: 'center',
+            boxShadow: '0 40px 80px rgba(0,0,0,0.3)',
+            animation: 'scaleIn 0.4s ease'
+          }
+        },
+          React.createElement('div', {
+            style: {
+              width: '80px',
+              height: '80px',
+              background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px'
+            }
+          },
+            React.createElement(Check, { size: 40, color: '#065f46' })
+          ),
+          React.createElement('h2', {
+            style: { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }
+          }, '✅ Upgrade Request Submitted!'),
+          React.createElement('p', {
+            style: { fontSize: '15px', color: '#64748b', margin: '0 0 24px 0' }
+          },
+            'We\'ve received your request to upgrade to ',
+            React.createElement('strong', null, tier.name),
+            ' Plan'
+          ),
+          React.createElement('div', {
+            style: {
+              background: '#f0fdf4',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              textAlign: 'left',
+              marginBottom: '24px'
+            }
+          },
+            React.createElement('p', {
+              style: { fontSize: '13px', color: '#065f46', margin: '0 0 8px 0', fontWeight: '600' }
+            }, '📋 Next Steps:'),
+            React.createElement('ol', {
+              style: { fontSize: '13px', color: '#065f46', margin: 0, paddingLeft: '20px', lineHeight: '1.8' }
+            },
+              React.createElement('li', null, 'Transfer ', React.createElement('strong', null, formatNaira(paymentData?.amount)), ' to our account'),
+              React.createElement('li', null, 'Use reference: ', React.createElement('strong', { style: { fontFamily: 'monospace', fontSize: '12px' } }, paymentData?.reference)),
+              React.createElement('li', null, 'We\'ll verify and activate within ', React.createElement('strong', null, '24 hours'))
+            )
+          ),
+          React.createElement('button', {
+            onClick: () => {
+              setShowUpgradeModal(false);
+              setPaymentStep('select');
+              setSelectedTier(null);
+              setPaymentData(null);
+            },
+            style: {
+              width: '100%',
+              padding: '14px',
+              background: '#4f46e5',
+              color: 'white',
+              border: 'none',
+              borderRadius: '14px',
+              fontSize: '15px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }
+          }, 'Go to Dashboard')
+        )
+      );
+    }
+
+    // ============================================================
+    // PAYMENT STEP - PREMIUM REDESIGN
+    // ============================================================
+    return React.createElement('div', {
+      style: {
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(12px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '20px'
+      },
+      onClick: (e) => {
+        if (e.target === e.currentTarget) {
+          setShowUpgradeModal(false);
+          setPaymentStep('select');
+          setSelectedTier(null);
+          setPaymentData(null);
+        }
+      }
+    },
+      React.createElement('div', {
+        style: {
+          background: 'white',
+          borderRadius: '32px',
+          maxWidth: '520px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          boxShadow: '0 40px 80px rgba(0,0,0,0.3)',
+          animation: 'slideUp 0.4s ease'
+        }
+      },
+        // Header
+        React.createElement('div', {
+          style: {
+            padding: '28px 32px',
+            borderBottom: '1px solid #f1f5f9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }
+        },
+          React.createElement('div', null,
+            React.createElement('h2', {
+              style: { fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: 0 }
+            }, '💳 Complete Payment'),
+            React.createElement('p', {
+              style: { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }
+            }, 'Transfer the exact amount to our bank account')
+          ),
+          React.createElement('button', {
+            onClick: () => {
+              setShowUpgradeModal(false);
+              setPaymentStep('select');
+              setSelectedTier(null);
+              setPaymentData(null);
+            },
+            style: {
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: '#94a3b8',
+              padding: '0 8px'
+            }
+          }, '✕')
+        ),
+
+        // Plan Summary Banner
+        React.createElement('div', {
+          style: {
+            margin: '24px 32px 0',
+            background: 'linear-gradient(135deg, ' + tier.color + '15, ' + tier.color + '08)',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            border: '1px solid ' + tier.color + '30',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }
+        },
+          React.createElement('div', null,
+            React.createElement('span', {
+              style: { fontSize: '12px', color: '#64748b', fontWeight: '500' }
+            }, 'Upgrading to'),
+            React.createElement('div', {
+              style: { fontSize: '18px', fontWeight: '700', color: tier.color }
+            }, tier.name + ' Plan')
+          ),
+          React.createElement('div', { style: { textAlign: 'right' } },
+            React.createElement('span', {
+              style: { fontSize: '12px', color: '#64748b', fontWeight: '500' }
+            }, 'Amount'),
+            React.createElement('div', {
+              style: { fontSize: '22px', fontWeight: '800', color: tier.color }
+            }, formatNaira(tier.price))
+          )
+        ),
+
+        // Payment Details - Premium Redesign
+        React.createElement('div', {
+          style: { padding: '24px 32px' }
+        },
+          React.createElement('div', {
+            style: {
+              background: '#f8fafc',
+              borderRadius: '16px',
+              padding: '20px',
+              border: '1px solid #e2e8f0'
+            }
+          },
+            // Bank Header
+            React.createElement('div', {
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '16px',
+                paddingBottom: '16px',
+                borderBottom: '2px dashed #e2e8f0'
+              }
+            },
+              React.createElement('div', {
+                style: {
+                  width: '48px',
+                  height: '48px',
+                  background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
+                  borderRadius: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }
+              },
+                React.createElement(Building, { size: 24, color: 'white' })
+              ),
+              React.createElement('div', null,
+                React.createElement('div', {
+                  style: { fontSize: '16px', fontWeight: '700', color: '#0f172a' }
+                }, paymentData?.bankName),
+                React.createElement('div', {
+                  style: { fontSize: '13px', color: '#64748b' }
+                }, paymentData?.accountName)
+              )
+            ),
+
+            // Account Number - Highlighted
+            React.createElement('div', {
+              style: {
+                background: 'white',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                marginBottom: '12px',
+                border: '2px solid #4f46e5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }
+            },
+              React.createElement('div', null,
+                React.createElement('div', {
+                  style: { fontSize: '11px', color: '#64748b', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }
+                }, 'Account Number'),
+                React.createElement('div', {
+                  style: { fontSize: '20px', fontWeight: '700', color: '#0f172a', fontFamily: 'monospace', letterSpacing: '2px' }
+                }, paymentData?.accountNumber)
+              ),
+              React.createElement('div', {
+                style: {
+                  background: '#d1fae5',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '11px',
+                  color: '#065f46',
+                  fontWeight: '600'
+                }
+              }, '✓ Active')
+            ),
+
+            // Other Details in Grid
+            React.createElement('div', {
+              style: {
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '8px'
+              }
+            },
+              React.createElement('div', {
+                style: {
+                  background: 'white',
+                  borderRadius: '10px',
+                  padding: '12px 14px'
+                }
+              },
+                React.createElement('div', {
+                  style: { fontSize: '10px', color: '#94a3b8', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }
+                }, 'Plan'),
+                React.createElement('div', {
+                  style: { fontSize: '14px', fontWeight: '600', color: '#0f172a', textTransform: 'capitalize' }
+                }, paymentData?.plan)
+              ),
+              React.createElement('div', {
+                style: {
+                  background: 'white',
+                  borderRadius: '10px',
+                  padding: '12px 14px'
+                }
+              },
+                React.createElement('div', {
+                  style: { fontSize: '10px', color: '#94a3b8', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }
+                }, 'Amount'),
+                React.createElement('div', {
+                  style: { fontSize: '14px', fontWeight: '600', color: '#0f172a' }
+                }, formatNaira(paymentData?.amount))
+              )
+            ),
+
+            // Reference - Copyable
+            React.createElement('div', {
+              style: {
+                background: 'white',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                marginTop: '8px',
+                border: '1px dashed #cbd5e1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }
+            },
+              React.createElement('div', null,
+                React.createElement('div', {
+                  style: { fontSize: '10px', color: '#94a3b8', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }
+                }, 'Reference (Use as narration)'),
+                React.createElement('div', {
+                  style: { fontSize: '13px', fontWeight: '600', color: '#0f172a', fontFamily: 'monospace' }
+                }, paymentData?.reference)
+              ),
+              React.createElement('button', {
+                onClick: handleCopyReference,
+                style: {
+                  background: copied ? '#d1fae5' : '#eef2ff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '12px',
+                  color: copied ? '#065f46' : '#4f46e5',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease'
+                }
+              },
+                copied 
+                  ? React.createElement(React.Fragment, null, React.createElement(Check, { size: 14 }), ' Copied')
+                  : React.createElement(React.Fragment, null, React.createElement(Copy, { size: 14 }), ' Copy')
+              )
+            )
+          ),
+
+          // Important Note
+          React.createElement('div', {
+            style: {
+              background: '#fffbeb',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              marginTop: '16px',
+              border: '1px solid #fde68a',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px'
+            }
+          },
+            React.createElement(AlertTriangle, { size: 18, color: '#d97706', style: { flexShrink: 0, marginTop: '1px' } }),
+            React.createElement('div', null,
+              React.createElement('div', {
+                style: { fontSize: '13px', fontWeight: '600', color: '#92400e' }
+              }, '⚠️ Important'),
+              React.createElement('div', {
+                style: { fontSize: '12px', color: '#78350f' }
+              },
+                'Use the reference as narration. Verification takes ',
+                React.createElement('strong', null, 'up to 24 hours')
+              )
+            )
+          ),
+
+          // Action Buttons
+          React.createElement('div', {
+            style: { marginTop: '20px', display: 'flex', gap: '12px' }
+          },
+            React.createElement('button', {
+              onClick: handleConfirmPayment,
+              disabled: isProcessingState,
+              style: {
+                flex: 1,
+                padding: '14px 24px',
+                background: isProcessingState ? '#94a3b8' : 'linear-gradient(135deg, #4f46e5, #6366f1)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '14px',
+                fontSize: '15px',
+                fontWeight: '600',
+                cursor: isProcessingState ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: isProcessingState ? 'none' : '0 4px 20px rgba(79, 70, 229, 0.3)',
+                transition: 'all 0.3s ease'
+              },
+              onMouseEnter: (e) => {
+                if (!isProcessingState) {
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(79, 70, 229, 0.4)';
+                }
+              },
+              onMouseLeave: (e) => {
+                if (!isProcessingState) {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(79, 70, 229, 0.3)';
+                }
+              }
+            },
+              isProcessingState 
+                ? React.createElement(React.Fragment, null, 
+                    React.createElement('div', { style: { width: '20px', height: '20px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' } }),
+                    ' Processing...'
+                  )
+                : React.createElement(React.Fragment, null,
+                    React.createElement(Check, { size: 18 }),
+                    ' I\'ve Made the Transfer'
+                  )
+            ),
+            React.createElement('button', {
+              onClick: () => {
+                setShowUpgradeModal(false);
+                setPaymentStep('select');
+                setSelectedTier(null);
+                setPaymentData(null);
+              },
+              style: {
+                padding: '14px 20px',
+                background: 'white',
+                color: '#64748b',
+                border: '1px solid #e2e8f0',
+                borderRadius: '14px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              },
+              onMouseEnter: (e) => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.color = '#4f46e5'; },
+              onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'; }
+            }, 'Cancel')
+          )
         )
       )
     );
@@ -1193,19 +1743,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       // Content Area
       React.createElement('div', { style: { padding: isDesktop ? '32px' : '20px' } }, 
         renderContent(),
-        
-        // Upgrade Modal
-        React.createElement(UpgradeModal, {
-          isOpen: showUpgradeModal,
-          onClose: () => setShowUpgradeModal(false),
-          businessName: business?.name || 'Your Business',
-          businessId: business?.id,
-          currentCount: bookings.length,
-          limit: limit || 50,
-          selectedTier: selectedTier,
-          onUpgradeComplete: handleUpgradeComplete,
-          currentPlan: business?.subscription_status || 'free'
-        })
+        renderUpgradeModal()
       )
     )
   );
