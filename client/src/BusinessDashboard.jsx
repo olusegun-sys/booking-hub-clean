@@ -1,4 +1,5 @@
-﻿// client/src/BusinessDashboard.jsx
+﻿
+// client/src/BusinessDashboard.jsx
 // =============================================
 // COMPLETE BUSINESS DASHBOARD - FIXED ₦ SYMBOL
 // All currency values now display with ₦ Naira symbol
@@ -435,6 +436,139 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     );
   };
 
+  // ============================================================
+  // Render Subscription / Plans tab
+  // Lists all tiers from SUBSCRIPTION_TIERS, highlights the
+  // current plan, and lets the user upgrade via UpgradeModal.
+  // ============================================================
+  const renderSubscription = () => {
+    const currentTierData = getCurrentTier();
+    const tierOrder = ['free', 'starter', 'pro'];
+
+    const renderTierCard = (tierId) => {
+      const tier = SUBSCRIPTION_TIERS[tierId];
+      const TierIcon = tier.icon;
+      const isCurrent = currentTierData.id === tierId;
+      const isFree = tier.price === 0;
+      const isUnlimited = tier.bookings === 999999;
+
+      return React.createElement('div', {
+        key: tier.id,
+        style: {
+          background: 'white',
+          borderRadius: '20px',
+          border: isCurrent ? ('2px solid ' + tier.color) : '1px solid #eef2ff',
+          padding: '28px',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: isCurrent ? ('0 12px 32px ' + tier.color + '22') : 'none'
+        }
+      },
+        tier.badge && React.createElement('span', {
+          style: {
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            background: tier.color + '15',
+            color: tier.color,
+            fontSize: '11px',
+            fontWeight: '600',
+            padding: '4px 10px',
+            borderRadius: '20px'
+          }
+        }, tier.badge),
+
+        React.createElement('div', {
+          style: {
+            width: '52px',
+            height: '52px',
+            background: tier.color + '15',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '16px'
+          }
+        }, React.createElement(TierIcon, { size: 26, color: tier.color })),
+
+        React.createElement('h3', {
+          style: { fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' }
+        }, tier.name + ' Plan'),
+
+        React.createElement('div', {
+          style: { display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '12px' }
+        },
+          React.createElement('span', {
+            style: { fontSize: '28px', fontWeight: '700', color: tier.color }
+          }, isFree ? 'Free' : formatNaira(tier.price)),
+          !isFree && React.createElement('span', {
+            style: { fontSize: '13px', color: '#94a3b8' }
+          }, '/month')
+        ),
+
+        React.createElement('p', {
+          style: { fontSize: '13px', color: '#64748b', margin: '0 0 20px 0' }
+        }, isUnlimited ? '♾️ Unlimited bookings per month' : (tier.bookings + ' bookings per month')),
+
+        React.createElement('button', {
+          onClick: () => isCurrent ? null : handleUpgrade(tier.id),
+          disabled: isCurrent,
+          style: {
+            marginTop: 'auto',
+            width: '100%',
+            padding: '12px',
+            background: isCurrent ? '#f1f5f9' : tier.color,
+            color: isCurrent ? '#94a3b8' : 'white',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: isCurrent ? 'default' : 'pointer'
+          }
+        }, isCurrent ? '✓ Current Plan' : ('Upgrade to ' + tier.name))
+      );
+    };
+
+    return React.createElement('div', null,
+      React.createElement('div', { style: { marginBottom: '28px' } },
+        React.createElement('h1', {
+          style: { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px 0' }
+        }, 'Subscription Plans'),
+        React.createElement('p', {
+          style: { fontSize: '14px', color: '#64748b', margin: 0 }
+        }, 'View and manage your subscription plans. Your current plan is ',
+          React.createElement('strong', { style: { color: currentTierData.color } }, currentTierData.name),
+          '.')
+      ),
+
+      React.createElement('div', {
+        style: {
+          display: 'grid',
+          gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr',
+          gap: '20px',
+          marginBottom: '28px'
+        }
+      }, tierOrder.map(renderTierCard)),
+
+      React.createElement('div', {
+        style: {
+          background: '#eef2ff',
+          borderRadius: '14px',
+          padding: '16px 20px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px'
+        }
+      },
+        React.createElement(AlertTriangle, { size: 18, color: '#4f46e5', style: { flexShrink: 0, marginTop: '2px' } }),
+        React.createElement('p', {
+          style: { fontSize: '13px', color: '#475569', margin: 0, lineHeight: '1.5' }
+        }, 'Upgrading takes effect after payment verification (usually within 24 hours). You can downgrade to a lower plan at any time from Settings.')
+      )
+    );
+  };
+
   const renderContent = () => {
     switch(activeTab) {
       case 'overview':
@@ -468,10 +602,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           onBusinessUpdate: fetchBusinessData
         });
       case 'subscription':
-        return React.createElement('div', { style: { textAlign: 'center', padding: '40px' } },
-          React.createElement('h2', { style: { fontSize: '24px', fontWeight: '700' } }, 'Subscription Plans'),
-          React.createElement('p', { style: { color: '#64748b' } }, 'View and manage your subscription plans')
-        );
+        return renderSubscription();
       default:
         return renderOverview();
     }
