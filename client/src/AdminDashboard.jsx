@@ -9,7 +9,7 @@ import {
   Building2, Clock, CheckCircle2, XCircle, TrendingUp, Calendar, 
   MapPin, Phone, Mail, Trash2, Search, Hotel, Dumbbell, CalendarDays, 
   LogOut, TrendingDown, DollarSign, Sparkles, AlertTriangle, Check, X,
-  Loader2, Home, Shield, AlertOctagon, Database, RefreshCw
+  Loader2, Home, Shield, AlertOctagon, RefreshCw
 } from 'lucide-react';
 import API_BASE from './config';
 
@@ -228,11 +228,11 @@ function AdminDashboard({ admin, onLogout }) {
     );
   }
 
-  return React.createElement('div', { style: { minHeight: '100vh', backgroundColor: '#f8fafc' } },
-    // ============================================================
-    // DELETE MODAL - ENHANCED WITH TWO-STEP CONFIRMATION
-    // ============================================================
-    deleteModal.isOpen && React.createElement('div', {
+  // Render delete modal conditionally
+  const renderDeleteModal = () => {
+    if (!deleteModal.isOpen) return null;
+    
+    return React.createElement('div', {
       style: { 
         position: 'fixed', 
         top: 0, 
@@ -376,7 +376,7 @@ function AdminDashboard({ admin, onLogout }) {
           ),
           
           // Warning message - changes based on step
-          deleteStep === 'confirm' ? (
+          deleteStep === 'confirm' ? 
             React.createElement('div', { 
               style: { 
                 backgroundColor: '#fffbeb', 
@@ -403,7 +403,7 @@ function AdminDashboard({ admin, onLogout }) {
                 React.createElement('li', null, 'All business data')
               )
             )
-          ) : deleteStep === 'final' ? (
+          : deleteStep === 'final' ? 
             React.createElement('div', { 
               style: { 
                 backgroundColor: '#fef2f2', 
@@ -424,7 +424,7 @@ function AdminDashboard({ admin, onLogout }) {
                 'This action cannot be undone. All data will be permanently lost.'
               )
             )
-          ) : null,
+          : null,
           
           // Action Buttons
           React.createElement('div', { 
@@ -523,7 +523,12 @@ function AdminDashboard({ admin, onLogout }) {
           )
         )
       )
-    ),
+    );
+  };
+
+  return React.createElement('div', { style: { minHeight: '100vh', backgroundColor: '#f8fafc' } },
+    // Delete Modal
+    renderDeleteModal(),
 
     // Header - Mobile Optimized
     React.createElement('header', { 
@@ -650,8 +655,8 @@ function AdminDashboard({ admin, onLogout }) {
           marginBottom: '24px' 
         } 
       },
-        statCards.map((card, i) => {
-          const ChangeIcon = card.changeUp ? TrendingUp : TrendingDown;
+        statCards.map(function(card, i) {
+          var ChangeIcon = card.changeUp ? TrendingUp : TrendingDown;
           return React.createElement('div', { 
             key: i, 
             style: { 
@@ -662,8 +667,8 @@ function AdminDashboard({ admin, onLogout }) {
               border: '1px solid rgba(0,0,0,0.05)',
               transition: 'all 0.3s ease'
             },
-            onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
-            onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; }
+            onMouseEnter: function(e) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
+            onMouseLeave: function(e) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; }
           },
             React.createElement('div', { 
               style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' } 
@@ -735,14 +740,14 @@ function AdminDashboard({ admin, onLogout }) {
         },
           [
             { id: 'all', label: isMobile ? 'All' : 'All Businesses', icon: Building2, count: businesses.length },
-            { id: 'pending', label: 'Pending', icon: Clock, count: businesses.filter(b => b.status === 'pending').length },
-            { id: 'approved', label: 'Approved', icon: CheckCircle2, count: businesses.filter(b => b.status === 'approved').length },
-            { id: 'rejected', label: 'Rejected', icon: XCircle, count: businesses.filter(b => b.status === 'rejected').length }
-          ].map(tab => {
-            const isActive = activeTab === tab.id;
+            { id: 'pending', label: 'Pending', icon: Clock, count: businesses.filter(function(b) { return b.status === 'pending'; }).length },
+            { id: 'approved', label: 'Approved', icon: CheckCircle2, count: businesses.filter(function(b) { return b.status === 'approved'; }).length },
+            { id: 'rejected', label: 'Rejected', icon: XCircle, count: businesses.filter(function(b) { return b.status === 'rejected'; }).length }
+          ].map(function(tab) {
+            var isActive = activeTab === tab.id;
             return React.createElement('button', { 
               key: tab.id, 
-              onClick: () => setActiveTab(tab.id), 
+              onClick: function() { setActiveTab(tab.id); }, 
               style: { 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -789,15 +794,15 @@ function AdminDashboard({ admin, onLogout }) {
             width: isMobile ? '100%' : '260px',
             transition: 'all 0.3s ease'
           },
-          onFocus: (e) => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.1)'; },
-          onBlur: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }
+          onFocus: function(e) { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.1)'; },
+          onBlur: function(e) { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }
         },
           React.createElement(Search, { size: isMobile ? 14 : 16, color: '#94a3b8' }),
           React.createElement('input', { 
             type: 'text', 
             placeholder: 'Search businesses...', 
             value: searchTerm, 
-            onChange: (e) => setSearchTerm(e.target.value), 
+            onChange: function(e) { setSearchTerm(e.target.value); }, 
             style: { 
               border: 'none', 
               outline: 'none', 
@@ -808,7 +813,7 @@ function AdminDashboard({ admin, onLogout }) {
             } 
           }),
           searchTerm && React.createElement('button', { 
-            onClick: () => setSearchTerm(''), 
+            onClick: function() { setSearchTerm(''); }, 
             style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', padding: '0 4px' } 
           }, '×')
         )
@@ -857,14 +862,14 @@ function AdminDashboard({ admin, onLogout }) {
             gap: '16px' 
           } 
         },
-          filteredBusinesses.map(business => {
-            const Icon = getBusinessIcon(business.business_type);
-            const iconGradient = getBusinessGradient(business.business_type);
-            const status = getStatusStyle(business.status);
-            const StatusIcon = status.icon;
-            const usagePercent = getUsagePercentage(business.current_booking_count || 0);
-            const isUpdating = updating === business.id;
-            const isDeleting = deleting === business.id;
+          filteredBusinesses.map(function(business) {
+            var Icon = getBusinessIcon(business.business_type);
+            var iconGradient = getBusinessGradient(business.business_type);
+            var status = getStatusStyle(business.status);
+            var StatusIcon = status.icon;
+            var usagePercent = getUsagePercentage(business.current_booking_count || 0);
+            var isUpdating = updating === business.id;
+            var isDeleting = deleting === business.id;
             
             return React.createElement('div', { 
               key: business.id, 
@@ -875,8 +880,8 @@ function AdminDashboard({ admin, onLogout }) {
                 border: '1px solid #e2e8f0',
                 transition: 'all 0.3s ease'
               },
-              onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.08)'; },
-              onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }
+              onMouseEnter: function(e) { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.08)'; },
+              onMouseLeave: function(e) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }
             },
               React.createElement('div', { 
                 style: { 
@@ -1006,7 +1011,7 @@ function AdminDashboard({ admin, onLogout }) {
                   business.status === 'pending' ? [
                     React.createElement('button', { 
                       key: 'approve', 
-                      onClick: () => handleStatusUpdate(business.id, 'approved'), 
+                      onClick: function() { handleStatusUpdate(business.id, 'approved'); }, 
                       disabled: isUpdating, 
                       style: { 
                         flex: 1, 
@@ -1024,8 +1029,8 @@ function AdminDashboard({ admin, onLogout }) {
                         gap: '4px',
                         transition: 'all 0.2s ease'
                       },
-                      onMouseEnter: (e) => { if (!isUpdating) e.currentTarget.style.backgroundColor = '#059669'; },
-                      onMouseLeave: (e) => { if (!isUpdating) e.currentTarget.style.backgroundColor = '#10b981'; }
+                      onMouseEnter: function(e) { if (!isUpdating) e.currentTarget.style.backgroundColor = '#059669'; },
+                      onMouseLeave: function(e) { if (!isUpdating) e.currentTarget.style.backgroundColor = '#10b981'; }
                     }, 
                       isUpdating 
                         ? React.createElement(Loader2, { size: 12, style: { animation: 'spin 1s linear infinite' } }) 
@@ -1034,7 +1039,7 @@ function AdminDashboard({ admin, onLogout }) {
                     ),
                     React.createElement('button', { 
                       key: 'reject', 
-                      onClick: () => handleStatusUpdate(business.id, 'rejected'), 
+                      onClick: function() { handleStatusUpdate(business.id, 'rejected'); }, 
                       disabled: isUpdating, 
                       style: { 
                         flex: 1, 
@@ -1052,8 +1057,8 @@ function AdminDashboard({ admin, onLogout }) {
                         gap: '4px',
                         transition: 'all 0.2s ease'
                       },
-                      onMouseEnter: (e) => { if (!isUpdating) e.currentTarget.style.backgroundColor = '#dc2626'; },
-                      onMouseLeave: (e) => { if (!isUpdating) e.currentTarget.style.backgroundColor = '#ef4444'; }
+                      onMouseEnter: function(e) { if (!isUpdating) e.currentTarget.style.backgroundColor = '#dc2626'; },
+                      onMouseLeave: function(e) { if (!isUpdating) e.currentTarget.style.backgroundColor = '#ef4444'; }
                     }, 
                       isUpdating 
                         ? React.createElement(Loader2, { size: 12, style: { animation: 'spin 1s linear infinite' } }) 
@@ -1062,7 +1067,7 @@ function AdminDashboard({ admin, onLogout }) {
                     )
                   ] : null,
                   React.createElement('button', { 
-                    onClick: () => openDeleteModal(business), 
+                    onClick: function() { openDeleteModal(business); }, 
                     disabled: isDeleting, 
                     style: { 
                       padding: '8px', 
@@ -1080,8 +1085,8 @@ function AdminDashboard({ admin, onLogout }) {
                       flex: business.status !== 'pending' ? 1 : 'auto',
                       transition: 'all 0.2s ease'
                     },
-                    onMouseEnter: (e) => { if (!isDeleting) { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.borderColor = '#fca5a5'; } },
-                    onMouseLeave: (e) => { if (!isDeleting) { e.currentTarget.style.backgroundColor = '#fef2f2'; e.currentTarget.style.borderColor = '#fecaca'; } }
+                    onMouseEnter: function(e) { if (!isDeleting) { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.borderColor = '#fca5a5'; } },
+                    onMouseLeave: function(e) { if (!isDeleting) { e.currentTarget.style.backgroundColor = '#fef2f2'; e.currentTarget.style.borderColor = '#fecaca'; } }
                   }, 
                     isDeleting 
                       ? React.createElement(Loader2, { size: 12, style: { animation: 'spin 1s linear infinite' } }) 
