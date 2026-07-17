@@ -1,7 +1,7 @@
 ﻿// client/src/AdminDashboard.jsx
 // =============================================
-// COMPLETE ADMIN DASHBOARD - WITH SECURITY FIXES
-// Enhanced delete confirmation, audit logging, and UX improvements
+// COMPLETE ADMIN DASHBOARD - SYNTAX FIXED
+// Enhanced delete confirmation, security, and UX
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -23,7 +23,7 @@ function AdminDashboard({ admin, onLogout }) {
   const [deleting, setDeleting] = useState(null);
   const [updating, setUpdating] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, business: null });
-  const [deleteStep, setDeleteStep] = useState('confirm'); // 'confirm' | 'final' | 'processing'
+  const [deleteStep, setDeleteStep] = useState('confirm');
   const [error, setError] = useState(null);
   
   // Responsive breakpoints
@@ -256,7 +256,6 @@ function AdminDashboard({ admin, onLogout }) {
           maxWidth: '480px', 
           width: '100%', 
           overflow: 'hidden',
-          animation: 'scaleIn 0.3s ease',
           boxShadow: '0 40px 80px rgba(0,0,0,0.3)'
         } 
       },
