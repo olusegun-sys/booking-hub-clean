@@ -1,8 +1,7 @@
-﻿
-// client/src/BusinessDashboard.jsx
+﻿// client/src/BusinessDashboard.jsx
 // =============================================
-// COMPLETE BUSINESS DASHBOARD - FIXED ₦ SYMBOL
-// All currency values now display with ₦ Naira symbol
+// PREMIUM BUSINESS DASHBOARD - 2026 LUXURY DESIGN
+// Glass-morphism, gradients, animations, premium UX
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -11,13 +10,15 @@ import {
   Hotel, Trophy, Sparkles, Image, Clock,
   DollarSign, ChevronRight, Menu, X,
   Building2, TrendingUp, Plus, ExternalLink,
-  CheckCircle, Crown, Star, Zap, AlertTriangle
+  CheckCircle, Crown, Star, Zap, AlertTriangle,
+  Sparkle, Gem, Rocket, Infinity, Shield, Award
 } from 'lucide-react';
 import RoomPage from './RoomPage';
 import BookingsManager from './BookingsManager';
 import BusinessProfile from './BusinessProfile';
 import BusinessSettings from './BusinessSettings';
 import StaffManagement from './StaffManagement';
+import BookingLimitBanner from './components/BookingLimitBanner';
 import UpgradeModal from './components/UpgradeModal';
 import API_BASE from './config';
 
@@ -30,7 +31,7 @@ function formatNaira(amount) {
 }
 
 // ============================================================
-// SUBSCRIPTION TIERS CONFIGURATION
+// SUBSCRIPTION TIERS CONFIGURATION - PREMIUM
 // ============================================================
 const SUBSCRIPTION_TIERS = {
   free: {
@@ -39,8 +40,16 @@ const SUBSCRIPTION_TIERS = {
     price: 0,
     bookings: 50,
     icon: Star,
-    color: '#94a3b8',
-    badge: 'Free'
+    iconBg: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)',
+    color: '#64748b',
+    gradient: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)',
+    badge: 'Free',
+    badgeColor: '#94a3b8',
+    features: [
+      '50 bookings per month',
+      'Basic dashboard',
+      'Email support'
+    ]
   },
   starter: {
     id: 'starter',
@@ -48,8 +57,18 @@ const SUBSCRIPTION_TIERS = {
     price: 30000,
     bookings: 100,
     icon: Zap,
+    iconBg: 'linear-gradient(135deg, #4f46e5, #6366f1)',
     color: '#4f46e5',
-    badge: 'Popular'
+    gradient: 'linear-gradient(135deg, #eef2ff, #e0e7ff)',
+    badge: 'Popular',
+    badgeColor: '#4f46e5',
+    features: [
+      '100 bookings per month',
+      'Priority email support',
+      'Advanced dashboard',
+      'Staff management (5 users)',
+      'Email notifications'
+    ]
   },
   pro: {
     id: 'pro',
@@ -57,12 +76,27 @@ const SUBSCRIPTION_TIERS = {
     price: 50000,
     bookings: 999999,
     icon: Crown,
+    iconBg: 'linear-gradient(135deg, #d97706, #f59e0b)',
     color: '#d97706',
-    badge: 'Best Value'
+    gradient: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+    badge: 'Best Value',
+    badgeColor: '#d97706',
+    features: [
+      '♾️ Unlimited bookings',
+      'Priority support (Email + WhatsApp)',
+      'Advanced analytics with charts',
+      'Custom branding on booking page',
+      'Staff management (unlimited)',
+      'SMS notifications',
+      'Dedicated account manager'
+    ]
   }
 };
 
 function BusinessDashboard({ business: propBusiness, onLogout }) {
+  // ============================================================
+  // STATE
+  // ============================================================
   const [activeTab, setActiveTab] = useState('overview');
   const [business, setBusiness] = useState(propBusiness || null);
   const [rooms, setRooms] = useState([]);
@@ -70,12 +104,20 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [subscriptionData, setSubscriptionData] = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState(null);
+  const [hoveredTier, setHoveredTier] = useState(null);
 
-  const token = localStorage.getItem('auth_token');
+  // ============================================================
+  // TOKEN & BUSINESS ID
+  // ============================================================
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
   const businessId = business?.id || localStorage.getItem('businessId');
 
+  // ============================================================
+  // EFFECTS
+  // ============================================================
   useEffect(() => {
     function handleResize() {
       const desktop = window.innerWidth >= 768;
@@ -91,7 +133,12 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
 
   useEffect(() => {
     if (businessId) {
-      Promise.all([fetchBusinessData(), fetchRooms(), fetchBookings()]).finally(() => {
+      Promise.all([
+        fetchBusinessData(), 
+        fetchRooms(), 
+        fetchBookings(),
+        fetchSubscriptionStatus()
+      ]).finally(() => {
         setLoading(false);
       });
     } else {
@@ -99,6 +146,9 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     }
   }, [businessId]);
 
+  // ============================================================
+  // FETCH FUNCTIONS
+  // ============================================================
   function fetchBusinessData() {
     const storedBusiness = localStorage.getItem('currentBusiness');
     if (storedBusiness) {
@@ -149,6 +199,40 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         }
       })
       .catch(err => console.error('Fetch bookings error:', err));
+  }
+
+  // ============================================================
+  // SUBSCRIPTION FUNCTIONS
+  // ============================================================
+  function fetchSubscriptionStatus() {
+    if (!businessId) return Promise.resolve();
+    
+    return fetch(API_BASE + '/api/businesses/' + businessId + '/subscription', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setSubscriptionData(data.data);
+        } else if (data.fallback) {
+          setSubscriptionData(data.fallback);
+        }
+      })
+      .catch(err => {
+        console.error('Fetch subscription error:', err);
+        setSubscriptionData({
+          plan: 'free',
+          limit: 50,
+          used: bookings.length || 0,
+          remaining: 50 - (bookings.length || 0),
+          percentage: 0,
+          isPremium: false
+        });
+      });
+  }
+
+  function handleUpgradeClick() {
+    setShowUpgradeModal(true);
   }
 
   function getBusinessTypeLabels() {
@@ -207,7 +291,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   }
 
   function getCurrentTier() {
-    const tier = business?.subscription_tier || 'free';
+    const tier = business?.subscription_status || 'free';
     return SUBSCRIPTION_TIERS[tier] || SUBSCRIPTION_TIERS.free;
   }
 
@@ -224,6 +308,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   const handleUpgradeComplete = async (tierId) => {
     await fetchBusinessData();
     await fetchBookings();
+    await fetchSubscriptionStatus();
     setShowUpgradeModal(false);
   };
 
@@ -232,16 +317,20 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       onLogout();
     } else {
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('token');
       localStorage.removeItem('currentBusiness');
       window.location.href = '/login';
     }
   };
 
+  // ============================================================
+  // CALCULATIONS
+  // ============================================================
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
   const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
   const limit = business?.booking_limit || 50;
-  const usagePercent = (confirmedBookings / limit) * 100;
-  const remaining = limit - confirmedBookings;
+  const usagePercent = limit > 0 ? (confirmedBookings / limit) * 100 : 0;
+  const remaining = Math.max(0, limit - confirmedBookings);
   const currentTier = getCurrentTier();
 
   const navItems = [
@@ -254,154 +343,284 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   ];
 
   if (loading) {
-    return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' } },
+    return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f8fafc' } },
       React.createElement('div', { className: 'loading-spinner' })
     );
   }
 
-  // Render Overview
+  // ============================================================
+  // RENDER OVERVIEW
+  // ============================================================
   const renderOverview = () => {
     const labels = getBusinessTypeLabels();
     const Icon = labels.icon;
     const currentTierData = getCurrentTier();
     
+    const subData = subscriptionData || {
+      plan: business?.subscription_status || 'free',
+      used: confirmedBookings || 0,
+      limit: business?.booking_limit || 50,
+      remaining: Math.max(0, (business?.booking_limit || 50) - (confirmedBookings || 0)),
+      percentage: business?.booking_limit > 0 ? Math.round(((confirmedBookings || 0) / (business?.booking_limit || 50)) * 100) : 0
+    };
+    
     return React.createElement('div', null,
-      // Plan Banner
+      // Premium Plan Banner with Glass Effect
       React.createElement('div', {
         style: {
-          background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-          borderRadius: '20px',
-          padding: '24px 32px',
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4f46e5 100%)',
+          borderRadius: '24px',
+          padding: '32px 36px',
           marginBottom: '24px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '16px',
-          color: 'white'
+          gap: '20px',
+          color: 'white',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 20px 60px rgba(79, 70, 229, 0.3)'
         }
       },
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
+        // Background decorative elements
+        React.createElement('div', {
+          style: {
+            position: 'absolute',
+            top: '-50%',
+            right: '-20%',
+            width: '300px',
+            height: '300px',
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.05)',
+            pointerEvents: 'none'
+          }
+        }),
+        React.createElement('div', {
+          style: {
+            position: 'absolute',
+            bottom: '-40%',
+            left: '-10%',
+            width: '200px',
+            height: '200px',
+            borderRadius: '50%',
+            background: 'rgba(99, 102, 241, 0.2)',
+            pointerEvents: 'none'
+          }
+        }),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '20px', position: 'relative', zIndex: 1 } },
           React.createElement('div', {
             style: {
-              width: '56px',
-              height: '56px',
+              width: '64px',
+              height: '64px',
               background: 'rgba(255,255,255,0.15)',
-              borderRadius: '14px',
+              borderRadius: '18px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.1)'
             }
           },
-            React.createElement(Crown, { size: 28, color: 'white' })
+            React.createElement(Crown, { size: 32, color: '#fcd34d' })
           ),
           React.createElement('div', null,
-            React.createElement('h2', { style: { fontSize: '20px', fontWeight: '700', margin: '0 0 2px 0' } }, currentTierData.name + ' Plan'),
-            React.createElement('p', { style: { opacity: 0.9, fontSize: '14px', margin: 0 } },
+            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
+              React.createElement('h2', { style: { fontSize: '22px', fontWeight: '700', margin: 0 } }, currentTierData.name + ' Plan'),
+              React.createElement('span', {
+                style: {
+                  background: 'rgba(255,255,255,0.2)',
+                  padding: '2px 12px',
+                  borderRadius: '20px',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  letterSpacing: '0.5px'
+                }
+              }, currentTierData.badge)
+            ),
+            React.createElement('p', { style: { opacity: 0.85, fontSize: '14px', margin: '4px 0 0 0' } },
               currentTierData.bookings === 999999 
                 ? '♾️ Unlimited bookings' 
                 : currentTierData.bookings + ' bookings per month'
             )
           )
         ),
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
-          React.createElement('span', { style: { fontSize: '14px', opacity: 0.8 } },
-            currentTierData.price === 0 ? 'Free' : formatNaira(currentTierData.price) + '/month'
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px', position: 'relative', zIndex: 1 } },
+          React.createElement('div', { style: { textAlign: 'right' } },
+            React.createElement('span', { style: { fontSize: '14px', opacity: 0.7 } }, 'Price'),
+            React.createElement('div', { style: { fontSize: '20px', fontWeight: '700' } },
+              currentTierData.price === 0 ? 'Free' : formatNaira(currentTierData.price) + '/mo'
+            )
           ),
           currentTierData.id !== 'pro' && React.createElement('button', {
-            onClick: () => setActiveTab('subscription'),
+            onClick: handleUpgradeClick,
             style: {
-              padding: '10px 24px',
+              padding: '12px 28px',
               background: 'white',
               color: '#4f46e5',
               border: 'none',
               borderRadius: '40px',
-              fontSize: '13px',
+              fontSize: '14px',
               fontWeight: '600',
-              cursor: 'pointer'
-            }
-          }, 'Upgrade')
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+            },
+            onMouseEnter: (e) => { e.target.style.transform = 'scale(1.05)'; e.target.style.boxShadow = '0 8px 30px rgba(0,0,0,0.25)'; },
+            onMouseLeave: (e) => { e.target.style.transform = 'scale(1)'; e.target.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)'; }
+          }, '⬆ Upgrade Now')
         )
       ),
 
-      // Stats Grid - FIXED ₦ symbol
+      // Booking Limit Banner
+      React.createElement(BookingLimitBanner, {
+        subscription: subData,
+        onUpgrade: handleUpgradeClick,
+        isMobile: !isDesktop
+      }),
+
+      // Stats Grid - Premium Glass Cards
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', gap: '20px', marginBottom: '32px' } },
-        React.createElement('div', { style: { background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #eef2ff' } },
+        // Revenue
+        React.createElement('div', { 
+          style: { 
+            background: 'white',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(226, 232, 240, 0.6)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+            transition: 'all 0.3s ease'
+          },
+          onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
+          onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.04)'; }
+        },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } },
             React.createElement('span', { style: { fontSize: '13px', fontWeight: '500', color: '#64748b' } }, 'Total Revenue'),
-            React.createElement('div', { style: { width: '36px', height: '36px', background: '#eef2ff', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(DollarSign, { size: 18, color: '#4f46e5' })
+            React.createElement('div', { style: { width: '40px', height: '40px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+              React.createElement(DollarSign, { size: 20, color: '#4f46e5' })
             )
           ),
-          React.createElement('h2', { style: { fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 } }, 
+          React.createElement('h2', { style: { fontSize: '30px', fontWeight: '700', color: '#0f172a', margin: 0 } }, 
             formatNaira(totalRevenue)
           ),
-          React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } }, 'Lifetime revenue')
+          React.createElement('p', { style: { fontSize: '13px', color: '#94a3b8', marginTop: '8px' } }, 'Lifetime revenue')
         ),
-        React.createElement('div', { style: { background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #eef2ff' } },
+        // Bookings
+        React.createElement('div', { 
+          style: { 
+            background: 'white',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(226, 232, 240, 0.6)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+            transition: 'all 0.3s ease'
+          },
+          onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
+          onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.04)'; }
+        },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } },
             React.createElement('span', { style: { fontSize: '13px', fontWeight: '500', color: '#64748b' } }, 'Total Bookings'),
-            React.createElement('div', { style: { width: '36px', height: '36px', background: '#eef2ff', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(Calendar, { size: 18, color: '#4f46e5' })
+            React.createElement('div', { style: { width: '40px', height: '40px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+              React.createElement(Calendar, { size: 20, color: '#4f46e5' })
             )
           ),
-          React.createElement('h2', { style: { fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 } }, bookings.length),
-          React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } }, 'Total bookings received')
+          React.createElement('h2', { style: { fontSize: '30px', fontWeight: '700', color: '#0f172a', margin: 0 } }, bookings.length),
+          React.createElement('p', { style: { fontSize: '13px', color: '#94a3b8', marginTop: '8px' } }, 'Total bookings received')
         ),
-        React.createElement('div', { style: { background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #eef2ff' } },
+        // Rooms
+        React.createElement('div', { 
+          style: { 
+            background: 'white',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(226, 232, 240, 0.6)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+            transition: 'all 0.3s ease'
+          },
+          onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
+          onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.04)'; }
+        },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } },
             React.createElement('span', { style: { fontSize: '13px', fontWeight: '500', color: '#64748b' } }, 'Active ' + labels.plural),
-            React.createElement('div', { style: { width: '36px', height: '36px', background: '#eef2ff', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(Icon, { size: 18, color: '#4f46e5' })
+            React.createElement('div', { style: { width: '40px', height: '40px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+              React.createElement(Icon, { size: 20, color: '#4f46e5' })
             )
           ),
-          React.createElement('h2', { style: { fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 } }, rooms.length),
-          React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } }, 'Total ' + labels.plural.toLowerCase())
+          React.createElement('h2', { style: { fontSize: '30px', fontWeight: '700', color: '#0f172a', margin: 0 } }, rooms.length),
+          React.createElement('p', { style: { fontSize: '13px', color: '#94a3b8', marginTop: '8px' } }, 'Total ' + labels.plural.toLowerCase())
         ),
-        React.createElement('div', { style: { background: 'white', borderRadius: '20px', padding: '20px', border: '1px solid #eef2ff' } },
+        // Usage
+        React.createElement('div', { 
+          style: { 
+            background: 'white',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(226, 232, 240, 0.6)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+            transition: 'all 0.3s ease'
+          },
+          onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
+          onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.04)'; }
+        },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } },
             React.createElement('span', { style: { fontSize: '13px', fontWeight: '500', color: '#64748b' } }, 'Bookings Used'),
-            React.createElement('div', { style: { width: '36px', height: '36px', background: '#eef2ff', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(TrendingUp, { size: 18, color: '#4f46e5' })
+            React.createElement('div', { style: { width: '40px', height: '40px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+              React.createElement(TrendingUp, { size: 20, color: '#4f46e5' })
             )
           ),
-          React.createElement('h2', { style: { fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 } }, confirmedBookings + '/' + limit),
-          React.createElement('div', { style: { marginTop: '8px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' } },
-            React.createElement('div', { style: { width: Math.min(usagePercent, 100) + '%', height: '100%', background: usagePercent > 80 ? '#ef4444' : '#10b981', borderRadius: '3px' } })
+          React.createElement('h2', { style: { fontSize: '30px', fontWeight: '700', color: '#0f172a', margin: 0 } }, confirmedBookings + '/' + limit),
+          React.createElement('div', { style: { marginTop: '10px', height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' } },
+            React.createElement('div', { 
+              style: { 
+                width: Math.min(usagePercent, 100) + '%', 
+                height: '100%', 
+                background: usagePercent > 80 ? 'linear-gradient(90deg, #ef4444, #dc2626)' : 'linear-gradient(90deg, #4f46e5, #6366f1)', 
+                borderRadius: '4px',
+                transition: 'width 0.6s ease'
+              } 
+            })
           ),
-          React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } }, remaining + ' bookings remaining')
+          React.createElement('p', { style: { fontSize: '13px', color: '#94a3b8', marginTop: '10px' } }, remaining + ' bookings remaining')
         )
       ),
       
       // Quick Actions
-      React.createElement('div', { style: { background: 'white', borderRadius: '20px', border: '1px solid #eef2ff', overflow: 'hidden', marginBottom: '32px' } },
+      React.createElement('div', { style: { background: 'white', borderRadius: '20px', border: '1px solid rgba(226, 232, 240, 0.6)', overflow: 'hidden', marginBottom: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' } },
         React.createElement('div', { style: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#fafbff' } },
-          React.createElement('h3', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 'Quick Actions')
+          React.createElement('h3', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, '⚡ Quick Actions')
         ),
         React.createElement('div', { style: { padding: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap' } },
           React.createElement('button', { 
             onClick: () => setActiveTab('rooms'), 
-            style: { padding: '12px 24px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }
+            style: { padding: '12px 28px', background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', border: 'none', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s ease', boxShadow: '0 4px 15px rgba(79, 70, 229, 0.3)' },
+            onMouseEnter: (e) => { e.currentTarget.style.transform = 'scale(1.02)'; e.currentTarget.style.boxShadow = '0 6px 25px rgba(79, 70, 229, 0.4)'; },
+            onMouseLeave: (e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(79, 70, 229, 0.3)'; }
           }, React.createElement(Plus, { size: 16 }), labels.action),
           React.createElement('button', { 
             onClick: () => setActiveTab('profile'), 
-            style: { padding: '12px 24px', background: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }
+            style: { padding: '12px 28px', background: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s ease' },
+            onMouseEnter: (e) => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.color = '#4f46e5'; },
+            onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }
           }, React.createElement(Image, { size: 16 }), 'Update Images'),
           React.createElement('button', { 
             onClick: () => setActiveTab('settings'), 
-            style: { padding: '12px 24px', background: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }
+            style: { padding: '12px 28px', background: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s ease' },
+            onMouseEnter: (e) => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.color = '#4f46e5'; },
+            onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }
           }, React.createElement(Clock, { size: 16 }), 'Set Hours'),
           React.createElement('button', { 
             onClick: () => window.open('/book/' + business?.slug, '_blank'), 
-            style: { padding: '12px 24px', background: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }
+            style: { padding: '12px 28px', background: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s ease' },
+            onMouseEnter: (e) => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.color = '#4f46e5'; },
+            onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }
           }, React.createElement(ExternalLink, { size: 16 }), 'View Page')
         )
       ),
       
-      // Recent Bookings - FIXED ₦ symbol
-      React.createElement('div', { style: { background: 'white', borderRadius: '20px', border: '1px solid #eef2ff', overflow: 'hidden' } },
+      // Recent Bookings
+      React.createElement('div', { style: { background: 'white', borderRadius: '20px', border: '1px solid rgba(226, 232, 240, 0.6)', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' } },
         React.createElement('div', { style: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#fafbff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-          React.createElement('h3', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 'Recent Bookings'),
+          React.createElement('h3', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, '📋 Recent Bookings'),
           React.createElement('button', { 
             onClick: () => setActiveTab('bookings'), 
             style: { background: 'none', border: 'none', color: '#4f46e5', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }
@@ -419,7 +638,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
                 React.createElement('span', { 
                   style: { 
                     fontSize: '11px', 
-                    padding: '2px 8px', 
+                    padding: '2px 12px', 
                     borderRadius: '20px', 
                     background: booking.status === 'confirmed' ? '#d1fae5' : '#fef3c7',
                     color: booking.status === 'confirmed' ? '#065f46' : '#92400e',
@@ -437,9 +656,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   };
 
   // ============================================================
-  // Render Subscription / Plans tab
-  // Lists all tiers from SUBSCRIPTION_TIERS, highlights the
-  // current plan, and lets the user upgrade via UpgradeModal.
+  // RENDER SUBSCRIPTION / PLANS TAB - PREMIUM 2026 DESIGN
   // ============================================================
   const renderSubscription = () => {
     const currentTierData = getCurrentTier();
@@ -451,124 +668,273 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       const isCurrent = currentTierData.id === tierId;
       const isFree = tier.price === 0;
       const isUnlimited = tier.bookings === 999999;
+      const isHovered = hoveredTier === tierId;
 
       return React.createElement('div', {
         key: tier.id,
         style: {
-          background: 'white',
-          borderRadius: '20px',
-          border: isCurrent ? ('2px solid ' + tier.color) : '1px solid #eef2ff',
-          padding: '28px',
+          background: isCurrent 
+            ? 'linear-gradient(145deg, #ffffff, #fafbff)' 
+            : 'white',
+          borderRadius: '24px',
+          padding: '32px',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: isCurrent ? ('0 12px 32px ' + tier.color + '22') : 'none'
-        }
+          border: isCurrent 
+            ? '2px solid ' + tier.color 
+            : '1px solid rgba(226, 232, 240, 0.6)',
+          boxShadow: isCurrent 
+            ? '0 20px 60px ' + tier.color + '22, 0 4px 20px rgba(0,0,0,0.04)' 
+            : (isHovered ? '0 12px 40px rgba(0,0,0,0.08)' : '0 4px 20px rgba(0,0,0,0.04)'),
+          transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
+          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          cursor: 'pointer'
+        },
+        onMouseEnter: () => setHoveredTier(tierId),
+        onMouseLeave: () => setHoveredTier(null),
+        onClick: () => !isCurrent && handleUpgrade(tier.id)
       },
-        tier.badge && React.createElement('span', {
+        // Premium Badge
+        tier.badge && React.createElement('div', {
           style: {
             position: 'absolute',
-            top: '16px',
-            right: '16px',
-            background: tier.color + '15',
-            color: tier.color,
+            top: '-12px',
+            right: '24px',
+            background: 'linear-gradient(135deg, ' + tier.color + ', ' + (tierId === 'pro' ? '#f59e0b' : '#6366f1') + ')',
+            color: 'white',
             fontSize: '11px',
-            fontWeight: '600',
-            padding: '4px 10px',
-            borderRadius: '20px'
+            fontWeight: '700',
+            padding: '6px 16px',
+            borderRadius: '20px',
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
+            boxShadow: '0 4px 15px ' + tier.color + '44'
           }
         }, tier.badge),
 
+        // Icon with Premium Gradient
         React.createElement('div', {
           style: {
-            width: '52px',
-            height: '52px',
-            background: tier.color + '15',
-            borderRadius: '14px',
+            width: '64px',
+            height: '64px',
+            background: tier.iconBg,
+            borderRadius: '18px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '16px'
+            marginBottom: '20px',
+            boxShadow: '0 8px 25px ' + tier.color + '33',
+            transition: 'transform 0.3s ease',
+            transform: isHovered ? 'scale(1.05) rotate(-3deg)' : 'scale(1) rotate(0deg)'
           }
-        }, React.createElement(TierIcon, { size: 26, color: tier.color })),
+        }, React.createElement(TierIcon, { size: 28, color: 'white' })),
 
-        React.createElement('h3', {
-          style: { fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' }
-        }, tier.name + ' Plan'),
-
-        React.createElement('div', {
-          style: { display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '12px' }
-        },
-          React.createElement('span', {
-            style: { fontSize: '28px', fontWeight: '700', color: tier.color }
-          }, isFree ? 'Free' : formatNaira(tier.price)),
-          !isFree && React.createElement('span', {
-            style: { fontSize: '13px', color: '#94a3b8' }
-          }, '/month')
+        // Plan Name & Price
+        React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '8px' } },
+          React.createElement('h3', {
+            style: { fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: 0 }
+          }, tier.name + ' Plan'),
+          React.createElement('div', { style: { textAlign: 'right' } },
+            React.createElement('span', {
+              style: { fontSize: '28px', fontWeight: '800', color: tier.color }
+            }, isFree ? 'Free' : formatNaira(tier.price)),
+            !isFree && React.createElement('span', {
+              style: { fontSize: '14px', color: '#94a3b8', marginLeft: '4px' }
+            }, '/mo')
+          )
         ),
 
-        React.createElement('p', {
-          style: { fontSize: '13px', color: '#64748b', margin: '0 0 20px 0' }
-        }, isUnlimited ? '♾️ Unlimited bookings per month' : (tier.bookings + ' bookings per month')),
+        // Booking Limit Badge
+        React.createElement('div', {
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: tier.color + '10',
+            color: tier.color,
+            padding: '4px 14px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            marginBottom: '20px'
+          }
+        },
+          React.createElement(Infinity, { size: 14 }),
+          isUnlimited ? 'Unlimited bookings' : (tier.bookings + ' bookings/month')
+        ),
 
+        // Features List
+        React.createElement('ul', { style: { margin: '0 0 24px 0', padding: 0, listStyle: 'none', flex: 1 } },
+          tier.features.map((feature, index) =>
+            React.createElement('li', {
+              key: index,
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '6px 0',
+                color: '#475569',
+                fontSize: '14px',
+                borderBottom: index < tier.features.length - 1 ? '1px solid #f1f5f9' : 'none'
+              }
+            },
+              React.createElement(CheckCircle, { size: 16, color: tier.color, style: { flexShrink: 0 } }),
+              React.createElement('span', null, feature)
+            )
+          )
+        ),
+
+        // Action Button
         React.createElement('button', {
-          onClick: () => isCurrent ? null : handleUpgrade(tier.id),
+          onClick: (e) => { e.stopPropagation(); if (!isCurrent) handleUpgrade(tier.id); },
           disabled: isCurrent,
           style: {
-            marginTop: 'auto',
             width: '100%',
-            padding: '12px',
-            background: isCurrent ? '#f1f5f9' : tier.color,
+            padding: '14px',
+            background: isCurrent 
+              ? '#f1f5f9' 
+              : 'linear-gradient(135deg, ' + tier.color + ', ' + (tierId === 'pro' ? '#f59e0b' : '#6366f1') + ')',
             color: isCurrent ? '#94a3b8' : 'white',
             border: 'none',
-            borderRadius: '12px',
-            fontSize: '14px',
+            borderRadius: '14px',
+            fontSize: '15px',
             fontWeight: '600',
-            cursor: isCurrent ? 'default' : 'pointer'
+            cursor: isCurrent ? 'default' : 'pointer',
+            transition: 'all 0.3s ease',
+            boxShadow: isCurrent ? 'none' : ('0 4px 15px ' + tier.color + '44'),
+            opacity: isCurrent ? 0.7 : 1
+          },
+          onMouseEnter: (e) => {
+            if (!isCurrent) {
+              e.currentTarget.style.transform = 'scale(1.02)';
+              e.currentTarget.style.boxShadow = '0 8px 25px ' + tier.color + '55';
+            }
+          },
+          onMouseLeave: (e) => {
+            if (!isCurrent) {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 4px 15px ' + tier.color + '44';
+            }
           }
-        }, isCurrent ? '✓ Current Plan' : ('Upgrade to ' + tier.name))
+        }, 
+          isCurrent 
+            ? React.createElement(React.Fragment, null, '✓ ', React.createElement('span', { style: { fontWeight: '700' } }, 'Current Plan'))
+            : React.createElement(React.Fragment, null, '✨ Upgrade to ', tier.name)
+        )
       );
     };
 
+    // Premium Header with Decorative Elements
     return React.createElement('div', null,
-      React.createElement('div', { style: { marginBottom: '28px' } },
-        React.createElement('h1', {
-          style: { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px 0' }
-        }, 'Subscription Plans'),
-        React.createElement('p', {
-          style: { fontSize: '14px', color: '#64748b', margin: 0 }
-        }, 'View and manage your subscription plans. Your current plan is ',
-          React.createElement('strong', { style: { color: currentTierData.color } }, currentTierData.name),
-          '.')
+      React.createElement('div', { 
+        style: { 
+          marginBottom: '36px',
+          position: 'relative',
+          padding: '32px 0 20px 0'
+        }
+      },
+        // Decorative gradient line
+        React.createElement('div', {
+          style: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: 'linear-gradient(90deg, #4f46e5, #7c3aed, #d97706, #4f46e5)',
+            borderRadius: '4px',
+            backgroundSize: '200% 100%',
+            animation: 'gradientMove 4s ease-in-out infinite'
+          }
+        }),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' } },
+          React.createElement('div', null,
+            React.createElement('h1', {
+              style: { 
+                fontSize: isDesktop ? '32px' : '24px', 
+                fontWeight: '800', 
+                color: '#0f172a', 
+                margin: '0 0 8px 0',
+                letterSpacing: '-0.5px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }
+            },
+              '💎 Subscription Plans',
+              React.createElement('span', {
+                style: {
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  background: currentTierData.color + '15',
+                  color: currentTierData.color,
+                  padding: '4px 14px',
+                  borderRadius: '20px'
+                }
+              }, currentTierData.name)
+            ),
+            React.createElement('p', {
+              style: { fontSize: '16px', color: '#64748b', margin: 0 }
+            }, 'Choose the perfect plan for your business growth')
+          ),
+          React.createElement('div', {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#f8fafc',
+              padding: '8px 16px',
+              borderRadius: '40px',
+              border: '1px solid #e2e8f0'
+            }
+          },
+            React.createElement(Users, { size: 16, color: '#64748b' }),
+            React.createElement('span', { style: { fontSize: '13px', color: '#475569', fontWeight: '500' } },
+              confirmedBookings, ' of ', limit, ' bookings used'
+            )
+          )
+        )
       ),
 
+      // Premium Plan Cards Grid
       React.createElement('div', {
         style: {
           display: 'grid',
           gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr',
-          gap: '20px',
-          marginBottom: '28px'
+          gap: '24px',
+          marginBottom: '32px'
         }
       }, tierOrder.map(renderTierCard)),
 
+      // Premium Footer Note
       React.createElement('div', {
         style: {
-          background: '#eef2ff',
-          borderRadius: '14px',
-          padding: '16px 20px',
+          background: 'linear-gradient(135deg, #f8fafc, #eef2ff)',
+          borderRadius: '16px',
+          padding: '20px 24px',
           display: 'flex',
           alignItems: 'flex-start',
-          gap: '12px'
+          gap: '14px',
+          border: '1px solid rgba(79, 70, 229, 0.1)'
         }
       },
-        React.createElement(AlertTriangle, { size: 18, color: '#4f46e5', style: { flexShrink: 0, marginTop: '2px' } }),
-        React.createElement('p', {
-          style: { fontSize: '13px', color: '#475569', margin: 0, lineHeight: '1.5' }
-        }, 'Upgrading takes effect after payment verification (usually within 24 hours). You can downgrade to a lower plan at any time from Settings.')
+        React.createElement(Shield, { size: 20, color: '#4f46e5', style: { flexShrink: 0, marginTop: '2px' } }),
+        React.createElement('div', null,
+          React.createElement('p', {
+            style: { fontSize: '14px', color: '#475569', margin: 0, fontWeight: '500' }
+          }, '🔒 Secure & Flexible'),
+          React.createElement('p', {
+            style: { fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }
+          }, 'Upgrades take effect within 24 hours after payment verification. Cancel or downgrade anytime from Settings.')
+        )
       )
     );
   };
 
+  // ============================================================
+  // RENDER CONTENT
+  // ============================================================
   const renderContent = () => {
     switch(activeTab) {
       case 'overview':
@@ -613,6 +979,9 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     { id: 'subscription', label: 'Plans', icon: Crown }
   ];
 
+  // ============================================================
+  // MAIN RENDER
+  // ============================================================
   return React.createElement('div', { style: { display: 'flex', minHeight: '100vh', background: '#f8fafc', position: 'relative' } },
     // Mobile overlay
     React.createElement('div', { 
@@ -824,14 +1193,18 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       // Content Area
       React.createElement('div', { style: { padding: isDesktop ? '32px' : '20px' } }, 
         renderContent(),
+        
+        // Upgrade Modal
         React.createElement(UpgradeModal, {
           isOpen: showUpgradeModal,
           onClose: () => setShowUpgradeModal(false),
           businessName: business?.name || 'Your Business',
+          businessId: business?.id,
           currentCount: bookings.length,
           limit: limit || 50,
           selectedTier: selectedTier,
-          onUpgradeComplete: handleUpgradeComplete
+          onUpgradeComplete: handleUpgradeComplete,
+          currentPlan: business?.subscription_status || 'free'
         })
       )
     )
