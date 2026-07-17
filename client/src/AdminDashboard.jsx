@@ -210,7 +210,7 @@ function AdminDashboard({ admin, onLogout }) {
     );
   }
 
-  // Render delete modal
+  // Render delete modal - FIXED: Properly closing parentheses
   const renderDeleteModal = function() {
     if (!deleteModal.isOpen) return null;
     
