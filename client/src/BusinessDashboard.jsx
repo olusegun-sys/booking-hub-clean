@@ -2,6 +2,7 @@
 // =============================================
 // PREMIUM BUSINESS DASHBOARD - 2026 LUXURY DESIGN
 // Glass-morphism, gradients, animations, premium UX
+// WITH DEBUG LOGGING FOR DATA DIAGNOSTICS
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -109,9 +110,10 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   const [selectedTier, setSelectedTier] = useState(null);
   const [hoveredTier, setHoveredTier] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [paymentStep, setPaymentStep] = useState('select'); // 'select' | 'payment' | 'success'
+  const [paymentStep, setPaymentStep] = useState('select');
   const [paymentData, setPaymentData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
 
   // ============================================================
   // TOKEN & BUSINESS ID
@@ -137,6 +139,10 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
 
   useEffect(() => {
     if (businessId) {
+      console.log('[BusinessDashboard] Initializing with businessId:', businessId);
+      console.log('[BusinessDashboard] Token present:', token ? 'Yes' : 'No');
+      console.log('[BusinessDashboard] API_BASE:', API_BASE);
+      
       Promise.all([
         fetchBusinessData(), 
         fetchRooms(), 
@@ -144,8 +150,10 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         fetchSubscriptionStatus()
       ]).finally(() => {
         setLoading(false);
+        console.log('[BusinessDashboard] Initial load complete');
       });
     } else {
+      console.warn('[BusinessDashboard] No businessId found');
       setLoading(false);
     }
   }, [businessId]);
@@ -159,50 +167,103 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       try {
         const parsed = JSON.parse(storedBusiness);
         setBusiness(parsed);
-      } catch(e) {}
+        console.log('[BusinessDashboard] Loaded business from localStorage:', parsed.name);
+      } catch(e) {
+        console.error('[BusinessDashboard] Error parsing stored business:', e);
+      }
     }
     
     if (!businessId) return Promise.resolve();
     
+    console.log('[BusinessDashboard] Fetching business profile for:', businessId);
+    
     return fetch(API_BASE + '/api/businesses/profile', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
-      .then(res => res.json())
+      .then(res => {
+        console.log('[BusinessDashboard] Profile response status:', res.status);
+        if (res.status === 401) {
+          throw new Error('Session expired. Please login again.');
+        }
+        return res.json();
+      })
       .then(data => {
+        console.log('[BusinessDashboard] Profile data:', data);
         if (data.success && data.business) {
           setBusiness(data.business);
           localStorage.setItem('currentBusiness', JSON.stringify(data.business));
+          console.log('[BusinessDashboard] Business profile updated:', data.business.name);
+        } else {
+          console.error('[BusinessDashboard] Profile fetch failed:', data.error);
+          setError(data.error || 'Failed to load business profile');
         }
       })
-      .catch(err => console.error('Fetch business error:', err));
+      .catch(err => {
+        console.error('[BusinessDashboard] Fetch business error:', err);
+        setError(err.message || 'Failed to load business data');
+      });
   }
 
   function fetchRooms() {
     if (!businessId) return Promise.resolve();
+    
+    console.log('[BusinessDashboard] Fetching rooms for:', businessId);
+    
     return fetch(API_BASE + '/api/businesses/' + businessId + '/rooms', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
-      .then(res => res.json())
+      .then(res => {
+        console.log('[BusinessDashboard] Rooms response status:', res.status);
+        return res.json();
+      })
       .then(data => {
+        console.log('[BusinessDashboard] Rooms data:', data);
         if (data.success) {
           setRooms(data.rooms || []);
+          console.log('[BusinessDashboard] Set rooms count:', data.rooms?.length || 0);
+        } else {
+          console.error('[BusinessDashboard] Rooms fetch failed:', data.error);
         }
       })
-      .catch(err => console.error('Fetch rooms error:', err));
+      .catch(err => console.error('[BusinessDashboard] Fetch rooms error:', err));
   }
 
   function fetchBookings() {
     if (!businessId) return Promise.resolve();
+    
+    console.log('[BusinessDashboard] Fetching bookings for businessId:', businessId);
+    console.log('[BusinessDashboard] Using token:', token ? 'Present (starts with ' + token.substring(0, 10) + '...)' : 'Missing');
+    
     return fetch(API_BASE + '/api/businesses/' + businessId + '/bookings', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
-      .then(res => res.json())
+      .then(res => {
+        console.log('[BusinessDashboard] Bookings response status:', res.status);
+        if (res.status === 401) {
+          console.error('[BusinessDashboard] Unauthorized - token may be expired');
+          setError('Session expired. Please login again.');
+          return { success: false, error: 'Unauthorized' };
+        }
+        return res.json();
+      })
       .then(data => {
+        console.log('[BusinessDashboard] Bookings data received:', data);
+        console.log('[BusinessDashboard] Bookings count:', data.bookings?.length || 0);
         if (data.success) {
           setBookings(data.bookings || []);
+          console.log('[BusinessDashboard] Set bookings count:', data.bookings?.length || 0);
+          if (data.bookings && data.bookings.length > 0) {
+            console.log('[BusinessDashboard] First booking:', data.bookings[0]);
+          }
+        } else {
+          console.error('[BusinessDashboard] Bookings fetch failed:', data.error);
+          setError(data.error || 'Failed to load bookings');
         }
       })
-      .catch(err => console.error('Fetch bookings error:', err));
+      .catch(err => {
+        console.error('[BusinessDashboard] Fetch bookings error:', err);
+        setError('Network error loading bookings');
+      });
   }
 
   // ============================================================
@@ -211,19 +272,35 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   function fetchSubscriptionStatus() {
     if (!businessId) return Promise.resolve();
     
+    console.log('[BusinessDashboard] Fetching subscription status for:', businessId);
+    
     return fetch(API_BASE + '/api/businesses/' + businessId + '/subscription', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
-      .then(res => res.json())
+      .then(res => {
+        console.log('[BusinessDashboard] Subscription response status:', res.status);
+        return res.json();
+      })
       .then(data => {
+        console.log('[BusinessDashboard] Subscription data:', data);
         if (data.success) {
           setSubscriptionData(data.data);
         } else if (data.fallback) {
           setSubscriptionData(data.fallback);
+        } else {
+          console.warn('[BusinessDashboard] No subscription data, using defaults');
+          setSubscriptionData({
+            plan: 'free',
+            limit: 50,
+            used: bookings.length || 0,
+            remaining: 50 - (bookings.length || 0),
+            percentage: 0,
+            isPremium: false
+          });
         }
       })
       .catch(err => {
-        console.error('Fetch subscription error:', err);
+        console.error('[BusinessDashboard] Fetch subscription error:', err);
         setSubscriptionData({
           plan: 'free',
           limit: 50,
@@ -240,7 +317,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     setPaymentStep('payment');
     setShowUpgradeModal(true);
     
-    // Generate payment data immediately
     const tier = SUBSCRIPTION_TIERS[tierId];
     const reference = `UPG-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
     
@@ -277,6 +353,10 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         return;
       }
 
+      console.log('[BusinessDashboard] Submitting upgrade request for:', businessId);
+      console.log('[BusinessDashboard] Plan:', selectedTier);
+      console.log('[BusinessDashboard] Reference:', paymentData.reference);
+
       const response = await fetch(`${API_BASE}/api/businesses/${businessId}/upgrade-request`, {
         method: 'POST',
         headers: {
@@ -290,7 +370,10 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         })
       });
 
+      console.log('[BusinessDashboard] Upgrade response status:', response.status);
+
       const data = await response.json();
+      console.log('[BusinessDashboard] Upgrade response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create upgrade request');
@@ -307,7 +390,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       
     } catch (error) {
       alert(error.message || 'Failed to submit upgrade request');
-      console.error('Upgrade error:', error);
+      console.error('[BusinessDashboard] Upgrade error:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -441,7 +524,45 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     };
     
     return React.createElement('div', null,
-      // Premium Plan Banner with Glass Effect - UPDATED: White text
+      // Error message if any
+      error && React.createElement('div', {
+        style: {
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '12px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }
+      },
+        React.createElement(AlertTriangle, { size: 16, color: '#dc2626' }),
+        React.createElement('span', { style: { color: '#991b1b', fontSize: '13px' } }, error)
+      ),
+      
+      // Refresh button
+      React.createElement('div', { style: { marginBottom: '16px', textAlign: 'right' } },
+        React.createElement('button', {
+          onClick: function() {
+            console.log('[BusinessDashboard] Manual refresh triggered');
+            setError(null);
+            Promise.all([fetchBusinessData(), fetchRooms(), fetchBookings(), fetchSubscriptionStatus()]);
+          },
+          style: {
+            padding: '8px 16px',
+            backgroundColor: '#4f46e5',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: '500'
+          }
+        }, '🔄 Refresh Data')
+      ),
+
+      // Premium Plan Banner with Glass Effect
       React.createElement('div', {
         style: {
           background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4f46e5 100%)',
@@ -690,7 +811,12 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       // Recent Bookings
       React.createElement('div', { style: { background: 'white', borderRadius: '20px', border: '1px solid rgba(226, 232, 240, 0.6)', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' } },
         React.createElement('div', { style: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#fafbff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-          React.createElement('h3', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, '📋 Recent Bookings'),
+          React.createElement('h3', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 
+            '📋 Recent Bookings',
+            React.createElement('span', { style: { fontSize: '12px', color: '#94a3b8', marginLeft: '8px' } }, 
+              '(' + bookings.length + ' total)'
+            )
+          ),
           React.createElement('button', { 
             onClick: () => setActiveTab('bookings'), 
             style: { background: 'none', border: 'none', color: '#4f46e5', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }
@@ -700,11 +826,11 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           bookings.slice(0, 5).map(booking => 
             React.createElement('div', { key: booking.id, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f1f5f9' } },
               React.createElement('div', null,
-                React.createElement('p', { style: { fontWeight: '500', color: '#0f172a', margin: 0 } }, booking.customer_name),
-                React.createElement('p', { style: { fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' } }, booking.booking_reference)
+                React.createElement('p', { style: { fontWeight: '500', color: '#0f172a', margin: 0 } }, booking.customer_name || 'Guest'),
+                React.createElement('p', { style: { fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' } }, booking.booking_reference || booking.id)
               ),
               React.createElement('div', { style: { textAlign: 'right' } },
-                React.createElement('p', { style: { fontWeight: '600', color: '#4f46e5', margin: 0 } }, formatNaira(booking.total_amount)),
+                React.createElement('p', { style: { fontWeight: '600', color: '#4f46e5', margin: 0 } }, formatNaira(booking.total_amount || 0)),
                 React.createElement('span', { 
                   style: { 
                     fontSize: '11px', 
@@ -715,18 +841,34 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
                     display: 'inline-block',
                     marginTop: '4px'
                   } 
-                }, booking.status)
+                }, booking.status || 'pending')
               )
             )
           ),
-          bookings.length === 0 && React.createElement('p', { style: { textAlign: 'center', color: '#64748b', padding: '40px' } }, 'No bookings yet')
+          bookings.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: '40px 20px' } },
+            React.createElement(Calendar, { size: 40, color: '#cbd5e1' }),
+            React.createElement('p', { style: { color: '#64748b', marginTop: '12px' } }, 'No bookings yet'),
+            React.createElement('button', { 
+              onClick: fetchBookings,
+              style: { 
+                marginTop: '8px',
+                padding: '6px 16px',
+                backgroundColor: '#4f46e5',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }
+            }, 'Refresh')
+          )
         )
       )
     );
   };
 
   // ============================================================
-  // RENDER SUBSCRIPTION / PLANS TAB - PREMIUM 2026 DESIGN
+  // RENDER SUBSCRIPTION / PLANS TAB
   // ============================================================
   const renderSubscription = () => {
     const currentTierData = getCurrentTier();
