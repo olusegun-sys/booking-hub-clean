@@ -1,7 +1,7 @@
 ﻿// client/src/AdminDashboard.jsx
 // =============================================
-// ADMIN DASHBOARD - CLEAN WORKING VERSION
-// NO COMPLEX NESTING - SIMPLE AND PRODUCTION-READY
+// ADMIN DASHBOARD - FULLY FIXED
+// SIMPLE, CLEAN, NO SYNTAX ERRORS
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -197,139 +197,155 @@ function AdminDashboard({ admin, onLogout }) {
   }
 
   // ============================================================
-  // SIMPLE DELETE MODAL - USING A SEPARATE FUNCTION
+  // SIMPLE DELETE MODAL - BUILT STEP BY STEP
   // ============================================================
   const renderDeleteModal = function() {
     if (!deleteModal.isOpen) return null;
     
-    return React.createElement('div', {
-      style: { 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        bottom: 0, 
-        backgroundColor: 'rgba(0, 0, 0, 0.6)', 
-        backdropFilter: 'blur(4px)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        zIndex: 9999, 
-        padding: '20px' 
+    // Build the confirm button
+    var deleteButton = React.createElement('button', {
+      key: 'delete',
+      onClick: handleConfirmDelete,
+      disabled: deleting === deleteModal.business?.id,
+      style: {
+        flex: 1,
+        padding: '10px 24px',
+        backgroundColor: '#dc2626',
+        color: 'white',
+        border: 'none',
+        borderRadius: '10px',
+        fontSize: '13px',
+        fontWeight: '600',
+        cursor: deleting === deleteModal.business?.id ? 'not-allowed' : 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        opacity: deleting === deleteModal.business?.id ? 0.7 : 1
+      }
+    },
+      deleting === deleteModal.business?.id
+        ? React.createElement(Loader2, { size: 16, style: { animation: 'spin 1s linear infinite' } })
+        : React.createElement(Trash2, { size: 16 }),
+      'Delete'
+    );
+
+    // Build the cancel button
+    var cancelButton = React.createElement('button', {
+      key: 'cancel',
+      onClick: handleCancelDelete,
+      style: {
+        flex: 1,
+        padding: '10px 24px',
+        backgroundColor: 'white',
+        color: '#475569',
+        border: '1px solid #e2e8f0',
+        borderRadius: '10px',
+        fontSize: '13px',
+        fontWeight: '500',
+        cursor: 'pointer'
+      }
+    }, 'Cancel');
+
+    // Build the buttons row
+    var buttonsRow = React.createElement('div', {
+      style: {
+        display: 'flex',
+        gap: '12px',
+        marginTop: '16px'
+      }
+    }, cancelButton, deleteButton);
+
+    // Build the confirmation message
+    var message = React.createElement('p', {
+      style: { fontSize: '14px', color: '#1e293b', margin: 0, marginBottom: '16px' }
+    },
+      'Are you sure you want to permanently delete ',
+      React.createElement('strong', { style: { color: '#dc2626' } }, deleteModal.business?.name),
+      '?'
+    );
+
+    // Build the modal body
+    var body = React.createElement('div', { style: { padding: '24px' } }, message, buttonsRow);
+
+    // Build the warning icon
+    var warningIcon = React.createElement('div', {
+      style: {
+        width: '40px',
+        height: '40px',
+        backgroundColor: '#fee2e2',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    },
+      React.createElement(AlertTriangle, { size: 20, color: '#dc2626' })
+    );
+
+    // Build the header text
+    var headerText = React.createElement('div', null,
+      React.createElement('h3', {
+        style: {
+          fontSize: '18px',
+          fontWeight: '700',
+          color: '#991b1b',
+          margin: 0
+        }
+      }, 'Delete Business'),
+      React.createElement('p', {
+        style: {
+          fontSize: '12px',
+          color: '#b91c1c',
+          margin: 0
+        }
+      }, 'This action cannot be undone')
+    );
+
+    // Build the header
+    var header = React.createElement('div', {
+      style: {
+        padding: '20px 24px',
+        backgroundColor: '#fef2f2',
+        borderBottom: '1px solid #fecaca',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px'
+      }
+    }, warningIcon, headerText);
+
+    // Build the modal card
+    var modalCard = React.createElement('div', {
+      style: {
+        backgroundColor: 'white',
+        borderRadius: '24px',
+        maxWidth: '420px',
+        width: '100%',
+        overflow: 'hidden',
+        boxShadow: '0 40px 80px rgba(0,0,0,0.3)'
+      }
+    }, header, body);
+
+    // Build the modal overlay
+    var modalOverlay = React.createElement('div', {
+      style: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '20px'
       },
       onClick: function(e) { if (e.target === e.currentTarget) handleCancelDelete(); }
-    },
-      React.createElement('div', { 
-        style: { 
-          backgroundColor: 'white', 
-          borderRadius: '24px', 
-          maxWidth: '420px', 
-          width: '100%', 
-          overflow: 'hidden',
-          boxShadow: '0 40px 80px rgba(0,0,0,0.3)'
-        } 
-      },
-        React.createElement('div', { 
-          style: { 
-            padding: '20px 24px', 
-            backgroundColor: '#fef2f2',
-            borderBottom: '1px solid #fecaca',
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '12px' 
-          } 
-        },
-          React.createElement('div', { 
-            style: { 
-              width: '40px', 
-              height: '40px', 
-              backgroundColor: '#fee2e2',
-              borderRadius: '50%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center' 
-            } 
-          },
-            React.createElement(AlertTriangle, { size: 20, color: '#dc2626' })
-          ),
-          React.createElement('div', null,
-            React.createElement('h3', { 
-              style: { 
-                fontSize: '18px', 
-                fontWeight: '700', 
-                color: '#991b1b', 
-                margin: 0 
-              } 
-            }, 'Delete Business'),
-            React.createElement('p', { 
-              style: { 
-                fontSize: '12px', 
-                color: '#b91c1c', 
-                margin: 0 
-              } 
-            }, 'This action cannot be undone')
-          )
-        ),
-        React.createElement('div', { style: { padding: '24px' } },
-          React.createElement('p', { 
-            style: { fontSize: '14px', color: '#1e293b', margin: 0, marginBottom: '16px' } 
-          },
-            'Are you sure you want to permanently delete ',
-            React.createElement('strong', { style: { color: '#dc2626' } }, deleteModal.business?.name),
-            '?'
-          ),
-          React.createElement('div', { 
-            style: { 
-              display: 'flex', 
-              gap: '12px',
-              marginTop: '16px'
-            } 
-          },
-            React.createElement('button', { 
-              key: 'cancel',
-              onClick: handleCancelDelete,
-              style: { 
-                flex: 1,
-                padding: '10px 24px',
-                backgroundColor: 'white',
-                color: '#475569',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              } 
-            }, 'Cancel'),
-            React.createElement('button', { 
-              key: 'delete',
-              onClick: handleConfirmDelete,
-              disabled: deleting === deleteModal.business?.id,
-              style: { 
-                flex: 1,
-                padding: '10px 24px',
-                backgroundColor: '#dc2626',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: deleting === deleteModal.business?.id ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                opacity: deleting === deleteModal.business?.id ? 0.7 : 1
-              } 
-            },
-              deleting === deleteModal.business?.id 
-                ? React.createElement(Loader2, { size: 16, style: { animation: 'spin 1s linear infinite' } })
-                : React.createElement(Trash2, { size: 16 }),
-              'Delete'
-            )
-          )
-        )
-      )
-    );
+    }, modalCard);
+
+    return modalOverlay;
   };
 
   return React.createElement('div', { style: { minHeight: '100vh', backgroundColor: '#f8fafc' } },
@@ -477,7 +493,6 @@ function AdminDashboard({ admin, onLogout }) {
         )
       )
     )
-  );
 }
 
 export default AdminDashboard;
