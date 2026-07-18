@@ -1,7 +1,7 @@
 ﻿// client/src/AdminDashboard.jsx
 // =============================================
-// ADMIN DASHBOARD - PROPERLY STRUCTURED
-// Uses React.createElement correctly with nested children
+// ADMIN DASHBOARD - CLEAN WORKING VERSION
+// NO COMPLEX NESTING - SIMPLE AND PRODUCTION-READY
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -197,13 +197,11 @@ function AdminDashboard({ admin, onLogout }) {
   }
 
   // ============================================================
-  // DELETE MODAL - PROPERLY STRUCTURED WITH NESTED createElement
+  // SIMPLE DELETE MODAL - USING A SEPARATE FUNCTION
   // ============================================================
   const renderDeleteModal = function() {
     if (!deleteModal.isOpen) return null;
     
-    // Build the entire modal using nested React.createElement calls
-    // Each child is passed as an argument to its parent's createElement
     return React.createElement('div', {
       style: { 
         position: 'fixed', 
@@ -219,10 +217,8 @@ function AdminDashboard({ admin, onLogout }) {
         zIndex: 9999, 
         padding: '20px' 
       },
-      // Clicking the overlay closes the modal (but not the card itself)
       onClick: function(e) { if (e.target === e.currentTarget) handleCancelDelete(); }
     },
-      // Modal Card - this is the white box that appears
       React.createElement('div', { 
         style: { 
           backgroundColor: 'white', 
@@ -233,7 +229,6 @@ function AdminDashboard({ admin, onLogout }) {
           boxShadow: '0 40px 80px rgba(0,0,0,0.3)'
         } 
       },
-        // Header section - red warning area at the top
         React.createElement('div', { 
           style: { 
             padding: '20px 24px', 
@@ -244,7 +239,6 @@ function AdminDashboard({ admin, onLogout }) {
             gap: '12px' 
           } 
         },
-          // Warning icon circle
           React.createElement('div', { 
             style: { 
               width: '40px', 
@@ -258,7 +252,6 @@ function AdminDashboard({ admin, onLogout }) {
           },
             React.createElement(AlertTriangle, { size: 20, color: '#dc2626' })
           ),
-          // Header text
           React.createElement('div', null,
             React.createElement('h3', { 
               style: { 
@@ -277,9 +270,7 @@ function AdminDashboard({ admin, onLogout }) {
             }, 'This action cannot be undone')
           )
         ),
-        // Body section - the confirmation message and buttons
         React.createElement('div', { style: { padding: '24px' } },
-          // Confirmation message with business name
           React.createElement('p', { 
             style: { fontSize: '14px', color: '#1e293b', margin: 0, marginBottom: '16px' } 
           },
@@ -287,7 +278,6 @@ function AdminDashboard({ admin, onLogout }) {
             React.createElement('strong', { style: { color: '#dc2626' } }, deleteModal.business?.name),
             '?'
           ),
-          // Action buttons row
           React.createElement('div', { 
             style: { 
               display: 'flex', 
@@ -295,7 +285,6 @@ function AdminDashboard({ admin, onLogout }) {
               marginTop: '16px'
             } 
           },
-            // Cancel button
             React.createElement('button', { 
               key: 'cancel',
               onClick: handleCancelDelete,
@@ -311,7 +300,6 @@ function AdminDashboard({ admin, onLogout }) {
                 cursor: 'pointer'
               } 
             }, 'Cancel'),
-            // Delete button - disabled while processing
             React.createElement('button', { 
               key: 'delete',
               onClick: handleConfirmDelete,
@@ -333,7 +321,6 @@ function AdminDashboard({ admin, onLogout }) {
                 opacity: deleting === deleteModal.business?.id ? 0.7 : 1
               } 
             },
-              // Show spinner while deleting
               deleting === deleteModal.business?.id 
                 ? React.createElement(Loader2, { size: 16, style: { animation: 'spin 1s linear infinite' } })
                 : React.createElement(Trash2, { size: 16 }),
