@@ -1,4 +1,4 @@
-﻿// FILE: server.js
+﻿﻿// FILE: server.js
 // COMPLETE PRODUCTION-READY VERSION WITH SUBSCRIPTION SYSTEM
 // DEPLOY TO RENDER: Replace your server.js with this
 
@@ -45,6 +45,16 @@ function getLocalIpAddress() {
     }
   }
   return 'localhost';
+}
+
+// ============================================================
+// HELPER: Remove sensitive fields from objects
+// ============================================================
+function removeSensitiveFields(obj, ...fields) {
+  if (!obj) return obj;
+  const result = { ...obj };
+  fields.forEach(field => delete result[field]);
+  return result;
 }
 
 // ============================================================
@@ -210,7 +220,7 @@ app.get('/api/test', function(req, res) {
 
 app.get('/api/supabase-test', async function(req, res) {
   try {
-    const { data, error, count } = await supabase
+    const { error, count } = await supabase
       .from('businesses')
       .select('*', { count: 'exact', head: true });
     if (error) throw error;
@@ -250,7 +260,8 @@ app.get('/api/businesses/featured', async function(req, res) {
       .limit(3);
     if (error) throw error;
     res.json({ success: true, businesses: data });
-  } catch (error) {
+  } catch {
+    console.error('Failed to fetch featured businesses');
     res.status(500).json({ error: 'Failed to fetch featured businesses' });
   }
 });
@@ -275,9 +286,9 @@ app.get('/api/businesses/search/category', async function(req, res) {
     
     if (error) throw error;
     res.json({ success: true, businesses: data });
-  } catch (error) {
-    console.error('Search error:', error);
-    res.status(500).json({ error: 'Search failed', details: error.message });
+  } catch {
+    console.error('Search error:');
+    res.status(500).json({ error: 'Search failed', details: 'An error occurred during search' });
   }
 });
 
@@ -293,7 +304,8 @@ app.get('/api/businesses/slug/:slug', async function(req, res) {
     
     if (error) throw error;
     res.json({ success: true, business: data });
-  } catch (error) {
+  } catch {
+    console.error('Business not found:');
     res.status(404).json({ success: false, error: 'Business not found' });
   }
 });
@@ -316,7 +328,8 @@ app.get('/api/domain-info', async function(req, res) {
       return res.json({ success: true, business: req.detectedBusiness, source: req.domainSource || 'custom-domain' });
     }
     res.json({ success: false, message: 'No business associated with this domain' });
-  } catch (error) {
+  } catch {
+    console.error('Domain info error:');
     res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' });
   }
 });
@@ -332,8 +345,8 @@ app.get('/api/businesses/:businessId/rooms', async function(req, res) {
     
     if (error) throw error;
     res.json({ success: true, rooms: data });
-  } catch (error) {
-    console.error('Fetch rooms error:', error);
+  } catch {
+    console.error('Fetch rooms error:');
     res.status(500).json({ error: 'Failed to fetch rooms' });
   }
 });
@@ -412,7 +425,7 @@ app.post('/api/admin/login', async function(req, res) {
       expires_at: expiresAt.toISOString()
     });
 
-    const { password_hash, password: plainPassword, ...safeAdmin } = admin;
+    const safeAdmin = removeSensitiveFields(admin, 'password_hash', 'password');
 
     res.json({
       success: true,
@@ -553,7 +566,7 @@ app.post('/api/businesses/login', async function(req, res) {
       expires_at: expiresAt.toISOString()
     });
 
-    var { password_hash, password: plainPassword, ...safeBusiness } = business;
+    var safeBusiness = removeSensitiveFields(business, 'password_hash', 'password');
 
     res.json({
       success: true,
@@ -591,7 +604,7 @@ app.post('/api/staff/login', async function(req, res) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
     
-    var { password_hash, password: plainPassword, ...staff } = data;
+    var staff = removeSensitiveFields(data, 'password_hash', 'password');
     res.json({ success: true, staff: staff });
   } catch (error) {
     console.error('Staff login error:', error);
@@ -1085,8 +1098,8 @@ app.get('/api/businesses/:businessId/bookings', authenticateBusiness, async func
     
     if (error) throw error;
     res.json({ success: true, bookings: data });
-  } catch (error) {
-    console.error('Fetch bookings error:', error);
+  } catch {
+    console.error('Fetch bookings error:');
     res.status(500).json({ success: false, error: 'Failed to fetch bookings' });
   }
 });
@@ -1133,7 +1146,7 @@ app.post('/api/businesses/:businessId/staff', authenticateBusiness, async functi
       throw error;
     }
     
-    var { password_hash, ...staff } = data;
+    var staff = removeSensitiveFields(data, 'password_hash', 'password');
     res.json({ success: true, staff: staff });
   } catch (error) {
     console.error('Staff creation error:', error);
@@ -1155,7 +1168,7 @@ app.put('/api/staff/:staffId', authenticateBusiness, async function(req, res) {
       .single();
     
     if (error) throw error;
-    var { password_hash, ...staff } = data;
+    var staff = removeSensitiveFields(data, 'password_hash', 'password');
     res.json({ success: true, staff: staff });
   } catch (error) {
     console.error('Staff update error:', error);
@@ -1249,8 +1262,8 @@ app.post('/api/businesses/:businessId/block-date', authenticateBusiness, async f
     
     if (error) throw error;
     res.json({ success: true, blockedDate: data });
-  } catch (error) {
-    console.error('Block date error:', error);
+  } catch {
+    console.error('Block date error:');
     res.status(500).json({ success: false, error: 'Failed to block date' });
   }
 });
@@ -1498,15 +1511,16 @@ app.post('/api/bookings', async function(req, res) {
 
 app.get('/api/bookings/reference/:reference', async function(req, res) {
   try {
-    var { data, error } = await supabase
+    const { data, error } = await supabase
       .from('bookings')
       .select('*')
       .eq('booking_reference', req.params.reference)
       .single();
-    
+
     if (error) throw error;
     res.json({ success: true, booking: data });
-  } catch (error) {
+  } catch {
+    console.error('Booking not found:');
     res.status(404).json({ error: 'Booking not found' });
   }
 });
@@ -1623,7 +1637,7 @@ app.post('/api/upload-gallery-image', async function(req, res) {
       return res.status(400).json({ error: 'Business ID, file name, and file data are required' });
     }
 
-    var matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    var matches = fileData.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
       return res.status(400).json({ error: 'Invalid image data format' });
     }
