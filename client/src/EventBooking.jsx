@@ -1,4 +1,4 @@
-﻿// client/src/EventBooking.jsx
+﻿﻿// client/src/EventBooking.jsx
 // =============================================
 // EVENT BOOKING - DISPLAYS ACTUAL BUSINESS VENUES
 // Fetches venues from the business's rooms table
@@ -10,7 +10,7 @@ import {
   ArrowLeft, MapPin, Calendar, Users, Star, DollarSign, Clock, 
   CheckCircle, Sparkles, PartyPopper, Music, Cake, Briefcase, 
   Gift, GlassWater, Crown, Shield, Heart, Camera, Building2,
-  Info, TrendingUp
+  Info, TrendingUp, AlertTriangle
 } from 'lucide-react';
 import GuestBookingForm from './components/forms/GuestBookingForm';
 import API_BASE from './config';

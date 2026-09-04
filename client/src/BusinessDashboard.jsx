@@ -1,4 +1,4 @@
-﻿// client/src/BusinessDashboard.jsx
+﻿﻿// client/src/BusinessDashboard.jsx
 // =============================================
 // PREMIUM BUSINESS DASHBOARD - 2026 LUXURY DESIGN
 // Glass-morphism, gradients, animations, premium UX
@@ -12,7 +12,7 @@ import {
   DollarSign, ChevronRight, Menu, X,
   Building2, TrendingUp, Plus, ExternalLink,
   CheckCircle, Crown, Star, Zap, AlertTriangle,
-  Sparkle, Gem, Rocket, Infinity, Shield, Award,
+  Sparkle, Gem, Rocket, Infinity as InfinityIcon, Shield, Award,
   Copy, Check, ArrowRight, Wallet, Building, Phone, Mail,
   PartyPopper, Music, Cake, Briefcase, Gift, GlassWater
 } from 'lucide-react';
@@ -977,7 +977,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             marginBottom: '20px'
           }
         },
-          React.createElement(Infinity, { size: 14 }),
+          React.createElement(InfinityIcon, { size: 14 }),
           isUnlimited ? 'Unlimited bookings' : (tier.bookings + ' bookings/month')
         ),
 
