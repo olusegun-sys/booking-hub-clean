@@ -6,13 +6,7 @@
 // Integrated: Reviews breakdown section
 // Integrated: Premium glass-morphism effects
 // Integrated: Mobile-first responsive design
-// FIXED: isMobile ReferenceError (production fix)
-// FIXED: Mobile header alignment (back button stays left)
-// FIXED: Header container width on mobile (compact back button)
-// FIXED: Booking modal - paymentMethod state properly declared
-// FIXED: Booking modal - User icon replaced with Users
-// FIXED: Booking modal - Wallet icon replaced with CreditCard
-// FIXED: Booking modal - Loader2 replaced with Loader (already imported)
+// POLISHED: Event-specific highlights, hero badges, and messaging
 // =============================================
 
 import React from 'react';
@@ -25,7 +19,7 @@ import {
   Lock, CreditCard as CardIcon, Receipt, Check, Building, Loader,
   HeartHandshake, Dumbbell, Map, Navigation, Award, Shield, Crown,
   Headphones, Snowflake, Utensils as UtensilsIcon, ExternalLink, Info,
-  Camera
+  Camera, PartyPopper, Music, Cake, Briefcase, Gift, GlassWater
 } from 'lucide-react';
 import RoomPage from './RoomPage';
 import SportsBooking from './SportsBooking';
@@ -999,6 +993,21 @@ function createStyles(isMobile) {
       transition: 'all 0.3s ease',
       boxShadow: '0 4px 12px rgba(79,70,229,0.2)',
       width: isMobile ? '100%' : 'auto'
+    },
+    
+    // ===== EVENT HERO BADGE =====
+    eventBadge: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      padding: '6px 14px',
+      borderRadius: '40px',
+      fontSize: '12px',
+      fontWeight: '600',
+      background: 'rgba(251, 146, 60, 0.2)',
+      border: '1px solid rgba(251, 146, 60, 0.3)',
+      color: 'white',
+      backdropFilter: 'blur(10px)'
     }
   };
 }
@@ -1019,6 +1028,7 @@ var eventImages = [
 ];
 
 var defaultHotelHero = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600&h=600&fit=crop';
+var defaultEventHero = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1600&h=600&fit=crop';
 
 function getRoomImage(roomName) {
   var name = roomName.toLowerCase();
@@ -1271,8 +1281,15 @@ function UnifiedBookingPage() {
   var badgeType = business.business_type === 'hotel' ? 'Hotel' : business.business_type === 'sports' ? 'Sports Facility' : 'Event Venue';
   var badgeColor = business.business_type === 'hotel' ? '#4F46E5' : business.business_type === 'sports' ? '#059669' : '#d97706';
 
-  // ===== HIGHLIGHTS DATA =====
-  var highlights = [
+  // ===== HIGHLIGHTS - EVENT SPECIFIC =====
+  var isEvent = business.business_type === 'event';
+  
+  var highlights = isEvent ? [
+    { icon: Sparkles, color: '#d97706', bgColor: '#FEF3C7', label: 'Perfect for celebrations' },
+    { icon: Users, color: '#8B5CF6', bgColor: '#EDE9FE', label: 'Hosts up to 300 guests' },
+    { icon: Calendar, color: '#EC4899', bgColor: '#FCE4EC', label: 'Flexible booking' },
+    { icon: Crown, color: '#F59E0B', bgColor: '#FEF3C7', label: 'Premium venue' }
+  ] : [
     { icon: HeartHandshake, color: '#EC4899', bgColor: '#FCE4EC', label: 'Loved by couples' },
     { icon: UtensilsIcon, color: '#F59E0B', bgColor: '#FEF3C7', label: 'Top rated breakfast' },
     { icon: Dumbbell, color: '#10B981', bgColor: '#D1FAE5', label: 'Fitness center' },
@@ -1354,15 +1371,15 @@ function UnifiedBookingPage() {
     React.createElement('div', { style: styles.heroSection },
       React.createElement('img', {
         src: getHeroImage(),
-        alt: business?.name || 'Hotel',
+        alt: business?.name || 'Venue',
         style: styles.heroImage,
-        onError: function(e) { e.currentTarget.src = defaultHotelHero; }
+        onError: function(e) { e.currentTarget.src = isEvent ? defaultEventHero : defaultHotelHero; }
       }),
       React.createElement('div', { style: styles.heroOverlay }),
       React.createElement('div', { style: styles.heroContent },
         React.createElement('div', { style: styles.heroTop },
           React.createElement('div', null,
-            React.createElement('h1', { style: styles.heroName }, business?.name || 'Hotel'),
+            React.createElement('h1', { style: styles.heroName }, business?.name || 'Venue'),
             React.createElement('div', { style: styles.heroLocation },
               React.createElement(MapPin, { size: 14 }),
               business?.city || 'Lagos', ', ', business?.state || 'Lagos'
@@ -1373,13 +1390,22 @@ function UnifiedBookingPage() {
               React.createElement(Star, { size: 12, fill: '#F59E0B', color: '#F59E0B' }),
               '4.9'
             ),
-            React.createElement('div', { style: { ...styles.heroBadge, background: 'rgba(79,70,229,0.3)', border: '1px solid rgba(79,70,229,0.3)' } },
-              React.createElement(Crown, { size: 12 }),
-              'Premium Host'
-            ),
+            isEvent ? 
+              React.createElement('div', { style: { ...styles.heroBadge, background: 'rgba(251, 146, 60, 0.3)', border: '1px solid rgba(251, 146, 60, 0.3)' } },
+                React.createElement(Sparkles, { size: 12 }),
+                'Premium Event Venue'
+              ) :
+              React.createElement('div', { style: { ...styles.heroBadge, background: 'rgba(79,70,229,0.3)', border: '1px solid rgba(79,70,229,0.3)' } },
+                React.createElement(Crown, { size: 12 }),
+                'Premium Host'
+              ),
             React.createElement('div', { style: { ...styles.heroBadge, background: 'rgba(16,185,129,0.3)', border: '1px solid rgba(16,185,129,0.3)' } },
               React.createElement(Shield, { size: 12 }),
               'Verified'
+            ),
+            isEvent && React.createElement('div', { style: { ...styles.heroBadge, background: 'rgba(236, 72, 153, 0.3)', border: '1px solid rgba(236, 72, 153, 0.3)' } },
+              React.createElement(PartyPopper, { size: 12 }),
+              'Celebration Ready'
             )
           )
         ),
@@ -1547,7 +1573,7 @@ function UnifiedBookingPage() {
               src: img.image_url || img,
               alt: img.file_name || 'Gallery ' + (i + 1),
               style: styles.galleryImage,
-              onError: function(e) { e.currentTarget.src = defaultHotelHero; },
+              onError: function(e) { e.currentTarget.src = isEvent ? defaultEventHero : defaultHotelHero; },
               onClick: function() { openLightbox(i); }
             });
           })
@@ -1767,7 +1793,7 @@ function UnifiedBookingPage() {
         React.createElement('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: isMobile ? '0.5rem' : '0.75rem' } },
           business.business_type === 'sports' 
             ? React.createElement(Trophy, { size: isMobile ? 32 : 40, color: '#4F46E5', strokeWidth: 1.5 })
-            : React.createElement(Sparkles, { size: isMobile ? 32 : 40, color: '#4F46E5', strokeWidth: 1.5 })
+            : React.createElement(PartyPopper, { size: isMobile ? 32 : 40, color: '#d97706', strokeWidth: 1.5 })
         ),
         React.createElement('h2', { 
           style: { 
@@ -1789,7 +1815,7 @@ function UnifiedBookingPage() {
             margin: '0 auto 1rem' 
           } 
         }, 
-          'Select your date and time to get started with your booking.'
+          isEvent ? 'Find the perfect venue for your event. Select your date and time to get started.' : 'Select your date and time to get started with your booking.'
         ),
         React.createElement('button', { 
           className: 'btn btn-primary', 
@@ -1804,7 +1830,7 @@ function UnifiedBookingPage() {
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(79,70,229,0.2)';
           }
         },
-          business.business_type === 'sports' ? 'Book a Court ?' : 'Plan Your Event ?'
+          business.business_type === 'sports' ? 'Book a Court →' : 'Plan Your Event →'
         ),
         React.createElement('p', { 
           style: { 
@@ -1813,7 +1839,7 @@ function UnifiedBookingPage() {
             marginTop: '0.5rem' 
           } 
         }, 
-          'No payment required to book'
+          isEvent ? 'No payment required to book. Secure your date now.' : 'No payment required to book'
         )
       )
     ),
@@ -1876,10 +1902,6 @@ function UnifiedBookingPage() {
 
 // ============================================================
 // BOOKING FORM MODAL - COMPLETE FIX
-// Fixed: paymentMethod state properly declared
-// Fixed: User icon replaced with Users (already imported)
-// Fixed: Wallet icon replaced with CreditCard (already imported)
-// Fixed: Loader2 replaced with Loader (already imported)
 // ============================================================
 function BookingFormModal({ business, room, dateRange, guests, onClose, onSuccess, API_BASE, formatPrice, businessName, isMobile, styles }) {
   // ===== STATE DECLARATIONS - ALL MUST BE DEFINED =====
@@ -2206,7 +2228,7 @@ function BookingFormModal({ business, room, dateRange, guests, onClose, onSucces
             )
           )
         ),
-        // ===== FULL NAME FIELD - Using Users icon =====
+        // ===== FULL NAME FIELD =====
         React.createElement('div', { style: styles.formGroup },
           React.createElement('label', { style: styles.formLabel },
             React.createElement(Users, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
@@ -2270,7 +2292,7 @@ function BookingFormModal({ business, room, dateRange, guests, onClose, onSucces
             onBlur: function(e) { e.target.style.borderColor = '#e2e8f0'; }
           })
         ),
-        // ===== PAYMENT METHOD - Using CreditCard icon =====
+        // ===== PAYMENT METHOD =====
         React.createElement('div', { style: styles.formGroup },
           React.createElement('label', { style: styles.formLabel },
             React.createElement(CreditCard, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
@@ -2296,7 +2318,7 @@ function BookingFormModal({ business, room, dateRange, guests, onClose, onSucces
             )
           )
         ),
-        // ===== SUBMIT BUTTON - FIXED: Loader2 replaced with Loader =====
+        // ===== SUBMIT BUTTON =====
         React.createElement('button', {
           onClick: function() { createAndProcessBooking(paymentMethod); },
           disabled: isCreatingBooking,

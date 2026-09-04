@@ -1,4 +1,8 @@
-﻿# Booking Hub - Complete Project Overview (MASTER UPDATE)
+﻿I'll update the complete project overview with everything we've built, the current state, and where we're heading. This will serve as the master reference for any new chat.
+
+---
+
+# Booking Hub - Complete Project Overview (MASTER UPDATE - SEPTEMBER 2025)
 
 ## 📋 Plain English Summary
 This document captures EVERYTHING we've built for Booking Hub - from the first line of code to our current state. It includes our vision, technical decisions, every roadblock we smashed, every breakthrough we celebrated, and a clear map of where we're heading next. If this chat hits the limit, the next chat can pick up right here and know exactly what we've done, why we did it, and what's left.
@@ -9,6 +13,8 @@ This document captures EVERYTHING we've built for Booking Hub - from the first l
 
 ### What We're Building
 **Booking Hub** is a multi-tenant booking management platform for Nigerian hospitality businesses. Think of it as **"Shopify for hospitality"** - not a marketplace like Booking.com, but a platform where each business gets their own branded booking page, accepts payments (Paystack or pay-at-venue), receives automated email notifications, and tracks all bookings in a real-time dashboard.
+
+**Now part of Plazzaa:** The platform is being integrated into the larger Plazzaa ecosystem as the "Plazzaa for Business" solution - a comprehensive business management tool for hospitality businesses.
 
 ### The Problem We're Solving
 Nigerian hospitality businesses (hotels, sports facilities, event venues) struggle with:
@@ -25,6 +31,7 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 - ✅ Automated email notifications for bookings
 - ✅ Analytics and insights dashboard
 - ✅ Mobile-first design (Nigeria is mobile-first!)
+- ✅ Shareable booking links for WhatsApp and social media
 
 ---
 
@@ -150,8 +157,11 @@ CREATE TABLE businesses (
   cover_url TEXT,
   about TEXT,
   story_image TEXT,
-  is_approved BOOLEAN DEFAULT FALSE,
+  status VARCHAR(50) DEFAULT 'pending',
   is_active BOOLEAN DEFAULT TRUE,
+  booking_limit INTEGER DEFAULT 50,
+  current_booking_count INTEGER DEFAULT 0,
+  subscription_status VARCHAR(50) DEFAULT 'free',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -176,6 +186,7 @@ CREATE TABLE bookings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
   room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
+  booking_reference VARCHAR(255) UNIQUE NOT NULL,
   customer_name VARCHAR(255) NOT NULL,
   customer_email VARCHAR(255) NOT NULL,
   customer_phone VARCHAR(50),
@@ -183,10 +194,10 @@ CREATE TABLE bookings (
   check_out DATE NOT NULL,
   guests INTEGER DEFAULT 1,
   total_price DECIMAL(10,2) NOT NULL,
-  payment_method VARCHAR(50), -- 'paystack' or 'pay_at_venue'
+  payment_method VARCHAR(50),
   payment_status VARCHAR(50) DEFAULT 'pending',
   paystack_reference VARCHAR(255),
-  status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'confirmed', 'cancelled', 'completed'
+  status VARCHAR(50) DEFAULT 'pending',
   notes TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -205,36 +216,45 @@ CREATE TABLE staff (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Custom Domains Table
-CREATE TABLE custom_domains (
+-- Admin Users Table
+CREATE TABLE admin_users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
-  domain VARCHAR(255) UNIQUE NOT NULL,
-  verification_code VARCHAR(50) NOT NULL,
-  is_verified BOOLEAN DEFAULT FALSE,
-  verified_at TIMESTAMP,
-  expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Blocked Dates Table
-CREATE TABLE blocked_dates (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  reason TEXT,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  password VARCHAR(255),
+  full_name VARCHAR(255),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Operating Hours Table
-CREATE TABLE operating_hours (
+-- Admin Sessions Table
+CREATE TABLE admin_sessions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID REFERENCES admin_users(id),
+  token VARCHAR(255) UNIQUE NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Business Sessions Table
+CREATE TABLE business_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  business_id UUID REFERENCES businesses(id),
+  token VARCHAR(255) UNIQUE NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Subscription Upgrades Table
+CREATE TABLE subscription_upgrades (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
-  day_of_week INTEGER NOT NULL, -- 0-6 (Sunday-Saturday)
-  is_open BOOLEAN DEFAULT TRUE,
-  open_time TIME,
-  close_time TIME,
+  plan VARCHAR(50) NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  payment_reference VARCHAR(255) UNIQUE NOT NULL,
+  status VARCHAR(50) DEFAULT 'pending',
+  notes TEXT,
+  verified_at TIMESTAMP,
+  verified_by UUID,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -257,27 +277,6 @@ CREATE TABLE operating_hours (
 | Success Green | `#10B981` | Approved status, success messages |
 | Warning Yellow | `#F59E0B` | Pending status, warnings |
 | Danger Red | `#EF4444` | Rejected status, errors |
-
-### Typography System
-| Element | Font Size | Weight | Color |
-|---------|-----------|--------|-------|
-| H1 | 2.5rem (40px) | 700 | #1A1A1A |
-| H2 | 2rem (32px) | 600 | #1A1A1A |
-| H3 | 1.5rem (24px) | 600 | #1A1A1A |
-| H4 | 1.25rem (20px) | 600 | #1A1A1A |
-| Body | 1rem (16px) | 400 | #1A1A1A |
-| Small | 0.875rem (14px) | 400 | #666666 |
-| Tiny | 0.75rem (12px) | 400 | #999999 |
-
-### Spacing System
-| Size | Value | Usage |
-|------|-------|-------|
-| xs | 4px | Tiny gaps |
-| sm | 8px | Small gaps |
-| md | 16px | Standard gaps |
-| lg | 24px | Large gaps |
-| xl | 32px | Section gaps |
-| 2xl | 48px | Major sections |
 
 ---
 
@@ -320,9 +319,10 @@ CREATE TABLE operating_hours (
 
 5. **Business Dashboard** (`BusinessDashboard.jsx`)
    - Stats cards (Total rooms, bookings, revenue, usage X/50)
-   - Tab navigation (Dashboard, Rooms, Bookings, Profile, Staff, Settings)
+   - Tab navigation (Dashboard, Rooms, Bookings, Profile, Staff, Settings, Plans)
    - Mobile responsive with scrollable tabs
    - Bottom navigation on mobile
+   - Booking limit banner with upgrade prompt
 
 6. **Public Booking Page** (`UnifiedBookingPage.jsx`) - **COMPLETELY REDESIGNED**
    - Premium UI with glass-morphism effects
@@ -338,169 +338,59 @@ CREATE TABLE operating_hours (
    - Room cards with premium styling
    - Booking modal with Paystack/Pay at Venue
 
-7. **HotelBooking.jsx** (Legacy - being replaced by UnifiedBookingPage)
-8. **SportsBooking.jsx**
-9. **EventBooking.jsx**
-10. **Host Landing** (`HostLanding.jsx`)
-    - Marketing page for business owners
-    - Features section
-    - How it works (3 steps)
-    - CTA to register
+7. **UpgradePage** (`pages/UpgradePage.jsx`)
+   - Full page upgrade flow
+   - Plan selection (Starter/Pro)
+   - Bank transfer payment instructions
+   - Copyable reference
+   - Success confirmation
 
-#### Sub-Components
-11. **ImageUpload** (`ImageUpload.jsx`)
-    - Drag and drop or click to upload
-    - Preview thumbnails
-    - Max file size validation (5MB)
-    - Supports logo, cover, and gallery images
-    - `onRefresh` callback for parent update
-
-12. **RoomCard** (`RoomCard.jsx`)
-    - Room image, name, description
-    - Price display
-    - Amenities badges
-    - Capacity indicator
-    - Book now button
-
-13. **BusinessCard** (`BusinessCard.jsx`)
-    - Logo, name, business type
-    - Location (state/city)
-    - Rating placeholder
-    - View booking page button
-
-14. **CategoryCard** (`CategoryCard.jsx`)
-    - Icon + label
-    - Active state with indigo color
-    - Click to filter results
-
-15. **Toast** (React Hot Toast)
-    - Success, error, info, warning variants
-    - Auto-dismiss (3-5 seconds)
-    - Custom styling with indigo theme
-
-16. **ConfirmationModal** (`ConfirmationModal.jsx`)
-    - Replaced browser confirm()
-    - Custom styled modal
-    - Indigo theme
-    - Cancel/Confirm buttons
-
-17. **DatePicker** (`DatePicker.jsx`)
-    - Check-in/check-out date selection
-    - Disabled past dates
-    - Disabled blocked dates
-    - Responsive on mobile
-
-18. **StaffManagement** (`StaffManagement.jsx`)
-    - Add staff form (email, name, role)
-    - Staff list with roles
-    - Edit/Delete actions
-    - Password generation
-
-19. **Settings** (`Settings.jsx`)
-    - Operating hours (per day)
-    - Blocked dates management
-    - Custom domain with DNS verification
-    - Verification code display
-
-20. **AdminSubscriptionManager.jsx** - Subscription plan management
-21. **BookingLimitBanner.jsx** - Displays booking limits
-22. **UpgradeModal.jsx** - Subscription upgrade modal
-23. **useBookingLimit.js** - Custom hook for booking limits
-
-#### Layout Components
-24. **BottomNav** (`BottomNav.jsx`)
-    - Mobile-only navigation
-    - Home, Dashboard, Bookings, Profile icons
-    - Active state with indigo color
-
-25. **Header** (`Header.jsx`)
-    - Logo + navigation links
-    - Login/Register buttons
-    - Mobile hamburger menu
-
-26. **Footer** (`Footer.jsx`)
-    - Links, social icons
-    - Copyright info
+---
 
 ### Backend Routes (Complete API)
 
 #### Authentication Routes
 ```
-POST /api/auth/register      - Register new business
-POST /api/auth/login         - Login (admin, owner, staff)
-POST /api/auth/verify        - Verify JWT token
-POST /api/auth/logout        - Logout (clear token)
+POST /api/admin/login          - Admin login
+POST /api/businesses/login     - Business login
+POST /api/businesses/register  - Business registration
+POST /api/staff/login          - Staff login
+```
+
+#### Admin Routes
+```
+GET    /api/admin/businesses        - Get all businesses
+PUT    /api/admin/businesses/:id/status - Approve/reject business
+DELETE /api/admin/businesses/:id   - Delete business
+GET    /api/admin/stats            - Get admin stats
+GET    /api/admin/pending-upgrades - Get pending subscription upgrades
+POST   /api/admin/subscription/verify - Verify subscription upgrade
 ```
 
 #### Business Routes
 ```
-GET    /api/businesses        - Get all businesses (admin)
-GET    /api/businesses/:id    - Get single business
-POST   /api/businesses        - Create business
-PUT    /api/businesses/:id    - Update business
-DELETE /api/businesses/:id    - Delete business (admin)
-POST   /api/businesses/:id/approve  - Approve business (admin)
-POST   /api/businesses/:id/reject   - Reject business (admin)
-GET    /api/businesses/:id/rooms    - Get business rooms
+GET    /api/businesses/profile     - Get business profile
+PUT    /api/businesses/:id         - Update business
+GET    /api/businesses/:id/rooms   - Get business rooms
 GET    /api/businesses/:id/bookings - Get business bookings
-GET    /api/businesses/:slug         - Get business by slug (public)
-```
-
-#### Room Routes
-```
-GET    /api/rooms/:businessId    - Get rooms by business
-POST   /api/rooms                - Create room
-PUT    /api/rooms/:id            - Update room
-DELETE /api/rooms/:id            - Delete room
+GET    /api/businesses/:id/staff   - Get business staff
+GET    /api/businesses/:id/subscription - Get subscription status
+POST   /api/businesses/:id/upgrade-request - Create upgrade request
 ```
 
 #### Booking Routes
 ```
-GET    /api/bookings/:businessId - Get bookings by business
-POST   /api/bookings             - Create booking
-PUT    /api/bookings/:id         - Update booking status
-GET    /api/bookings/:id         - Get single booking
-POST   /api/bookings/:id/paystack-verify  - Verify Paystack payment
+POST   /api/bookings               - Create booking
+GET    /api/bookings/reference/:reference - Get booking by reference
+POST   /api/bookings/:reference/cancel - Cancel booking
+PATCH  /api/bookings/:id           - Update booking
+GET    /api/businesses/:businessId/booking-capacity - Check booking capacity
 ```
 
-#### Staff Routes
+#### Payment Routes
 ```
-GET    /api/staff/:businessId    - Get staff by business
-POST   /api/staff                - Create staff
-PUT    /api/staff/:id            - Update staff
-DELETE /api/staff/:id            - Delete staff
-```
-
-#### Image Routes
-```
-POST   /api/upload/logo          - Upload business logo
-POST   /api/upload/cover         - Upload business cover
-POST   /api/upload/gallery       - Upload gallery image
-DELETE /api/upload/image         - Delete image
-```
-
-#### Custom Domain Routes
-```
-POST   /api/domains/verify       - Verify custom domain
-GET    /api/domains/:businessId  - Get domain by business
-PUT    /api/domains/:id          - Update domain
-DELETE /api/domains/:id          - Delete domain
-```
-
-#### Settings Routes
-```
-GET    /api/settings/:businessId - Get settings
-PUT    /api/settings/:businessId - Update settings
-POST   /api/settings/blocked-dates - Add blocked date
-DELETE /api/settings/blocked-dates/:id - Remove blocked date
-```
-
-#### Subscription Routes
-```
-GET    /api/subscriptions/plans         - Get all subscription plans
-GET    /api/subscriptions/business/:businessId - Get business subscription
-POST   /api/subscriptions/upgrade        - Upgrade business subscription
-POST   /api/subscriptions/webhook        - Stripe/Paystack webhook handler
+POST   /api/create-payment         - Initialize Paystack payment
+POST   /api/verify-payment         - Verify Paystack payment
 ```
 
 ---
@@ -526,89 +416,54 @@ POST   /api/subscriptions/webhook        - Stripe/Paystack webhook handler
   - Approve/reject with confirmation
   - Delete with confirmation
 - **Mobile Responsive**: Bottom nav on mobile, scrollable tabs
-- **Home Button**: Quick navigation to homepage
+- **Subscription Management**: View and verify upgrade requests
 
 ### 4. Business Dashboard
 - **Stats Cards**: Total rooms, bookings, revenue, usage (X/50)
-- **Room Management**:
-  - Add room (name, description, price, capacity, amenities, images)
-  - Edit room (update details)
-  - Delete room (with confirmation)
-- **Booking Management**:
-  - View all bookings (table)
-  - Update booking status (pending → confirmed → completed → cancelled)
-  - Filter by date/status
-- **Profile Management**:
-  - Logo upload (with preview)
-  - Cover image upload (with preview)
-  - Gallery (max 5 images, upload/delete)
-  - About text
-  - Story image
-- **Staff Management**:
-  - Add staff (email, name, role)
-  - Edit staff details
-  - Delete staff
-  - Staff login with generated password
-- **Settings**:
-  - Operating hours (per day, open/close time)
-  - Blocked dates (date picker, reason)
-  - Custom domain (DNS verification with 24-hour expiry)
+- **Room Management**: Add/edit/delete rooms with images
+- **Booking Management**: View all bookings, update status
+- **Profile Management**: Logo, cover, gallery, about text
+- **Staff Management**: Add/edit/delete staff with roles
+- **Settings**: Operating hours, blocked dates, custom domain
+- **Subscription**: View plans, upgrade with bank transfer
 
 ### 5. Public Booking Page (UnifiedBookingPage.jsx) - COMPLETE REDESIGN
 - **Hero Section**: Premium cover image with business name, location, badges
-- **Highlights Section**: Key selling points (Loved by couples, Top rated breakfast, Fitness center, Central location)
+- **Highlights Section**: Key selling points
 - **Story Section**: Business description with read more/less toggle
 - **Location Map**: Google Maps integration
 - **Reviews Breakdown**: Category-based ratings with progress bars
 - **Gallery**: Photo gallery with lightbox
-- **Room Selection**: Premium room cards with:
-  - Room image with zoom on hover
-  - Price with Naira symbol
-  - Capacity, bed type, rating
-  - Amenities icons
-  - Reserve/Book Now toggle
+- **Room Selection**: Premium room cards with pricing, capacity, amenities
 - **Date Picker**: Check-in/check-out with guest selector
-- **Booking Modal**: 
-  - Customer details form
-  - Payment method selection (Paystack/Pay at Venue)
-  - Booking confirmation with receipt
-- **Mobile-First**: Fully responsive with compact back button on mobile
+- **Booking Modal**: Customer details, payment method selection, receipt
 
-### 6. Email Notifications (Production Mode)
+### 6. Email Notifications (Currently Blocked)
 - **Welcome Email**: Sent to business owners after registration
 - **Approval Email**: Sent when admin approves business
-  - Contains login credentials
-  - Dashboard link
 - **Booking Confirmation**: Sent to customer after booking
-  - Booking details (dates, room, price)
-  - Payment confirmation (if Paystack)
 - **Booking Notification**: Sent to business owner
-  - New booking alert
-  - Customer details
-  - Action required
 
-### 7. Custom Domain System
-- **DNS Verification**: Actual TXT record lookup
-  - Checks for verification code in DNS TXT records
-  - Validates domain ownership
-- **24-Hour Expiry**: Verification codes expire after 24 hours
-- **Domain Validation**: Valid domain format (e.g., `hotel.example.com`)
-- **Auto-Verification**: Polling mechanism for DNS propagation
+**BLOCKER**: Resend requires domain verification to send to all users. Test emails only work for verified addresses (`olusegun@luminara.io`, `segzyblink170@gmail.com`).
 
-### 8. Image Upload System
-- **Supabase Storage**: Images stored in Supabase buckets
-- **Multiple Types**: Logo, cover, gallery (max 5)
-- **Preview**: Show preview before upload
-- **Refresh**: Parent component refreshes after upload
-- **Placeholder**: Business name initials when no logo
-- **No Hardcoded Images**: All images come from business uploads
-
-### 9. Subscription System (NEW)
-- **Subscription Plans**: Free, Basic, Pro, Enterprise
+### 7. Subscription System
+- **Subscription Plans**: Free (50 bookings), Starter (100 bookings, ₦30k/mo), Pro (Unlimited, ₦50k/mo)
 - **Booking Limits**: Free tier limited to 50 bookings/month
-- **Upgrade Flow**: Seamless upgrade to paid plans
+- **Upgrade Flow**: Bank transfer with admin verification
 - **Usage Tracking**: Real-time booking usage tracking
 - **Upgrade Modal**: In-app upgrade prompt when limit reached
+
+### 8. Admin Login & Session Management
+- Admin login at `/admin` route
+- Secure session with `admin_sessions` table
+- Admin-only routes with `authenticateAdmin` middleware
+- Session expiry: 1 day
+- Protected admin endpoints for business management
+
+### 9. Domain & Deployment (In Progress)
+- **Current Domain**: Render free domain (`booking-frontend-clean.onrender.com`)
+- **Planned Domain**: `myplazzaa.com` (being handled by Yannick)
+- **Email Blocked**: Resend needs domain verification to send production emails
 
 ---
 
@@ -620,160 +475,96 @@ POST   /api/subscriptions/webhook        - Stripe/Paystack webhook handler
 - **Problem**: Repository became corrupted, couldn't push/pull
 - **Root Cause**: Large files, interrupted operations
 - **Solution**: Fresh clone from GitHub, re-applied changes
-- **Date**: Early development phase
+- **Status**: ✅ FIXED
 
 #### 2. Admin Login Demo Credentials Showing
 - **Problem**: Demo credentials displayed on login form
 - **Root Cause**: Found in `App.jsx` SimpleAdminLogin component
 - **Solution**: Removed demo credentials, added "Contact admin" message
-- **Date**: First deployment phase
+- **Status**: ✅ FIXED
 
 #### 3. Password Toggle Not Working
 - **Problem**: Eye icon didn't toggle password visibility
 - **Root Cause**: Missing `showPassword` state in both login components
 - **Solution**: Added `showPassword` state and Eye/EyeOff icons with click handlers
-- **Files**: `AdminLogin.jsx`, `BusinessLogin.jsx`
-- **Date**: Login system implementation
+- **Status**: ✅ FIXED
 
 #### 4. AdminLogin ReferenceError
 - **Problem**: `React is not defined` error
 - **Root Cause**: Missing React import in AdminLogin component
 - **Solution**: Added `import React from 'react'`
-- **Date**: Component creation
+- **Status**: ✅ FIXED
 
 #### 5. AdminDashboard Build Failures
 - **Problem**: Syntax errors during build
 - **Root Cause**: Extra closing parenthesis, missing brackets
 - **Solution**: Fixed syntax errors, proper formatting
-- **Date**: Dashboard implementation
+- **Status**: ✅ FIXED
 
 #### 6. Render Deployment Failing
 - **Problem**: Build failures on Render
 - **Root Cause**: Syntax errors, incorrect file paths
 - **Solution**: Fixed all syntax errors, proper Git push
-- **Date**: Deployment phase
+- **Status**: ✅ FIXED
 
 #### 7. Home Button Missing
 - **Problem**: No navigation back to homepage from admin dashboard
 - **Root Cause**: Oversight in UI design
 - **Solution**: Added Home button to AdminDashboard header
-- **File**: `AdminDashboard.jsx`
-- **Date**: UI improvement phase
+- **Status**: ✅ FIXED
 
 #### 8. Mobile Responsiveness Issues
 - **Problem**: Many components not responsive on mobile
 - **Root Cause**: Desktop-first design without proper breakpoints
-- **Solution**: 
-  - Added `isMobile` state to all components
-  - Mobile-specific styles (smaller fonts, stacked layouts)
-  - Modals become bottom-sheet on mobile
-  - 2-column grid on mobile, 4-column on desktop
-- **Files**: All components
-- **Date**: Mobile optimization phase
-
-#### 9. Email Not Sending to Business Owners
-- **Problem**: Approval emails were sent to hardcoded email address
-- **Root Cause**: `NODE_ENV` not set to `'production'` on Render
-- **Solution**: Multiple environment detection methods:
-  - Check for `RENDER` environment variable
-  - Check for non-standard PORT (Render uses dynamic ports)
-  - Check for `RENDER_EXTERNAL_URL`
-  - Check for Supabase URL containing 'render'
-  - Explicit console logging for debugging
+- **Solution**: Added mobile-specific styles, bottom nav on mobile
 - **Status**: ✅ FIXED
+
+#### 9. Email Notifications Blocked (CURRENT ISSUE)
+- **Problem**: Only test emails work (`olusegun@luminara.io`, `segzyblink170@gmail.com`)
+- **Root Cause**: Resend test mode requires domain verification
+- **Solution**: Need to purchase domain (`myplazzaa.com`) and verify in Resend
+- **Status**: 🔴 **BLOCKED** - Awaiting domain from Yannick
 
 #### 10. Image Upload Not Displaying
 - **Problem**: Users could select images but they wouldn't display
-- **Root Cause**: 
-  1. Parent component didn't refresh after upload
-  2. Hardcoded fallback images always showing
-- **Solution**:
-  1. Added `onRefresh` callback to ImageUpload component
-  2. Removed hardcoded fallback images from HotelBooking
-  3. Added placeholder with business name when no images exist
-  4. Better error handling and success messages
+- **Root Cause**: Parent component didn't refresh after upload
+- **Solution**: Added `onRefresh` callback to ImageUpload component
 - **Status**: ✅ FIXED
 
-#### 11. Custom Domain Verification Simplified
+#### 11. Custom Domain Verification
 - **Problem**: Domain verification was simplified without actual DNS checking
 - **Root Cause**: No DNS TXT record verification implemented
-- **Solution**:
-  1. Created `dnsService.js` with actual DNS TXT record verification
-  2. Added 24-hour expiry for verification codes
-  3. Proper domain format validation
-  4. Clear error messages for DNS propagation delays
-- **Status**: ✅ COMPLETE
-
-#### 12. Verification Code Too Long
-- **Problem**: Codes were 83 characters, too long for VARCHAR(50)
-- **Root Cause**: Using `crypto.randomBytes(32).toString('hex')` + prefix
-- **Solution**: Changed to `crypto.randomBytes(12).toString('hex')` (24 characters)
+- **Solution**: Created `dnsService.js` with actual DNS TXT record verification
 - **Status**: ✅ FIXED
 
-#### 13. Emoji Encoding Errors
-- **Problem**: Emojis in console.log causing encoding errors
-- **Root Cause**: Non-ASCII characters in console statements
-- **Solution**: Removed emojis from console.log statements
-- **Status**: ✅ FIXED
-
-#### 14. Approval Emails Going to Wrong Address
-- **Problem**: Emails routing to wrong recipients
-- **Root Cause**: Email routing logic in production
-- **Solution**: Fixed email routing with production detection
-- **Status**: ✅ FIXED
-
-#### 15. Paystack Payment Not Fully Tested
-- **Problem**: Payment flow not fully tested
-- **Root Cause**: Test mode only, no real transactions
-- **Solution**: Ready for testing with pilot businesses
-- **Status**: 🟡 MEDIUM PRIORITY
-
-#### 16. isMobile ReferenceError (CRITICAL - FIXED)
+#### 12. isMobile ReferenceError (CRITICAL - FIXED)
 - **Problem**: `isMobile is not defined` causing blank page
 - **Root Cause**: `isMobile` variable used but never declared in `UnifiedBookingPage.jsx`
 - **Solution**: Added `useIsMobile()` custom hook with SSR support
 - **Status**: ✅ FIXED
 
-#### 17. Mobile Header - Back Button Stretching Full Width (FIXED)
-- **Problem**: Back button taking up entire top bar on mobile
-- **Root Cause**: Header container had `width: 'auto'` but parent was stretching
-- **Solution**: Made back button circular on mobile (36px, 50% border-radius) with arrow only
-- **Status**: ✅ FIXED
-
-#### 18. Date Picker - White Text on White Background (FIXED)
-- **Problem**: Date picker blank on mobile until date selected
-- **Root Cause**: WebKit date picker placeholder text color issue
-- **Solution**: Added `booking-date-input` CSS class with proper color styling
-- **Status**: ✅ FIXED
-
-#### 19. Logo and Business Name Pushed Off Screen (FIXED)
-- **Problem**: Logo and business name not visible on mobile
-- **Root Cause**: Header content overflowing due to back button taking full width
-- **Solution**: Reduced logo size to 24px on mobile, business name max-width to 120px
-- **Status**: ✅ FIXED
-
-#### 20. Booking Modal - paymentMethod Not Defined (FIXED)
+#### 13. Booking Modal - paymentMethod Not Defined (FIXED)
 - **Problem**: `paymentMethod is not defined` error when submitting booking
 - **Root Cause**: paymentMethod state missing from BookingFormModal
-- **Solution**: Added `var _useState11 = React.useState('venue')` with setter
+- **Solution**: Added proper state declaration
 - **Status**: ✅ FIXED
 
-#### 21. Booking Modal - User and Wallet Icons Not Defined (FIXED)
-- **Problem**: `User is not defined`, `Wallet is not defined` errors
+#### 14. Booking Modal - Icon Import Errors (FIXED)
+- **Problem**: `User is not defined`, `Wallet is not defined`, `Loader2 is not defined`
 - **Root Cause**: Icons used but not imported
-- **Solution**: Replaced with `Users` and `CreditCard` (already imported)
+- **Solution**: Replaced with `Users`, `CreditCard`, and `Loader` (already imported)
 - **Status**: ✅ FIXED
 
-#### 22. Booking Modal - Loader2 Not Defined (FIXED)
-- **Problem**: `Loader2 is not defined` error
-- **Root Cause**: Used `Loader2` but only `Loader` was imported
-- **Solution**: Replaced `Loader2` with `Loader`
+#### 15. Admin Token Key Mismatch (FIXED)
+- **Problem**: AdminDashboard 401 Unauthorized
+- **Root Cause**: AdminLogin stores token as `auth_token` but AdminDashboard looked for `admin_token`
+- **Solution**: Added `getToken()` helper that tries all possible token keys
 - **Status**: ✅ FIXED
 
-#### 23. CSS Syntax Error on Render (FIXED)
+#### 16. CSS Syntax Error on Render (FIXED)
 - **Problem**: `[postcss] Unknown word ""` build failure
-- **Root Cause**: Malformed CSS from PowerShell echo commands, duplicate `.booking-date-input` entries
-- **Solution**: Cleaned up CSS file, removed duplicates, kept one clean version
+- **Root Cause**: Malformed CSS from PowerShell echo commands
+- **Solution**: Cleaned up CSS file, removed duplicates
 - **Status**: ✅ FIXED
 
 ---
@@ -782,69 +573,25 @@ POST   /api/subscriptions/webhook        - Stripe/Paystack webhook handler
 
 ### Major Breakthroughs
 
-#### 1. Indigo Branding Decision
-- **What**: Chose Indigo (#4F46E5) as primary color
-- **Why**: Professional, trustworthy, stands out from competitors
-- **Impact**: Consistent professional look across all pages
-- **Result**: Strong brand identity, positive user feedback
+1. **Indigo Branding Decision**: Chose Indigo (#4F46E5) as primary color for professional, trustworthy feel
 
-#### 2. Mobile-First Design Philosophy
-- **What**: "Design for worst-case scenario first (375px mobile), then expand for desktop"
-- **Why**: Nigeria is mobile-first, most users access via phone
-- **Impact**: All components responsive, bottom nav on mobile
-- **Result**: Seamless experience across all devices
+2. **Mobile-First Design Philosophy**: "Design for worst-case scenario first (375px mobile), then expand for desktop"
 
-#### 3. No JSX Decision
-- **What**: Using React.createElement instead of JSX
-- **Why**: More control, easier debugging, no build step issues
-- **Impact**: All components created programmatically
-- **Result**: Cleaner code, fewer build errors
+3. **No JSX Decision**: Using `React.createElement` instead of JSX for more control and easier debugging
 
-#### 4. Supabase for Database + Storage
-- **What**: Chose Supabase over Firebase or custom PostgreSQL
-- **Why**: PostgreSQL familiarity, built-in storage, real-time
-- **Impact**: Easy data modeling, image storage built-in
-- **Result**: Faster development, reliable data layer
+4. **Supabase for Database + Storage**: PostgreSQL familiarity, built-in storage, real-time capabilities
 
-#### 5. Render for Deployment
-- **What**: Chose Render over Vercel, Netlify, or AWS
-- **Why**: Simple deployment, free tier, Node.js support
-- **Impact**: Easy CI/CD, environment variables
-- **Result**: Stable deployment, easy updates
+5. **Render for Deployment**: Simple deployment, free tier, Node.js support
 
-#### 6. DNS Verification with Real Lookups
-- **What**: Actual DNS TXT record verification
-- **Why**: Secure domain verification, prevents spoofing
-- **Impact**: Businesses prove domain ownership
-- **Result**: Secure custom domain system
+6. **Unified Booking Page**: Single booking page for all business types - consistent UX, less code duplication
 
-#### 7. Production Email Detection
-- **What**: Multiple detection methods for production mode
-- **Why**: Ensure emails go to right recipients
-- **Impact**: Reliable email delivery on Render
-- **Result**: Business owners receive approval emails
+7. **Plazzaa Integration**: Booking Hub is now the "Plazzaa for Business" solution - core booking platform for the larger ecosystem
 
-#### 8. Component-Based Architecture
-- **What**: Clean separation of concerns
-- **Why**: Reusability, maintainability
-- **Impact**: Each component has single responsibility
-- **Result**: Easier debugging, faster development
-
-#### 9. Unified Booking Page (NEW)
-- **What**: Single booking page for all business types (hotel, sports, event)
-- **Why**: Consistent user experience, reduced code duplication
-- **Impact**: Easier maintenance, unified design language
-- **Result**: Premium UI with glass-morphism, maps, reviews
-
-#### 10. Surgical Bug Fixing Approach (NEW)
-- **What**: Using Git CMD and sed/PowerShell for targeted fixes
-- **Why**: Efficient debugging without breaking other functionality
-- **Impact**: Faster bug resolution, minimal side effects
-- **Result**: All critical bugs resolved with surgical precision
+8. **Subscription System**: Free/Starter/Pro tiers with booking limits and upgrade flow
 
 ---
 
-## 📊 Current Project Status (LIVE)
+## 📊 Current Project Status (LIVE - SEPTEMBER 2025)
 
 ### Deployment Status
 | Platform | Service | URL | Status |
@@ -875,47 +622,43 @@ POST   /api/subscriptions/webhook        - Stripe/Paystack webhook handler
 | Public Booking Page | ✅ | 100% |
 | Image Upload | ✅ | 100% |
 | Paystack Integration | ✅ | 90% (test mode) |
-| Email Notifications | ✅ | 100% |
+| **Email Notifications** | 🔴 | **BLOCKED - Needs domain** |
 | Mobile Responsiveness | ✅ | 100% |
 | DNS Verification | ✅ | 100% |
 | Pay at Venue | ✅ | 100% |
 | Subscription System | ✅ | 100% |
 | Unified Booking Page | ✅ | 100% |
 | Premium UI Redesign | ✅ | 100% |
-| Analytics Dashboard | 🔴 | 0% (future) |
+| Admin Login/Sessions | ✅ | 100% |
 
 ---
 
 ## 🎯 What's Left to Do
 
 ### Immediate Tasks (High Priority)
-| Task | Priority | Time Estimate | Status |
-|------|----------|---------------|--------|
-| Acquire domain (bookinghub.ng or plaza.com) | 🔴 HIGH | 10 min | ⏳ PENDING |
-| Configure DNS for custom domain | 🔴 HIGH | 30 min | ⏳ PENDING |
-| Onboard 5-10 pilot businesses | 🔴 HIGH | 2-3 days | ⏳ PENDING |
-| Test Paystack with real transactions | 🟡 MEDIUM | 1 day | ⏳ PENDING |
-| Gather user feedback from pilots | 🟡 MEDIUM | 1 week | ⏳ PENDING |
+| Task | Priority | Status |
+|------|----------|--------|
+| Purchase domain (myplazzaa.com) | 🔴 HIGH | ⏳ Yannick handling |
+| Configure DNS for custom domain | 🔴 HIGH | ⏳ Awaiting domain |
+| Verify domain in Resend (production mode) | 🔴 HIGH | ⏳ Awaiting domain |
+| Fix email notifications to all users | 🔴 HIGH | ⏳ Blocked by domain |
+| Full demo for Mr. Terrence (21 September) | 🔴 HIGH | ⏳ In Progress |
+| Onboard pilot businesses | 🟡 MEDIUM | ⏳ PENDING |
 
-### Future Enhancements (Low Priority)
-| Task | Priority | Time Estimate |
-|------|----------|---------------|
-| Analytics dashboard with charts | 🟢 LOW | 2-3 days |
-| SMS notifications | 🟢 LOW | 1 day |
-| WhatsApp integration | 🟢 LOW | 2 days |
-| Multi-language support | 🟢 LOW | 3 days |
-| Mobile app (React Native) | 🟢 LOW | 2-3 weeks |
-| Advanced SEO optimization | 🟢 LOW | 2 days |
-| Performance optimization | 🟢 LOW | 1 day |
-| Security audit | 🟢 LOW | 2 days |
+### Phase 2 Features (After Demo)
+| Task | Priority |
+|------|----------|
+| Payments (Paystack production) | 🟡 MEDIUM |
+| WhatsApp integration | 🟡 MEDIUM |
+| Automated booking reminders | 🟢 LOW |
+| Analytics dashboard with charts | 🟢 LOW |
 
-### Known Issues (Minor)
+### Known Issues
 | Issue | Priority | Status |
 |-------|----------|--------|
-| Paystack payment not fully tested | 🟡 Medium | Test mode only |
-| No real businesses onboarded | 🔴 High | Awaiting pilot |
-| Domain not acquired | 🔴 High | Next step |
-| No analytics dashboard | 🟢 Low | Future feature |
+| Email notifications blocked | 🔴 High | Needs domain |
+| No real businesses onboarded | 🔴 High | After email fix |
+| Paystack not fully tested | 🟡 Medium | Test mode only |
 
 ---
 
@@ -930,110 +673,50 @@ POST   /api/subscriptions/webhook        - Stripe/Paystack webhook handler
 
 ✅ **All core features are complete and tested**
 - Authentication, business management, room management
-- Bookings, payments (test mode), email notifications
+- Bookings, payments (test mode)
 - Custom domains, image upload, mobile responsive
+- Admin login and session management
+- Subscription system with upgrade flow
 
-✅ **Premium UI Redesign Complete**
-- Glass-morphism design system
-- Location map with Google Maps
-- Reviews breakdown section
-- Highlights section
-- Compact mobile back button (circular, arrow only)
-- Date picker visibility fixed
-- Naira currency symbol throughout
-
-✅ **All Critical Bugs Fixed**
-- isMobile ReferenceError
-- Mobile header and back button issues
-- Date picker visibility on mobile
-- Booking modal state and import errors
-- CSS build errors on Render
+🔴 **MAIN BLOCKER: Email notifications**
+- Resend requires domain verification to send to all users
+- Currently only works for test emails: `olusegun@luminara.io`, `segzyblink170@gmail.com`
+- Need `myplazzaa.com` domain from Yannick
+- Once domain is set up, email service will work immediately
 
 ### What We Were Just Working On
-1. ✅ Fixed email delivery to business owners (production mode)
-2. ✅ Fixed image upload and display (onRefresh callback)
-3. ✅ Implemented custom domain DNS verification
-4. ✅ Fixed verification code length (24 chars)
-5. ✅ Made entire app mobile responsive
-6. ✅ Removed hardcoded images from booking page
-7. ✅ Deployed all fixes to Render
-8. ✅ Complete redesign of UnifiedBookingPage with premium UI
-9. ✅ Fixed isMobile ReferenceError with custom hook
-10. ✅ Fixed mobile header - back button circular (36px)
-11. ✅ Fixed date picker visibility with CSS class
-12. ✅ Fixed booking modal - paymentMethod, User, Wallet, Loader2 errors
-13. ✅ Fixed CSS build errors on Render
+1. ✅ Fixed AdminDashboard token key mismatch (401 error)
+2. ✅ Cleaned up AdminDashboard syntax errors
+3. ✅ Added debug logging to diagnose data display issues
+4. ✅ Fixed email service with test mode handling
+5. ✅ Prepared for Plazzaa integration
+6. 🔴 **Currently Blocked**: Awaiting domain from Yannick for email fix
 
 ### Immediate Next Steps (Don't Skip!)
-1. **Acquire a domain** - Get `bookinghub.ng` or `plaza.com`
-2. **Configure DNS** - Point to Render frontend URL
-3. **Onboard pilot businesses** - Work with Sadiq Thomas to get 5-10 businesses
-4. **Test Paystack** - Process real payments (₦100-₦1000)
-5. **Gather feedback** - Iterate based on pilot user input
-
-### How to Start Development
-```bash
-# Clone the repository
-git clone https://github.com/olusegun-sys/booking-hub-clean.git
-cd booking-hub-clean
-
-# Frontend setup
-cd client
-npm install
-npm run dev
-
-# Backend setup (in new terminal)
-cd ../server
-npm install
-node server.js
-
-# Environment variables needed
-# .env in /server
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-RESEND_API_KEY=your_resend_api_key
-PAYSTACK_SECRET_KEY=your_paystack_secret_key
-NODE_ENV=production
-
-# .env in /client
-VITE_API_BASE=http://localhost:5000
-```
+1. **Get domain from Yannick** (`myplazzaa.com`)
+2. **Configure DNS** for Resend verification
+3. **Test email notifications** to all users
+4. **Prepare full demo** for Mr. Terrence on 21 September
+5. **Onboard pilot businesses** after email fix
 
 ### Key Files to Know
 | File | Purpose |
 |------|---------|
 | `/client/src/App.jsx` | Main app, routing, toast provider |
-| `/client/src/pages/AdminDashboard.jsx` | Admin dashboard |
-| `/client/src/pages/BusinessDashboard.jsx` | Business dashboard |
-| `/client/src/UnifiedBookingPage.jsx` | **NEW** Public booking page (redesigned) |
-| `/client/src/HotelBooking.jsx` | Legacy booking page (being replaced) |
+| `/client/src/AdminDashboard.jsx` | Admin dashboard |
+| `/client/src/BusinessDashboard.jsx` | Business dashboard |
+| `/client/src/UnifiedBookingPage.jsx` | Public booking page (redesigned) |
 | `/server/server.js` | Express server, routes |
-| `/server/services/emailService.js` | Resend email integration |
-| `/server/services/dnsService.js` | DNS TXT record verification |
-| `/server/routes/businesses.js` | Business CRUD routes |
-| `/server/routes/bookings.js` | Booking routes |
-| `/server/routes/subscriptions.js` | Subscription routes |
+| `/server/src/services/emailService.js` | Resend email integration |
+| `/server/src/services/paystackService.js` | Paystack payment integration |
 
 ### The Golden Rule (Never Forget)
 > **"Design for the worst-case scenario first (375px mobile), then expand for desktop. Desktop is 'mobile + more space' not 'desktop - something broke.'"**
-
-Every solution must answer:
-1. "What does the user actually need at this moment?"
-2. "What's the job to be done?"
-3. "How do I remove friction?"
-
-### Key Learnings from Recent Debugging
-1. **Always test on mobile first** - Mobile issues are the most critical for Nigerian users
-2. **CSS issues on mobile are often WebKit-specific** - Always test on actual mobile devices
-3. **When using sed/PowerShell for replacements, verify the changes** - Regex patterns can fail silently
-4. **State management in React is critical** - Always double-check that all state variables are declared
-5. **Import all icons you use** - Missing icon imports cause cryptic ReferenceErrors
 
 ---
 
 ## 🏆 Success Criteria (All Completed ✅)
 
-### Core Functionality
 - [x] Frontend loads without blank screen
 - [x] Backend health check returns 200
 - [x] Admin can log in (password toggle works)
@@ -1047,11 +730,9 @@ Every solution must answer:
 - [x] Public booking page works
 - [x] Gallery images display
 - [x] "Pay at venue" creates booking
-- [x] Email notification is sent
 - [x] Indigo branding applied consistently
 - [x] Deployed to Render successfully
 - [x] Custom domain verification works
-- [x] Email delivery fixed (production mode)
 - [x] Image upload saves and displays correctly
 - [x] Mobile responsive across all pages
 - [x] No hardcoded images on booking page
@@ -1060,46 +741,6 @@ Every solution must answer:
 - [x] Reviews breakdown section
 - [x] Subscription system implemented
 - [x] All critical bugs fixed
-
-### Design & UX
-- [x] Consistent indigo color scheme
-- [x] Mobile-first design philosophy
-- [x] Password visibility toggle on login forms
-- [x] Toast notifications replace alerts
-- [x] Custom confirmation modal replaces browser confirm()
-- [x] Bottom navigation on mobile
-- [x] Touch-friendly targets (minimum 44px)
-- [x] Clear typography hierarchy
-- [x] Glass-morphism premium effects
-- [x] Compact back button on mobile (circular, arrow only)
-- [x] Naira currency symbol throughout
-- [x] Date picker visible on mobile
-- [x] Highlights section on booking page
-
-### Deployment & Infrastructure
-- [x] Frontend on Render (stable)
-- [x] Backend on Render (stable)
-- [x] Environment variables configured
-- [x] CORS properly configured
-- [x] Rate limiting enabled
-- [x] Git repository clean and up-to-date
-- [x] All code pushed to GitHub
-
----
-
-## 📈 Project Readiness Score: 95%
-
-| Area | Score | Notes |
-|------|-------|-------|
-| **Functionality** | 98% | All core features work perfectly |
-| **UI/UX** | 95% | Premium redesign complete, mobile-first |
-| **Email** | 95% | Working in production mode on Render |
-| **Payments** | 80% | Test mode only, needs real testing |
-| **Security** | 85% | Good baseline (JWT, bcrypt, rate limiting) |
-| **Performance** | 85% | Good, could use optimization |
-| **Deployment** | 95% | Stable on Render, easy updates |
-| **Mobile** | 98% | Fully responsive, mobile-first |
-| **Code Quality** | 92% | Clean, modular, well-organized |
 
 ---
 
@@ -1116,20 +757,8 @@ We've built a complete, production-ready booking management platform for Nigeria
 5. **Secure**: JWT, bcrypt, rate limiting, DNS verification
 6. **Subscription-ready**: Built-in booking limits and upgrade flow
 
-### Recent Achievements (Last 2-3 Days)
-1. ✅ Complete redesign of UnifiedBookingPage with premium UI
-2. ✅ Fixed isMobile ReferenceError with custom hook
-3. ✅ Fixed mobile header - back button circular (36px) with arrow only
-4. ✅ Fixed date picker visibility on mobile
-5. ✅ Fixed booking modal - paymentMethod, User, Wallet, Loader2 errors
-6. ✅ Fixed CSS build errors on Render
-7. ✅ Added location map with Google Maps
-8. ✅ Added reviews breakdown section
-9. ✅ Added highlights section
-10. ✅ Deployed all fixes to Render successfully
-
 ### The Road Ahead
-The code is ready. The deployment is ready. The only thing left is domain setup and user onboarding. With 5-10 pilot businesses, we'll gather real-world feedback and iterate. This is the beginning of something big.
+The code is ready. The deployment is ready. The only thing left is domain setup, email verification, and user onboarding. The Plazzaa integration is the next major milestone, with a demo scheduled for 21 September.
 
 ---
 
@@ -1156,9 +785,6 @@ cd client && npm run build
 git add .
 git commit -m "message"
 git push origin main
-
-# Check backend health
-curl https://booking-backend-clean.onrender.com/health
 ```
 
 ### Environment Variables (Required)
@@ -1173,9 +799,11 @@ curl https://booking-backend-clean.onrender.com/health
 
 ### Key People
 - **Developer**: Olusegun (olusegun-sys)
-- **Pilot Onboarding**: Sadiq Thomas
-- **Users**: Nigerian hospitality businesses
+- **Team Lead**: Felicity (Plazzaa)
+- **Head of Engineering**: Yannick
+- **CEO**: Mr. Terrence
+- **UI/UX**: Emmanuel
 
 ---
 
-*This document will be updated as we progress. Last update: Current date.*
+*This document will be updated as we progress. Last update: September 2025.*

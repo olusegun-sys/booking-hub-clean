@@ -2,7 +2,7 @@
 // =============================================
 // PREMIUM BUSINESS DASHBOARD - 2026 LUXURY DESIGN
 // Glass-morphism, gradients, animations, premium UX
-// WITH DEBUG LOGGING FOR DATA DIAGNOSTICS
+// UPDATED: Event business type support with "Venue" labels
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -13,7 +13,8 @@ import {
   Building2, TrendingUp, Plus, ExternalLink,
   CheckCircle, Crown, Star, Zap, AlertTriangle,
   Sparkle, Gem, Rocket, Infinity, Shield, Award,
-  Copy, Check, ArrowRight, Wallet, Building, Phone, Mail
+  Copy, Check, ArrowRight, Wallet, Building, Phone, Mail,
+  PartyPopper, Music, Cake, Briefcase, Gift, GlassWater
 } from 'lucide-react';
 import RoomPage from './RoomPage';
 import BookingsManager from './BookingsManager';
@@ -396,6 +397,9 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     }
   }
 
+  // ============================================================
+  // BUSINESS TYPE LABELS - UPDATED FOR EVENTS
+  // ============================================================
   function getBusinessTypeLabels() {
     const type = business?.business_type;
     if (type === 'hotel') {
@@ -439,7 +443,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     const type = business?.business_type;
     if (type === 'hotel') return React.createElement(Hotel, { size: 20 });
     if (type === 'sports') return React.createElement(Trophy, { size: 20 });
-    if (type === 'event') return React.createElement(Sparkles, { size: 20 });
+    if (type === 'event') return React.createElement(PartyPopper, { size: 20 });
     return React.createElement(Building2, { size: 20 });
   }
 
@@ -494,7 +498,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'rooms', label: typeLabels.plural, icon: typeLabels.icon },
+    { id: 'rooms', label: typeLabels.plural, icon: TypeIcon },
     { id: 'bookings', label: 'Bookings', icon: Calendar },
     { id: 'profile', label: 'Profile', icon: Building2 },
     { id: 'staff', label: 'Staff', icon: Users },
@@ -514,6 +518,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     const labels = getBusinessTypeLabels();
     const Icon = labels.icon;
     const currentTierData = getCurrentTier();
+    const isEvent = business?.business_type === 'event';
     
     const subData = subscriptionData || {
       plan: business?.subscription_status || 'free',
@@ -718,7 +723,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           React.createElement('h2', { style: { fontSize: '30px', fontWeight: '700', color: '#0f172a', margin: 0 } }, bookings.length),
           React.createElement('p', { style: { fontSize: '13px', color: '#94a3b8', marginTop: '8px' } }, 'Total bookings received')
         ),
-        // Rooms
+        // Venues/Rooms
         React.createElement('div', { 
           style: { 
             background: 'white',
@@ -734,7 +739,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } },
             React.createElement('span', { style: { fontSize: '13px', fontWeight: '500', color: '#64748b' } }, 'Active ' + labels.plural),
             React.createElement('div', { style: { width: '40px', height: '40px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(Icon, { size: 20, color: '#4f46e5' })
+              React.createElement(Icon, { size: 20, color: labels.iconColor })
             )
           ),
           React.createElement('h2', { style: { fontSize: '30px', fontWeight: '700', color: '#0f172a', margin: 0 } }, rooms.length),

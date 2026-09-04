@@ -1,11 +1,12 @@
 ﻿// FILE: client/src/RoomPage.jsx
-// COMPLETE FIX - Dynamic price labels for hotel/sports/event
+// COMPLETE FIX - Edit modal allows clearing input fields
+// Fixed: onChange handlers properly handle empty values
 
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, Plus, Trash2, Edit3, Save, X, 
   Hotel, Trophy, Sparkles, Users, Bed, DollarSign,
-  AlertCircle, CheckCircle, Loader2
+  AlertCircle, CheckCircle, Loader2, Info
 } from 'lucide-react';
 import API_BASE from './config';
 import { showError, showSuccess } from './toast';
@@ -19,8 +20,12 @@ function RoomPage({ business, onBack }) {
   const [formData, setFormData] = useState({
     name: '',
     type: '',
-    capacity: 2,
-    price_per_night: 0,
+    capacity: '',
+    price_per_night: '',
+    base_price: '',
+    included_guests: '',
+    max_capacity: '',
+    extra_guest_price: '',
     description: '',
     amenities: []
   });
@@ -58,7 +63,7 @@ function RoomPage({ business, onBack }) {
         plural: 'Venues', 
         icon: Sparkles,
         typeLabel: 'Venue Type',
-        capacityLabel: 'Capacity',
+        capacityLabel: 'Included Guests',
         priceLabel: 'Base Price',
         priceUnit: '/ event',
         typeOptions: ['Banquet Hall', 'Conference Room', 'Outdoor Space', 'Ballroom', 'Theater', 'Boardroom']
@@ -78,6 +83,7 @@ function RoomPage({ business, onBack }) {
 
   const labels = getLabels();
   const IconComponent = labels.icon;
+  const isEvent = business?.business_type === 'event';
 
   useEffect(() => {
     fetchRooms();
@@ -103,8 +109,12 @@ function RoomPage({ business, onBack }) {
     setFormData({
       name: '',
       type: labels.typeOptions[0] || '',
-      capacity: 2,
-      price_per_night: 0,
+      capacity: '',
+      price_per_night: '',
+      base_price: '',
+      included_guests: '',
+      max_capacity: '',
+      extra_guest_price: '',
       description: '',
       amenities: []
     });
@@ -116,8 +126,12 @@ function RoomPage({ business, onBack }) {
     setFormData({
       name: room.name || '',
       type: room.type || labels.typeOptions[0] || '',
-      capacity: room.capacity || 2,
-      price_per_night: room.price_per_night || 0,
+      capacity: room.capacity !== undefined ? String(room.capacity) : '',
+      price_per_night: room.price_per_night !== undefined ? String(room.price_per_night) : '',
+      base_price: room.base_price !== undefined ? String(room.base_price) : '',
+      included_guests: room.included_guests !== undefined ? String(room.included_guests) : '',
+      max_capacity: room.max_capacity !== undefined ? String(room.max_capacity) : '',
+      extra_guest_price: room.extra_guest_price !== undefined ? String(room.extra_guest_price) : '',
       description: room.description || '',
       amenities: room.amenities || []
     });
@@ -125,17 +139,34 @@ function RoomPage({ business, onBack }) {
   }
 
   function handleChange(field, value) {
+    // Allow empty strings - don't convert to numbers yet
     setFormData(prev => ({ ...prev, [field]: value }));
   }
 
   function handleSave() {
+    // Validate
     if (!formData.name.trim()) {
       showError(labels.singular + ' name is required');
       return;
     }
-    if (!formData.price_per_night || formData.price_per_night <= 0) {
-      showError('Valid price is required');
+    
+    // For events, use base_price; for others, use price_per_night
+    let priceValue;
+    if (isEvent) {
+      priceValue = parseFloat(formData.base_price);
+    } else {
+      priceValue = parseFloat(formData.price_per_night);
+    }
+    
+    if (!priceValue || priceValue <= 0) {
+      showError('Valid ' + labels.priceLabel.toLowerCase() + ' is required');
       return;
+    }
+
+    // Validate numeric fields
+    let capacity = parseInt(formData.capacity);
+    if (isNaN(capacity) || capacity <= 0) {
+      capacity = isEvent ? 50 : 2;
     }
 
     setSaving(true);
@@ -144,20 +175,33 @@ function RoomPage({ business, onBack }) {
       : API_BASE + '/api/businesses/' + business.id + '/rooms/create';
     const method = editingRoom ? 'PUT' : 'POST';
 
+    const payload = {
+      name: formData.name.trim(),
+      type: formData.type,
+      capacity: capacity,
+      price_per_night: isEvent ? 0 : parseFloat(formData.price_per_night) || 0,
+      description: formData.description,
+      amenities: formData.amenities || []
+    };
+
+    // Add event-specific fields
+    if (isEvent) {
+      payload.base_price = parseFloat(formData.base_price) || 0;
+      payload.included_guests = parseInt(formData.included_guests) || 50;
+      payload.max_capacity = parseInt(formData.max_capacity) || 300;
+      payload.extra_guest_price = parseFloat(formData.extra_guest_price) || 2000;
+      payload.price_per_night = parseFloat(formData.base_price) || 0;
+    }
+
+    console.log('[RoomPage] Saving payload:', payload);
+
     fetch(url, {
       method: method,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
       },
-      body: JSON.stringify({
-        name: formData.name.trim(),
-        type: formData.type,
-        capacity: parseInt(formData.capacity) || 2,
-        price_per_night: parseFloat(formData.price_per_night),
-        description: formData.description,
-        amenities: formData.amenities || []
-      })
+      body: JSON.stringify(payload)
     })
       .then(res => res.json())
       .then(data => {
@@ -233,18 +277,26 @@ function RoomPage({ business, onBack }) {
         }, 'Add ' + labels.singular)
       ) :
       React.createElement('div', { style: { display: 'grid', gap: '12px' } },
-        rooms.map(room => 
-          React.createElement('div', { key: room.id, style: { background: 'white', borderRadius: '12px', padding: '16px 20px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' } },
+        rooms.map(room => {
+          const displayPrice = isEvent ? (room.base_price || room.price_per_night || 0) : (room.price_per_night || 0);
+          
+          return React.createElement('div', { key: room.id, style: { background: 'white', borderRadius: '12px', padding: '16px 20px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' } },
             React.createElement('div', null,
               React.createElement('h4', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, room.name),
               React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '4px' } },
                 React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, room.type || labels.typeOptions[0]),
                 React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, 
                   React.createElement(Users, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
-                  labels.capacityLabel + ': ' + (room.capacity || 2)
+                  labels.capacityLabel + ': ' + (isEvent ? (room.included_guests || room.capacity || 50) : (room.capacity || 2))
                 ),
                 React.createElement('span', { style: { fontSize: '12px', fontWeight: '600', color: '#4f46e5' } },
-                  '₦' + (room.price_per_night || 0).toLocaleString() + labels.priceUnit
+                  '₦' + (displayPrice).toLocaleString() + labels.priceUnit
+                ),
+                isEvent && room.max_capacity && React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } },
+                  'Max: ' + room.max_capacity + ' guests'
+                ),
+                isEvent && room.extra_guest_price && React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } },
+                  'Extra: ₦' + (room.extra_guest_price || 2000).toLocaleString() + '/guest'
                 )
               )
             ),
@@ -258,13 +310,13 @@ function RoomPage({ business, onBack }) {
                 style: { padding: '6px 12px', background: '#fef2f2', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#ef4444' }
               }, React.createElement(Trash2, { size: 16 }))
             )
-          )
-        )
+          );
+        })
       ),
 
     // Modal
     showModal && React.createElement('div', { style: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' } },
-      React.createElement('div', { style: { background: 'white', borderRadius: '20px', maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' } },
+      React.createElement('div', { style: { background: 'white', borderRadius: '20px', maxWidth: isEvent ? '560px' : '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' } },
         // Modal Header
         React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' } },
           React.createElement('h3', { style: { fontSize: '20px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 
@@ -299,36 +351,110 @@ function RoomPage({ business, onBack }) {
               React.createElement('option', { key: opt, value: opt }, opt)
             ))
           ),
-          // Capacity
-          React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.capacityLabel),
-            React.createElement('input', {
-              type: 'number',
-              value: formData.capacity,
-              onChange: (e) => handleChange('capacity', parseInt(e.target.value) || 2),
-              min: 1,
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
-            })
-          ),
-          // PRICE - FIXED: Dynamic label
-          React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
-              labels.priceLabel + ' (₦) *'
-            ),
-            React.createElement('input', {
-              type: 'number',
-              value: formData.price_per_night,
-              onChange: (e) => handleChange('price_per_night', parseFloat(e.target.value) || 0),
-              min: 0,
-              step: 500,
-              placeholder: 'e.g., 5000',
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
-            }),
-            React.createElement('div', { style: { fontSize: '11px', color: '#94a3b8', marginTop: '4px' } },
-              'This is the ' + labels.priceLabel.toLowerCase() + ' for this ' + labels.singular.toLowerCase()
+          
+          // ============================================================
+          // EVENT-SPECIFIC FIELDS (Help text removed, allows clearing)
+          // ============================================================
+          isEvent ? (
+            React.createElement(React.Fragment, null,
+              // Base Price
+              React.createElement('div', null,
+                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
+                  labels.priceLabel + ' (₦) *'
+                ),
+                React.createElement('div', { style: { position: 'relative' } },
+                  React.createElement('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' } }, '₦'),
+                  React.createElement('input', {
+                    type: 'number',
+                    value: formData.base_price,
+                    onChange: (e) => handleChange('base_price', e.target.value),
+                    placeholder: 'e.g., 800000',
+                    style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                  })
+                )
+              ),
+              
+              // Included Guests
+              React.createElement('div', null,
+                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
+                  'Included Guests *'
+                ),
+                React.createElement('input', {
+                  type: 'number',
+                  value: formData.included_guests,
+                  onChange: (e) => handleChange('included_guests', e.target.value),
+                  placeholder: 'e.g., 100',
+                  style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                })
+              ),
+              
+              // Max Capacity
+              React.createElement('div', null,
+                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
+                  'Maximum Capacity *'
+                ),
+                React.createElement('input', {
+                  type: 'number',
+                  value: formData.max_capacity,
+                  onChange: (e) => handleChange('max_capacity', e.target.value),
+                  placeholder: 'e.g., 300',
+                  style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                })
+              ),
+              
+              // Extra Guest Price
+              React.createElement('div', null,
+                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
+                  'Extra Guest Price (₦)'
+                ),
+                React.createElement('div', { style: { position: 'relative' } },
+                  React.createElement('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' } }, '₦'),
+                  React.createElement('input', {
+                    type: 'number',
+                    value: formData.extra_guest_price,
+                    onChange: (e) => handleChange('extra_guest_price', e.target.value),
+                    placeholder: 'e.g., 2000',
+                    style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                  })
+                )
+              )
+            )
+          ) : (
+            // ============================================================
+            // NON-EVENT FIELDS (Hotel / Sports)
+            // ============================================================
+            React.createElement(React.Fragment, null,
+              // Capacity
+              React.createElement('div', null,
+                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.capacityLabel),
+                React.createElement('input', {
+                  type: 'number',
+                  value: formData.capacity,
+                  onChange: (e) => handleChange('capacity', e.target.value),
+                  placeholder: 'e.g., 2',
+                  style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                })
+              ),
+              // Price
+              React.createElement('div', null,
+                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
+                  labels.priceLabel + ' (₦) *'
+                ),
+                React.createElement('div', { style: { position: 'relative' } },
+                  React.createElement('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' } }, '₦'),
+                  React.createElement('input', {
+                    type: 'number',
+                    value: formData.price_per_night,
+                    onChange: (e) => handleChange('price_per_night', e.target.value),
+                    placeholder: 'e.g., 5000',
+                    style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                  })
+                )
+              )
             )
           ),
-          // Description
+          
+          // Description (always visible)
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 'Description'),
             React.createElement('textarea', {
@@ -339,6 +465,7 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }
             })
           ),
+          
           // Submit
           React.createElement('button', {
             onClick: handleSave,
