@@ -1,12 +1,8 @@
 ﻿// client/src/UnifiedBookingPage.jsx
 // =============================================
 // UNIFIED BOOKING PAGE - PREMIUM DESIGN INTEGRATION
-// Integrated: HotelBooking design system
-// Integrated: Location map with Google Maps
-// Integrated: Reviews breakdown section
-// Integrated: Premium glass-morphism effects
-// Integrated: Mobile-first responsive design
-// POLISHED: Event-specific highlights, hero badges, and messaging
+// FIXED: Shareable link navigation - no routing back to homepage
+// Customers stay within the booking flow
 // =============================================
 
 import React from 'react';
@@ -91,7 +87,17 @@ function createStyles(isMobile) {
       zIndex: 50,
       boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
     },
-    headerContent: { display: 'flex', alignItems: 'center', gap: isMobile ? '0.25rem' : '0.75rem', justifyContent: 'flex-start', flexWrap: 'nowrap', width: isMobile ? 'auto' : '100%', maxWidth: '100%', overflow: 'hidden', flex: isMobile ? '0 1 auto' : '1 1 auto' },
+    headerContent: { 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: isMobile ? '0.25rem' : '0.75rem', 
+      justifyContent: 'space-between', 
+      flexWrap: 'nowrap', 
+      width: '100%', 
+      maxWidth: '100%', 
+      overflow: 'hidden', 
+    },
+    // FIXED: Back button now uses goBack() instead of navigate('/')
     backButton: {
       whiteSpace: 'nowrap',
       background: 'rgba(79,70,229,0.08)',
@@ -110,7 +116,7 @@ function createStyles(isMobile) {
       lineHeight: 1
     },
     logo: { width: isMobile ? '24px' : '36px', height: isMobile ? '24px' : '36px', borderRadius: '6px', objectFit: 'cover', background: 'white', padding: '0.1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', flexShrink: 0 },
-    businessNameContainer: { minWidth: 0, flex: isMobile ? '0 1 auto' : '0 1 auto', overflow: 'hidden', maxWidth: isMobile ? '120px' : '200px', flexShrink: 1 },
+    businessNameContainer: { minWidth: 0, flex: '0 1 auto', overflow: 'hidden', maxWidth: isMobile ? '120px' : '200px', flexShrink: 1 },
     businessName: {
       margin: 0,
       fontSize: isMobile ? '0.8rem' : '1rem',
@@ -993,21 +999,6 @@ function createStyles(isMobile) {
       transition: 'all 0.3s ease',
       boxShadow: '0 4px 12px rgba(79,70,229,0.2)',
       width: isMobile ? '100%' : 'auto'
-    },
-    
-    // ===== EVENT HERO BADGE =====
-    eventBadge: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '6px 14px',
-      borderRadius: '40px',
-      fontSize: '12px',
-      fontWeight: '600',
-      background: 'rgba(251, 146, 60, 0.2)',
-      border: '1px solid rgba(251, 146, 60, 0.3)',
-      color: 'white',
-      backdropFilter: 'blur(10px)'
     }
   };
 }
@@ -1131,6 +1122,21 @@ function UnifiedBookingPage() {
   var setExpandedStory = _useState15[1];
 
   // ============================================================
+  // FIXED: Navigation handler - goes back in history, not to homepage
+  // ============================================================
+  function handleGoBack() {
+    // Check if there's history to go back to
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      // If no history, stay on current page (don't navigate to homepage)
+      // This prevents the user from leaving the booking flow
+      console.log('[UnifiedBookingPage] No history to go back to - staying on page');
+      // Optional: show a toast or notification
+    }
+  }
+
+  // ============================================================
   // FETCH BUSINESS DATA
   // ============================================================
   function fetchBusinessData() {
@@ -1237,7 +1243,15 @@ function UnifiedBookingPage() {
         React.createElement('p', null, error || "The page you're looking for doesn't exist."),
         React.createElement('button', { 
           className: 'btn btn-primary', 
-          onClick: function () { navigate('/'); },
+          onClick: function () { 
+            // FIXED: Use goBack instead of navigate to homepage
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              // Stay on page if no history
+              window.location.reload();
+            }
+          },
           style: {
             padding: '0.75rem 2rem',
             background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
@@ -1249,7 +1263,7 @@ function UnifiedBookingPage() {
             fontWeight: '600',
             boxShadow: '0 4px 16px rgba(79,70,229,0.25)'
           }
-        }, 'Go Home')
+        }, 'Go Back')
       )
     );
   }
@@ -1260,19 +1274,30 @@ function UnifiedBookingPage() {
         businessId: business.id, 
         businessName: business.name, 
         businessType: business.business_type, 
-        onBack: function () { navigate('/'); } 
+        onBack: function () { 
+          // FIXED: Go back in history, not to homepage
+          navigate(-1);
+        } 
       });
     }
     if (business.business_type === 'sports') {
       return React.createElement(SportsBooking, { 
         business: business, 
-        onBack: function () { setBookingStarted(false); } 
+        onBack: function () { 
+          // FIXED: Go back in history, not to homepage
+          setBookingStarted(false);
+          navigate(-1);
+        } 
       });
     }
     if (business.business_type === 'event') {
       return React.createElement(EventBooking, { 
         business: business, 
-        onBack: function () { setBookingStarted(false); } 
+        onBack: function () { 
+          // FIXED: Go back in history, not to homepage
+          setBookingStarted(false);
+          navigate(-1);
+        } 
       });
     }
   }
@@ -1326,41 +1351,44 @@ function UnifiedBookingPage() {
   var defaultAmenities = ['Free Wi-Fi', 'Air Conditioning', '24/7 Support', 'Secure Booking', 'Restaurant', 'Room Service', 'Parking', 'Laundry'];
 
   // ============================================================
-  // RENDER
+  // RENDER - HEADER WITH FIXED BACK BUTTON
   // ============================================================
   return React.createElement('div', { style: styles.container },
 
-    // ===== HEADER =====
+    // ===== HEADER - FIXED: Back button uses goBack =====
     React.createElement('div', { style: styles.header },
-      React.createElement('div', { style: { ...styles.headerContent, width: 'auto' } },
-        React.createElement('button', { 
-          className: 'btn btn-secondary', 
-          onClick: function () { navigate('/'); }, 
-          style: styles.backButton,
-          onMouseEnter: function(e) { 
-            e.currentTarget.style.background = 'rgba(79,70,229,0.15)';
+      React.createElement('div', { style: { ...styles.headerContent, width: '100%' } },
+        // Left section: Back button + logo
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: isMobile ? '0.25rem' : '0.75rem', flex: '0 1 auto', overflow: 'hidden' } },
+          React.createElement('button', { 
+            className: 'btn btn-secondary', 
+            onClick: handleGoBack, 
+            style: styles.backButton,
+            onMouseEnter: function(e) { 
+              e.currentTarget.style.background = 'rgba(79,70,229,0.15)';
+            },
+            onMouseLeave: function(e) { 
+              e.currentTarget.style.background = 'rgba(79,70,229,0.08)';
+            }
           },
-          onMouseLeave: function(e) { 
-            e.currentTarget.style.background = 'rgba(79,70,229,0.08)';
-          }
-        },
-          React.createElement(ArrowLeft, { size: isMobile ? 12 : 14 }), 
-          React.createElement('span', { style: { display: isMobile ? 'none' : 'inline' } }, 'Back')
-        ),
-        business.logo_url && React.createElement('img', { 
-          src: business.logo_url, 
-          alt: business.name, 
-          style: styles.logo
-        }),
-        React.createElement('div', { style: styles.businessNameContainer },
-          React.createElement('h1', { style: styles.businessName }, business.name),
-          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '0.2rem', flexWrap: 'wrap' } },
-            React.createElement('span', { 
-              style: { ...styles.businessBadge, background: badgeColor + '15', color: badgeColor } 
-            }, badgeType),
-            React.createElement('span', { style: styles.businessLocation },
-              React.createElement(MapPin, { size: isMobile ? 8 : 10 }), 
-              business.city
+            React.createElement(ArrowLeft, { size: isMobile ? 12 : 14 }), 
+            React.createElement('span', { style: { display: isMobile ? 'none' : 'inline' } }, 'Back')
+          ),
+          business.logo_url && React.createElement('img', { 
+            src: business.logo_url, 
+            alt: business.name, 
+            style: styles.logo
+          }),
+          React.createElement('div', { style: styles.businessNameContainer },
+            React.createElement('h1', { style: styles.businessName }, business.name),
+            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '0.2rem', flexWrap: 'wrap' } },
+              React.createElement('span', { 
+                style: { ...styles.businessBadge, background: badgeColor + '15', color: badgeColor } 
+              }, badgeType),
+              React.createElement('span', { style: styles.businessLocation },
+                React.createElement(MapPin, { size: isMobile ? 8 : 10 }), 
+                business.city
+              )
             )
           )
         )
@@ -1904,7 +1932,7 @@ function UnifiedBookingPage() {
 // BOOKING FORM MODAL - COMPLETE FIX
 // ============================================================
 function BookingFormModal({ business, room, dateRange, guests, onClose, onSuccess, API_BASE, formatPrice, businessName, isMobile, styles }) {
-  // ===== STATE DECLARATIONS - ALL MUST BE DEFINED =====
+  // ===== STATE DECLARATIONS =====
   var _useState = React.useState({ name: '', email: '', phone: '', specialRequests: '' });
   var formData = _useState[0];
   var setFormData = _useState[1];
@@ -1945,7 +1973,6 @@ function BookingFormModal({ business, room, dateRange, guests, onClose, onSucces
   var isDesktop = _useState10[0];
   var setIsDesktop = _useState10[1];
   
-  // ===== FIX: paymentMethod MUST be declared =====
   var _useState11 = React.useState('venue');
   var paymentMethod = _useState11[0];
   var setPaymentMethod = _useState11[1];
