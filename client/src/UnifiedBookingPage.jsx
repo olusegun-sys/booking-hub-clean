@@ -1,8 +1,10 @@
 ﻿// FILE: client/src/UnifiedBookingPage.jsx
-// COMPLETE FIX - SEPTEMBER 2026
+// COMPLETE FIX - OCTOBER 2026
 // UPDATED: Uses ONLY venue.images for gallery display
 // Professional placeholder when no images exist
 // FIXED: Book Now button uses selected venue instead of rooms[0]
+// REMOVED: "View all properties from this owner" link from Marketed by card
+// STANDARDIZED: Loading spinner matches BusinessDashboard
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -775,26 +777,19 @@ function UnifiedBookingPage() {
   const isMobile = window.innerWidth < 640;
 
   // ============================================================
-  // RENDER: LOADING
+  // RENDER: LOADING - STANDARDIZED (matches BusinessDashboard)
   // ============================================================
   if (loading) {
-    return React.createElement(
-      'div',
-      {
-        style: {
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          backgroundColor: '#f8fafc'
-        }
-      },
-      React.createElement(Loader, { 
-        size: 48, 
-        className: 'animate-spin', 
-        color: '#4F46E5',
-        style: { animation: 'spin 1s linear infinite' }
-      })
+    return React.createElement('div', { 
+      style: { 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh', 
+        background: '#f8fafc' 
+      } 
+    },
+      React.createElement('div', { className: 'loading-spinner' })
     );
   }
 
@@ -1935,7 +1930,7 @@ function UnifiedBookingPage() {
             )
           )
         ),
-      // MARKETED BY CARD
+      // MARKETED BY CARD - REMOVED "View all properties from this owner" link
       React.createElement(
         'div',
         {
@@ -2048,24 +2043,6 @@ function UnifiedBookingPage() {
                 }
               },
               'Member since ' + formatDate(business.created_at)
-            ),
-            React.createElement(
-              Link,
-              {
-                to: `/owner/${business.id}/properties`,
-                style: {
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  marginTop: '8px',
-                  color: '#4F46E5',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  textDecoration: 'none'
-                }
-              },
-              'View all properties from this owner',
-              React.createElement(ChevronRight, { size: 16 })
             )
           )
         )
