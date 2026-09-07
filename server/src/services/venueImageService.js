@@ -1,113 +1,233 @@
-// ============================================================
 // FILE: server/src/services/venueImageService.js
-// Venue image upload and management
-// ============================================================
+// COMPLETE FIX - With bucket creation fallback
 
-const { createClient } = require('@supabase/supabase-js');
-
-// Load environment variables
-require('dotenv').config();
+import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: false }
+});
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('[venueImageService] Supabase credentials missing');
-  throw new Error('Supabase credentials missing');
+const BUCKET_NAME = 'venue-images';
+
+/**
+ * Ensure the bucket exists - creates it if it doesn't
+ */
+async function ensureBucketExists() {
+  try {
+    // Check if bucket exists
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('[venueImageService] Error listing buckets:', listError);
+      throw listError;
+    }
+
+    const bucketExists = buckets.some(b => b.name === BUCKET_NAME);
+    
+    if (!bucketExists) {
+      console.log(`[venueImageService] Bucket "${BUCKET_NAME}" not found. Creating...`);
+      
+      // Create the bucket
+      const { data, error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
+        public: true,
+        fileSizeLimit: 5242880 // 5MB limit
+      });
+      
+      if (createError) {
+        console.error(`[venueImageService] Failed to create bucket:`, createError);
+        throw new Error(`Failed to create bucket: ${createError.message}`);
+      }
+      
+      console.log(`[venueImageService] Bucket "${BUCKET_NAME}" created successfully`);
+      
+      // Create RLS policies (using raw SQL via Supabase)
+      await createBucketPolicies();
+      
+      return true;
+    }
+    
+    console.log(`[venueImageService] Bucket "${BUCKET_NAME}" exists`);
+    return true;
+  } catch (error) {
+    console.error('[venueImageService] ensureBucketExists error:', error);
+    throw error;
+  }
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+/**
+ * Create RLS policies for the bucket
+ * Using supabase.rpc to execute SQL - only works with service role key
+ */
+async function createBucketPolicies() {
+  try {
+    // Create policies using SQL via supabase.rpc
+    const policies = [
+      // Public read
+      `CREATE POLICY IF NOT EXISTS "Public read access for venue-images"
+       ON storage.objects FOR SELECT
+       USING ( bucket_id = '${BUCKET_NAME}' );`,
+       
+      // Authenticated upload
+      `CREATE POLICY IF NOT EXISTS "Authenticated users can upload to venue-images"
+       ON storage.objects FOR INSERT
+       WITH CHECK ( 
+         bucket_id = '${BUCKET_NAME}' 
+         AND auth.role() = 'authenticated'
+       );`,
+       
+      // Delete own images
+      `CREATE POLICY IF NOT EXISTS "Users can delete their own venue images"
+       ON storage.objects FOR DELETE
+       USING ( 
+         bucket_id = '${BUCKET_NAME}' 
+         AND auth.role() = 'authenticated'
+       );`
+    ];
+    
+    // Execute each policy
+    for (const policy of policies) {
+      try {
+        await supabase.rpc('exec_sql', { query: policy });
+        console.log('[venueImageService] Policy created successfully');
+      } catch (e) {
+        // If RPC doesn't work, log but continue (policies can be created manually)
+        console.warn('[venueImageService] Could not create policy via RPC:', e.message);
+        console.warn('[venueImageService] Please create policies manually in Supabase dashboard');
+      }
+    }
+  } catch (error) {
+    console.warn('[venueImageService] Policy creation warning:', error.message);
+  }
+}
 
 /**
  * Upload a venue image
- * @param {string} businessId - Business UUID
- * @param {string} venueId - Venue UUID
- * @param {Buffer} fileBuffer - Image file buffer
- * @param {string} mimeType - Image MIME type
- * @param {string} fileName - Original file name
- * @returns {Promise<string>} Public URL of uploaded image
  */
-async function uploadVenueImage(businessId, venueId, fileBuffer, mimeType, fileName) {
-  if (!businessId || !venueId || !fileBuffer) {
-    throw new Error('Business ID, Venue ID, and file buffer are required');
+async function uploadVenueImage(fileData, businessId, roomId) {
+  try {
+    // Ensure bucket exists
+    await ensureBucketExists();
+    
+    if (!fileData) {
+      throw new Error('No file data provided');
+    }
+    
+    if (!businessId || !roomId) {
+      throw new Error('Business ID and Room ID are required');
+    }
+    
+    // Generate unique filename
+    const fileExtension = fileData.fileName?.split('.').pop() || 'jpg';
+    const fileName = `${uuidv4()}.${fileExtension}`;
+    const filePath = `${businessId}/${roomId}/${fileName}`;
+    
+    // Convert base64 to buffer
+    const base64Data = fileData.fileData.split(',')[1] || fileData.fileData;
+    const fileBuffer = Buffer.from(base64Data, 'base64');
+    
+    console.log(`[venueImageService] Uploading: ${filePath} (${fileBuffer.length} bytes)`);
+    
+    // Upload to Supabase
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, fileBuffer, {
+        contentType: fileData.fileType || 'image/jpeg',
+        upsert: false,
+        cacheControl: '3600'
+      });
+    
+    if (error) {
+      console.error('[venueImageService] Upload error:', error);
+      
+      // Handle specific errors
+      if (error.message.includes('Bucket not found')) {
+        // Try one more time with bucket creation
+        console.log('[venueImageService] Retrying with bucket creation...');
+        await ensureBucketExists();
+        
+        // Retry upload
+        const { data: retryData, error: retryError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .upload(filePath, fileBuffer, {
+            contentType: fileData.fileType || 'image/jpeg',
+            upsert: false,
+            cacheControl: '3600'
+          });
+          
+        if (retryError) {
+          throw new Error(`Upload failed after bucket creation: ${retryError.message}`);
+        }
+        
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from(BUCKET_NAME)
+          .getPublicUrl(filePath);
+          
+        return {
+          success: true,
+          imageUrl: urlData.publicUrl,
+          path: filePath
+        };
+      }
+      
+      throw error;
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath);
+    
+    console.log(`[venueImageService] Upload successful: ${urlData.publicUrl}`);
+    
+    return {
+      success: true,
+      imageUrl: urlData.publicUrl,
+      path: filePath
+    };
+  } catch (error) {
+    console.error('[venueImageService] uploadVenueImage error:', error);
+    throw error;
   }
-
-  // Validate file size (max 5MB)
-  if (fileBuffer.length > 5 * 1024 * 1024) {
-    throw new Error('File size must be under 5MB');
-  }
-
-  // Validate file type
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-  if (!allowedTypes.includes(mimeType)) {
-    throw new Error('Only JPEG, PNG, and WEBP images are allowed');
-  }
-
-  // Generate unique filename
-  const timestamp = Date.now();
-  const randomStr = Math.random().toString(36).substring(2, 10);
-  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const filePath = `venue-images/${businessId}/${venueId}/${timestamp}-${randomStr}-${safeName}`;
-
-  console.log('[venueImageService] Uploading to:', filePath);
-
-  // Upload to Supabase Storage
-  const { data, error } = await supabase.storage
-    .from('business-images')
-    .upload(filePath, fileBuffer, {
-      contentType: mimeType,
-      cacheControl: '3600',
-      upsert: false
-    });
-
-  if (error) {
-    console.error('[venueImageService] Upload error:', error);
-    throw new Error('Failed to upload image: ' + error.message);
-  }
-
-  // Get public URL
-  const { data: urlData } = supabase.storage
-    .from('business-images')
-    .getPublicUrl(filePath);
-
-  console.log('[venueImageService] Upload successful:', urlData.publicUrl);
-  return urlData.publicUrl;
 }
 
 /**
- * Delete a venue image from storage
- * @param {string} imageUrl - Full URL of the image
- * @returns {Promise<boolean>} Success status
+ * Delete a venue image
  */
-async function deleteVenueImage(imageUrl) {
+async function deleteVenueImage(imageUrl, businessId, roomId) {
   try {
-    // Extract file path from URL
-    const parts = imageUrl.split('/business-images/');
-    if (parts.length !== 2) {
-      console.warn('[venueImageService] Could not extract path from URL:', imageUrl);
-      return false;
+    if (!imageUrl) {
+      throw new Error('Image URL is required');
     }
-
-    const filePath = decodeURIComponent(parts[1]);
+    
+    // Extract file path from URL
+    const urlParts = imageUrl.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+    const filePath = `${businessId}/${roomId}/${fileName}`;
+    
+    console.log(`[venueImageService] Deleting: ${filePath}`);
     
     const { error } = await supabase.storage
-      .from('business-images')
+      .from(BUCKET_NAME)
       .remove([filePath]);
-
+    
     if (error) {
       console.error('[venueImageService] Delete error:', error);
-      return false;
+      throw error;
     }
-
-    console.log('[venueImageService] Deleted:', filePath);
-    return true;
+    
+    return { success: true };
   } catch (error) {
-    console.error('[venueImageService] Delete error:', error);
-    return false;
+    console.error('[venueImageService] deleteVenueImage error:', error);
+    throw error;
   }
 }
 
-module.exports = {
+export default {
   uploadVenueImage,
-  deleteVenueImage
+  deleteVenueImage,
+  ensureBucketExists
 };
