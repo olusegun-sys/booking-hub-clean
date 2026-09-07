@@ -1,6 +1,7 @@
 ﻿// FILE: client/src/UnifiedBookingPage.jsx
 // COMPLETE FIX - OCTOBER 2026
-// UPDATED: Uses ONLY venue.images for gallery display
+// UPDATED: Removed back navigation - users stay on booking page
+// Uses ONLY venue.images for gallery display
 // Professional placeholder when no images exist
 // FIXED: Book Now button uses selected venue instead of rooms[0]
 // REMOVED: "View all properties from this owner" link from Marketed by card
@@ -777,7 +778,7 @@ function UnifiedBookingPage() {
   const isMobile = window.innerWidth < 640;
 
   // ============================================================
-  // RENDER: LOADING - STANDARDIZED (matches BusinessDashboard)
+  // RENDER: LOADING - STANDARDIZED
   // ============================================================
   if (loading) {
     return React.createElement('div', { 
@@ -913,7 +914,7 @@ function UnifiedBookingPage() {
         fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
       }
     },
-    // BACK BUTTON
+    // HEADER - NO BACK BUTTON
     React.createElement(
       'div',
       {
@@ -927,31 +928,10 @@ function UnifiedBookingPage() {
           borderBottom: '1px solid rgba(226,232,240,0.8)',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
           gap: '12px'
         }
       },
-      React.createElement(
-        'button',
-        {
-          onClick: () => navigate('/'),
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '8px 12px',
-            borderRadius: '999px',
-            backgroundColor: 'rgba(79, 70, 229, 0.08)',
-            color: '#4F46E5',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        },
-        React.createElement(ArrowLeft, { size: 20 }),
-        React.createElement('span', { style: { display: isMobile ? 'none' : 'inline' } }, 'Back')
-      ),
       React.createElement(
         'span',
         {
