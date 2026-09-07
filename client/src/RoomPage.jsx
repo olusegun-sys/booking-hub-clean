@@ -1,6 +1,7 @@
 ﻿// FILE: client/src/RoomPage.jsx
-// COMPLETE VENUE MANAGEMENT WITH FULL SETTINGS
+// COMPLETE VENUE MANAGEMENT WITH FULL SETTINGS + IMAGES TAB
 // Features, Amenities, Area Guide, Property Details per venue
+// Updated: September 2026 - Added Images tab with drag-drop upload
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -12,7 +13,8 @@ import {
   Shield, Droplets, Thermometer, Lock, Award, Heart,
   ShoppingBag, GraduationCap, Landmark, Plane, Umbrella,
   Music, Utensils, Tent, Eye, Maximize, Layers, Grid3x3,
-  Phone, Mail, Clock, Globe, Copy, Check
+  Phone, Mail, Clock, Globe, Copy, Check,
+  GripVertical
 } from 'lucide-react';
 import API_BASE from './config';
 import { showError, showSuccess } from './toast';
@@ -193,7 +195,7 @@ function RoomPage({ business, onBack }) {
     newFeature: '',
     newFeatureCategory: 'interior',
     
-    // Amenities - FIXED: Using 'amenities' not 'venueAmenities'
+    // Amenities
     amenities: [],
     newAmenity: '',
     newAmenityCategory: 'interior',
@@ -291,7 +293,7 @@ function RoomPage({ business, onBack }) {
       features: room.features || [],
       newFeature: '',
       newFeatureCategory: 'interior',
-      amenities: room.amenities || [],  // FIXED: Use 'amenities'
+      amenities: room.amenities || [],
       newAmenity: '',
       newAmenityCategory: 'interior',
       areaGuide: room.area_guide || [],
@@ -318,9 +320,9 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // IMAGE UPLOAD
+  // IMAGE UPLOAD HANDLERS
   // ============================================================
-  function handleImageUpload(event) {
+  function handleVenueImageUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -338,6 +340,13 @@ function RoomPage({ business, onBack }) {
 
     if (!roomId) {
       showError('Please save the venue first before uploading images');
+      return;
+    }
+
+    // Check limit (max 16 images)
+    const currentImages = formData.images || [];
+    if (currentImages.length >= 16) {
+      showError('Maximum 16 images allowed per venue');
       return;
     }
 
@@ -366,7 +375,7 @@ function RoomPage({ business, onBack }) {
           if (data.success) {
             showSuccess('Image uploaded successfully');
             setFormData(function(prev) {
-              return { ...prev, images: [...prev.images, data.imageUrl] };
+              return { ...prev, images: [...(prev.images || []), data.imageUrl] };
             });
             fetchRooms();
           } else {
@@ -375,7 +384,7 @@ function RoomPage({ business, onBack }) {
           setUploading(false);
         })
         .catch(function() {
-          showError('Something went wrong');
+          showError('Something went wrong. Please try again.');
           setUploading(false);
         });
     };
@@ -383,7 +392,7 @@ function RoomPage({ business, onBack }) {
     reader.readAsDataURL(file);
   }
 
-  function removeImage(index) {
+  function removeVenueImage(index) {
     const imageUrl = formData.images[index];
     const roomId = editingRoom ? editingRoom.id : null;
     
@@ -418,7 +427,54 @@ function RoomPage({ business, onBack }) {
           showError(data.error || 'Failed to remove image');
         }
       })
-      .catch(function() { showError('Something went wrong'); });
+      .catch(function() { showError('Something went wrong. Please try again.'); });
+  }
+
+  function moveImageUp(index) {
+    if (index === 0) return;
+    const updated = [...(formData.images || [])];
+    [updated[index], updated[index - 1]] = [updated[index - 1], updated[index]];
+    setFormData(function(prev) {
+      return { ...prev, images: updated };
+    });
+  }
+
+  function moveImageDown(index) {
+    if (index === (formData.images || []).length - 1) return;
+    const updated = [...(formData.images || [])];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    setFormData(function(prev) {
+      return { ...prev, images: updated };
+    });
+  }
+
+  // Drag and drop handlers
+  function handleDragDrop(e) {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const input = document.getElementById('venueImageInput');
+      if (input) {
+        const dt = new DataTransfer();
+        for (let i = 0; i < files.length; i++) {
+          dt.items.add(files[i]);
+        }
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.style.borderColor = '#4F46E5';
+    e.currentTarget.style.backgroundColor = '#EEF2FF';
+  }
+
+  function handleDragLeave(e) {
+    e.preventDefault();
+    e.currentTarget.style.borderColor = '#e2e8f0';
+    e.currentTarget.style.backgroundColor = 'transparent';
   }
 
   // ============================================================
@@ -447,7 +503,7 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // AMENITIES - FIXED: Using 'amenities' not 'venueAmenities'
+  // AMENITIES
   // ============================================================
   function addAmenity() {
     if (!formData.newAmenity.trim()) {
@@ -530,7 +586,6 @@ function RoomPage({ business, onBack }) {
     const method = editingRoom ? 'PUT' : 'POST';
 
     const payload = {
-      // Basic
       name: formData.name.trim(),
       type: formData.type,
       capacity: capacity,
@@ -539,18 +594,14 @@ function RoomPage({ business, onBack }) {
       venue_description: formData.venue_description || formData.description || '',
       address: formData.address || '',
       images: formData.images || [],
-      
-      // Property Details
       property_type: formData.property_type || propertyTypeOptions[0],
       bathrooms: parseInt(formData.bathrooms) || 0,
       parking_spaces: parseInt(formData.parking_spaces) || 0,
       year_built: formData.year_built ? parseInt(formData.year_built) : null,
       furnishing_status: formData.furnishing_status || 'unfurnished',
       listing_status: formData.listing_status || 'for_rent',
-      
-      // Features, Amenities (FIXED: using 'amenities'), Area Guide
       features: formData.features || [],
-      amenities: formData.amenities || [],  // FIXED: Use 'amenities' not 'venueAmenities'
+      amenities: formData.amenities || [],
       area_guide: formData.areaGuide || []
     };
 
@@ -586,7 +637,7 @@ function RoomPage({ business, onBack }) {
       })
       .catch(function(err) {
         console.error('Save error:', err);
-        showError('Something went wrong: ' + err.message);
+        showError('Something went wrong. Please try again.');
         setSaving(false);
       });
   }
@@ -609,7 +660,7 @@ function RoomPage({ business, onBack }) {
           showError('Failed to delete');
         }
       })
-      .catch(function() { showError('Something went wrong'); });
+      .catch(function() { showError('Something went wrong. Please try again.'); });
   }
 
   // ============================================================
@@ -713,12 +764,13 @@ function RoomPage({ business, onBack }) {
           }, React.createElement(X, { size: 20, color: '#64748b' }))
         ),
 
-        // TABS
+        // TABS - Updated to include Images tab
         React.createElement('div', { style: { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' } },
-          ['basic', 'details', 'features', 'amenities', 'areaGuide'].map(function(tab) {
+          ['basic', 'details', 'images', 'features', 'amenities', 'areaGuide'].map(function(tab) {
             const tabLabels = {
               basic: '📋 Basic',
               details: '🏷️ Details',
+              images: '📸 Images',
               features: '⭐ Features',
               amenities: '🛋️ Amenities',
               areaGuide: '🗺️ Area Guide'
@@ -745,7 +797,6 @@ function RoomPage({ business, onBack }) {
         // TAB: BASIC
         // ============================================================
         activeTab === 'basic' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
-          // Name
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.singular + ' Name *'),
             React.createElement('input', {
@@ -756,7 +807,6 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
           ),
-          // Type
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.typeLabel),
             React.createElement('select', {
@@ -767,7 +817,6 @@ function RoomPage({ business, onBack }) {
               return React.createElement('option', { key: opt, value: opt }, opt);
             }))
           ),
-          // Address
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(MapPin, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
@@ -781,7 +830,6 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
           ),
-          // Description
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(FileText, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
@@ -795,7 +843,6 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }
             })
           ),
-          // Price & Capacity
           isEvent ? (
             React.createElement(React.Fragment, null,
               React.createElement('div', null,
@@ -864,53 +911,6 @@ function RoomPage({ business, onBack }) {
                 )
               )
             )
-          ),
-          // Images
-          React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
-              React.createElement(Camera, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
-              'Venue Images'
-            ),
-            editingRoom && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' } },
-              React.createElement('label', { style: { 
-                padding: '8px 16px', 
-                background: uploading ? '#94a3b8' : '#4f46e5', 
-                color: 'white', 
-                borderRadius: '8px', 
-                cursor: uploading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '13px'
-              } },
-                React.createElement(Upload, { size: 14 }),
-                uploading ? 'Uploading...' : 'Upload Image',
-                React.createElement('input', {
-                  type: 'file',
-                  accept: 'image/*',
-                  onChange: handleImageUpload,
-                  disabled: uploading,
-                  style: { display: 'none' }
-                })
-              ),
-              uploading && React.createElement('div', { style: { flex: 1, height: '4px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' } },
-                React.createElement('div', { style: { width: uploadProgress + '%', height: '100%', background: '#4f46e5', transition: 'width 0.3s ease' } })
-              )
-            ),
-            !editingRoom && React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginBottom: '8px' } },
-              'Save the venue first, then upload images'
-            ),
-            formData.images.length > 0 && React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
-              formData.images.map(function(url, idx) {
-                return React.createElement('div', { key: idx, style: { position: 'relative', width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' } },
-                  React.createElement('img', { src: url, alt: 'Venue image', style: { width: '100%', height: '100%', objectFit: 'cover' } }),
-                  React.createElement('button', {
-                    onClick: function() { removeImage(idx); },
-                    style: { position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px' }
-                  }, '×')
-                );
-              })
-            )
           )
         ),
 
@@ -921,7 +921,6 @@ function RoomPage({ business, onBack }) {
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '8px' } },
             'Property details specific to this venue'
           ),
-          // Property Type
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(Building, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
@@ -935,7 +934,6 @@ function RoomPage({ business, onBack }) {
               return React.createElement('option', { key: opt, value: opt }, opt);
             }))
           ),
-          // Listing Status
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(Tag, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
@@ -949,7 +947,6 @@ function RoomPage({ business, onBack }) {
               return React.createElement('option', { key: opt.value, value: opt.value }, opt.label);
             }))
           ),
-          // Furnishing Status
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(Sofa, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
@@ -963,7 +960,6 @@ function RoomPage({ business, onBack }) {
               return React.createElement('option', { key: opt.value, value: opt.value }, opt.label);
             }))
           ),
-          // Year Built
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(Calendar, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
@@ -977,7 +973,6 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
           ),
-          // Bathrooms & Parking
           React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
             React.createElement('div', null,
               React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
@@ -1006,6 +1001,251 @@ function RoomPage({ business, onBack }) {
               })
             )
           )
+        ),
+
+        // ============================================================
+        // TAB: IMAGES (NEW - Complete with drag-drop + button)
+        // ============================================================
+        activeTab === 'images' && React.createElement('div', null,
+          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
+            'Upload images to showcase this venue. Maximum 16 images allowed. The first image will be the primary display image.'
+          ),
+          
+          // Image count indicator
+          React.createElement('div', { style: { 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '12px',
+            padding: '8px 12px',
+            backgroundColor: '#f8fafc',
+            borderRadius: '8px'
+          } },
+            React.createElement('span', { style: { fontSize: '13px', color: '#475569' } },
+              React.createElement(Image, { size: 16, style: { display: 'inline', marginRight: '6px' } }),
+              (formData.images || []).length + ' / 16 images'
+            ),
+            (formData.images || []).length >= 16 &&
+              React.createElement('span', { style: { fontSize: '12px', color: '#ef4444' } }, 'Limit reached')
+          ),
+          
+          // Upload area (drag & drop + button)
+          React.createElement('div', {
+            onDrop: handleDragDrop,
+            onDragOver: handleDragOver,
+            onDragLeave: handleDragLeave,
+            style: {
+              border: '2px dashed #e2e8f0',
+              borderRadius: '12px',
+              padding: '24px',
+              textAlign: 'center',
+              marginBottom: '16px',
+              transition: 'all 0.2s',
+              backgroundColor: 'transparent'
+            }
+          },
+            React.createElement(Upload, { size: 32, color: '#94a3b8', style: { marginBottom: '8px' } }),
+            React.createElement('p', { style: { fontSize: '14px', color: '#64748b', marginBottom: '4px' } },
+              'Drag and drop images here, or'
+            ),
+            React.createElement('label', { style: {
+              display: 'inline-block',
+              padding: '8px 20px',
+              backgroundColor: (uploading || (formData.images || []).length >= 16) ? '#94a3b8' : '#4F46E5',
+              color: 'white',
+              borderRadius: '8px',
+              cursor: (uploading || (formData.images || []).length >= 16) ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginTop: '8px'
+            } },
+              uploading ? 'Uploading...' : 'Choose Images',
+              React.createElement('input', {
+                id: 'venueImageInput',
+                type: 'file',
+                accept: 'image/*',
+                multiple: false,
+                onChange: handleVenueImageUpload,
+                disabled: uploading || (formData.images || []).length >= 16 || !editingRoom,
+                style: { display: 'none' }
+              })
+            ),
+            uploading && React.createElement('div', { style: { 
+              marginTop: '12px', 
+              height: '4px', 
+              background: '#e2e8f0', 
+              borderRadius: '4px', 
+              overflow: 'hidden' 
+            } },
+              React.createElement('div', { style: { 
+                width: uploadProgress + '%', 
+                height: '100%', 
+                background: '#4F46E5', 
+                transition: 'width 0.3s ease' 
+              } })
+            ),
+            React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } },
+              'JPEG, PNG, WEBP up to 5MB each'
+            ),
+            !editingRoom && React.createElement('p', { style: { fontSize: '12px', color: '#f59e0b', marginTop: '4px' } },
+              '⚠️ Save the venue first, then upload images'
+            )
+          ),
+          
+          // Image grid
+          (formData.images || []).length === 0 ?
+            React.createElement('div', { style: {
+              padding: '40px 20px',
+              textAlign: 'center',
+              backgroundColor: '#f8fafc',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0'
+            } },
+              React.createElement(Camera, { size: 40, color: '#94a3b8' }),
+              React.createElement('p', { style: { marginTop: '12px', color: '#64748b', fontSize: '14px' } },
+                'No images uploaded yet'
+              ),
+              React.createElement('p', { style: { color: '#94a3b8', fontSize: '12px' } },
+                'Upload images to showcase this venue'
+              )
+            ) :
+            React.createElement('div', { style: {
+              display: 'grid',
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+              gap: '12px'
+            } },
+              (formData.images || []).map(function(url, idx) {
+                return React.createElement('div', {
+                  key: idx,
+                  style: {
+                    position: 'relative',
+                    aspectRatio: '1/1',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    border: idx === 0 ? '3px solid #4F46E5' : '1px solid #e2e8f0',
+                    backgroundColor: '#f1f5f9'
+                  }
+                },
+                  React.createElement('img', {
+                    src: url,
+                    alt: 'Venue image ' + (idx + 1),
+                    style: {
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }
+                  }),
+                  // Primary badge
+                  idx === 0 &&
+                    React.createElement('span', {
+                      style: {
+                        position: 'absolute',
+                        top: '6px',
+                        left: '6px',
+                        backgroundColor: '#4F46E5',
+                        color: 'white',
+                        fontSize: '9px',
+                        fontWeight: '700',
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        textTransform: 'uppercase'
+                      }
+                    }, 'Primary'),
+                  // Image number badge (if not primary)
+                  idx > 0 &&
+                    React.createElement('span', {
+                      style: {
+                        position: 'absolute',
+                        top: '6px',
+                        left: '6px',
+                        backgroundColor: 'rgba(0,0,0,0.6)',
+                        color: 'white',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        padding: '2px 8px',
+                        borderRadius: '999px'
+                      }
+                    }, idx + 1),
+                  // Reorder controls
+                  React.createElement('div', {
+                    style: {
+                      position: 'absolute',
+                      bottom: '6px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      display: 'flex',
+                      gap: '4px'
+                    }
+                  },
+                    idx > 0 &&
+                      React.createElement('button', {
+                        onClick: function() { moveImageUp(idx); },
+                        style: {
+                          background: 'rgba(0,0,0,0.7)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          width: '28px',
+                          height: '28px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px'
+                        }
+                      }, '↑'),
+                    idx < (formData.images || []).length - 1 &&
+                      React.createElement('button', {
+                        onClick: function() { moveImageDown(idx); },
+                        style: {
+                          background: 'rgba(0,0,0,0.7)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          width: '28px',
+                          height: '28px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px'
+                        }
+                      }, '↓')
+                  ),
+                  // Delete button
+                  React.createElement('button', {
+                    onClick: function() { removeVenueImage(idx); },
+                    style: {
+                      position: 'absolute',
+                      top: '6px',
+                      right: '6px',
+                      backgroundColor: 'rgba(239,68,68,0.9)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '28px',
+                      height: '28px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px'
+                    }
+                  }, '×')
+                );
+              })
+            ),
+          
+          // Reorder hint
+          (formData.images || []).length > 1 &&
+            React.createElement('p', { style: {
+              fontSize: '12px',
+              color: '#94a3b8',
+              textAlign: 'center',
+              marginTop: '12px'
+            } },
+              '⬆⬇ Use the arrows to reorder images. The first image is the primary display image.'
+            )
         ),
 
         // ============================================================
@@ -1092,7 +1332,7 @@ function RoomPage({ business, onBack }) {
         ),
 
         // ============================================================
-        // TAB: AMENITIES - FIXED: Using 'amenities' not 'venueAmenities'
+        // TAB: AMENITIES
         // ============================================================
         activeTab === 'amenities' && React.createElement('div', null,
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
@@ -1129,7 +1369,7 @@ function RoomPage({ business, onBack }) {
               return React.createElement('option', { key: cat.id, value: cat.id }, cat.label);
             })),
             React.createElement('button', {
-              onClick: addAmenity,  // FIXED: Using addAmenity
+              onClick: addAmenity,
               style: {
                 padding: '10px 20px',
                 backgroundColor: '#10b981',
@@ -1161,7 +1401,7 @@ function RoomPage({ business, onBack }) {
                   } },
                     React.createElement('span', null, amenity.name),
                     React.createElement('button', {
-                      onClick: function() { removeAmenity(amenity.id); },  // FIXED: Using removeAmenity
+                      onClick: function() { removeAmenity(amenity.id); },
                       style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 4px', fontSize: '16px' }
                     }, '×')
                   );

@@ -1,6 +1,7 @@
 ﻿// FILE: client/src/UnifiedBookingPage.jsx
 // COMPLETE FIX - SEPTEMBER 2026
-// Includes professional receipt after booking confirmation
+// UPDATED: Uses ONLY venue.images for gallery display
+// Professional placeholder when no images exist
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -244,7 +245,6 @@ function BookingReceipt({ booking, business, venue, onClose, onPrint }) {
   return React.createElement(
     'div',
     { style: receiptStyle },
-    // Header
     React.createElement(
       'div',
       { style: headerStyle },
@@ -264,11 +264,9 @@ function BookingReceipt({ booking, business, venue, onClose, onPrint }) {
         'Your booking has been confirmed successfully'
       )
     ),
-    // Body
     React.createElement(
       'div',
       { style: bodyStyle },
-      // Status & Reference
       React.createElement(
         'div',
         { style: { ...sectionStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } },
@@ -283,7 +281,6 @@ function BookingReceipt({ booking, business, venue, onClose, onPrint }) {
           'Ref: ' + (booking?.booking_reference || generateOrderId())
         )
       ),
-      // Venue Info
       React.createElement(
         'div',
         { style: sectionStyle },
@@ -304,7 +301,6 @@ function BookingReceipt({ booking, business, venue, onClose, onPrint }) {
           venue?.address || business?.address || business?.city || ''
         )
       ),
-      // Customer Info
       React.createElement(
         'div',
         { style: sectionStyle },
@@ -333,7 +329,6 @@ function BookingReceipt({ booking, business, venue, onClose, onPrint }) {
           React.createElement('span', { style: valueStyle }, booking?.customer_phone || '')
         )
       ),
-      // Booking Details
       React.createElement(
         'div',
         { style: sectionStyle },
@@ -364,7 +359,6 @@ function BookingReceipt({ booking, business, venue, onClose, onPrint }) {
           )
         )
       ),
-      // Payment Summary
       React.createElement(
         'div',
         { style: sectionStyle },
@@ -399,7 +393,6 @@ function BookingReceipt({ booking, business, venue, onClose, onPrint }) {
             'Pay at venue on the day of your event'
           )
       ),
-      // Footer Actions
       React.createElement(
         'div',
         { style: { display: 'flex', gap: '10px', marginTop: '16px', flexDirection: isMobile ? 'column' : 'row' } },
@@ -450,7 +443,6 @@ function BookingReceipt({ booking, business, venue, onClose, onPrint }) {
           'Done'
         )
       ),
-      // Email note
       React.createElement(
         'p',
         {
@@ -485,8 +477,6 @@ function UnifiedBookingPage() {
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedRoomIndex, setSelectedRoomIndex] = useState(0);
-  const [gallery, setGallery] = useState([]);
-  const [phoneNumbers, setPhoneNumbers] = useState([]);
   const [bookingLimit, setBookingLimit] = useState({ canBook: true, remaining: 50 });
   const [viewCount, setViewCount] = useState(0);
 
@@ -550,16 +540,6 @@ function UnifiedBookingPage() {
         }
       }
 
-      const galleryRes = await fetchAPI(`/api/businesses/${biz.id}/gallery`);
-      if (galleryRes.success) {
-        setGallery(galleryRes.images || []);
-      }
-
-      const phoneRes = await fetchAPI(`/api/businesses/${biz.id}/phone-numbers/public`);
-      if (phoneRes.success) {
-        setPhoneNumbers(phoneRes.phoneNumbers || []);
-      }
-
       const capacityRes = await fetchAPI(`/api/businesses/${biz.id}/booking-capacity`);
       if (capacityRes.success) {
         setBookingLimit({
@@ -576,26 +556,27 @@ function UnifiedBookingPage() {
   }
 
   // ============================================================
-  // GALLERY NAVIGATION
+  // GALLERY NAVIGATION - UPDATED to use ONLY venue.images
   // ============================================================
-  const allImages = [
-    business?.cover_image,
-    ...gallery.map(g => g.image_url)
-  ].filter(Boolean);
+  // Get images ONLY from the selected venue
+  const displayImages = (selectedRoom?.images || []).filter(Boolean);
 
-  const mainImage = allImages.length > 0 ? allImages[galleryMainIndex] : null;
-  const thumbnails = allImages.slice(0, 4);
-  const remainingImages = allImages.length - 4;
+  const mainImage = displayImages.length > 0 ? displayImages[galleryMainIndex] : null;
+  const thumbnails = displayImages.slice(0, 4);
+  const remainingImages = displayImages.length - 4;
 
   function goToPrevMain() {
-    setGalleryMainIndex(prev => (prev > 0 ? prev - 1 : allImages.length - 1));
+    if (displayImages.length === 0) return;
+    setGalleryMainIndex(prev => (prev > 0 ? prev - 1 : displayImages.length - 1));
   }
 
   function goToNextMain() {
-    setGalleryMainIndex(prev => (prev < allImages.length - 1 ? prev + 1 : 0));
+    if (displayImages.length === 0) return;
+    setGalleryMainIndex(prev => (prev < displayImages.length - 1 ? prev + 1 : 0));
   }
 
   function openLightbox(index) {
+    if (displayImages.length === 0) return;
     setLightboxIndex(index);
     setLightboxOpen(true);
     document.body.style.overflow = 'hidden';
@@ -607,11 +588,13 @@ function UnifiedBookingPage() {
   }
 
   function goToPrevLightbox() {
-    setLightboxIndex(prev => (prev > 0 ? prev - 1 : allImages.length - 1));
+    if (displayImages.length === 0) return;
+    setLightboxIndex(prev => (prev > 0 ? prev - 1 : displayImages.length - 1));
   }
 
   function goToNextLightbox() {
-    setLightboxIndex(prev => (prev < allImages.length - 1 ? prev + 1 : 0));
+    if (displayImages.length === 0) return;
+    setLightboxIndex(prev => (prev < displayImages.length - 1 ? prev + 1 : 0));
   }
 
   // ============================================================
@@ -714,10 +697,8 @@ function UnifiedBookingPage() {
       });
 
       if (result.success) {
-        // Close booking modal
         closeBookingModal();
         
-        // Show receipt with booking data
         setReceiptData({
           booking: result.booking,
           customerName: customerName.trim(),
@@ -732,7 +713,6 @@ function UnifiedBookingPage() {
         });
         setShowReceipt(true);
         
-        // Refresh booking limit
         const capacityRes = await fetchAPI(`/api/businesses/${business.id}/booking-capacity`);
         if (capacityRes.success) {
           setBookingLimit({
@@ -887,14 +867,13 @@ function UnifiedBookingPage() {
   }
 
   // ============================================================
-  // RENDER: MAIN - USE VENUE DATA
+  // RENDER: MAIN - USE ONLY VENUE DATA
   // ============================================================
   const venue = selectedRoom || rooms[0];
   const venueName = venue?.name || business.name;
   const venueAddress = venue?.address || business.address || business.city || 'Address not specified';
   const venuePrice = venue?.price_per_night || 0;
   const venueDescription = venue?.description || venue?.venue_description || business.description || '';
-  const venueImages = venue?.images || [];
 
   const venueFeatures = venue?.features || [];
   const venueAmenities = venue?.amenities || [];
@@ -918,9 +897,6 @@ function UnifiedBookingPage() {
 
   const furnishingDisplay = venuePropertyDetails.furnishing_status.charAt(0).toUpperCase() + 
     venuePropertyDetails.furnishing_status.slice(1);
-
-  const allVenueImages = [...venueImages, ...gallery.map(g => g.image_url)].filter(Boolean);
-  const displayImages = allVenueImages.length > 0 ? allVenueImages : [business?.cover_image].filter(Boolean);
 
   // ============================================================
   // RENDER
@@ -1261,7 +1237,7 @@ function UnifiedBookingPage() {
             )
           )
       ),
-      // GALLERY GRID
+      // GALLERY GRID - UPDATED to use ONLY displayImages (venue.images)
       React.createElement(
         'div',
         {
@@ -1276,7 +1252,7 @@ function UnifiedBookingPage() {
             marginBottom: '16px'
           }
         },
-        // Main image
+        // Main image - with professional placeholder when no images
         React.createElement(
           'div',
           {
@@ -1285,11 +1261,13 @@ function UnifiedBookingPage() {
               gridRow: isMobile ? '1' : '1 / 3',
               gridColumn: isMobile ? '1' : '1',
               aspectRatio: isMobile ? '4/3' : '3/2',
-              cursor: 'pointer',
+              cursor: displayImages.length > 0 ? 'pointer' : 'default',
               overflow: 'hidden',
-              backgroundColor: '#e2e8f0'
+              backgroundColor: '#f1f5f9'
             },
-            onClick: () => openLightbox(galleryMainIndex)
+            onClick: () => {
+              if (displayImages.length > 0) openLightbox(galleryMainIndex);
+            }
           },
           displayImages.length > 0 && displayImages[galleryMainIndex]
             ? React.createElement('img', {
@@ -1308,13 +1286,31 @@ function UnifiedBookingPage() {
                     width: '100%',
                     height: '100%',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#94a3b8'
+                    color: '#94a3b8',
+                    backgroundColor: '#f8fafc',
+                    padding: '20px'
                   }
                 },
-                React.createElement(Image, { size: 48 }),
-                React.createElement('span', { style: { marginLeft: '12px' } }, 'No images')
+                React.createElement(Camera, { size: 48, color: '#cbd5e1' }),
+                React.createElement(
+                  'h3',
+                  { style: { marginTop: '16px', fontSize: '18px', fontWeight: '600', color: '#475569' } },
+                  'No Images Yet'
+                ),
+                React.createElement(
+                  'p',
+                  { style: { fontSize: '14px', color: '#94a3b8', textAlign: 'center', maxWidth: '300px' } },
+                  'This venue has no images uploaded. Check back later!'
+                ),
+                business?.name &&
+                  React.createElement(
+                    'p',
+                    { style: { fontSize: '12px', color: '#cbd5e1', marginTop: '8px' } },
+                    'Contact ' + business.name + ' for more information'
+                  )
               ),
           displayImages.length > 1 &&
             React.createElement(
@@ -1383,8 +1379,8 @@ function UnifiedBookingPage() {
               `${galleryMainIndex + 1} / ${displayImages.length}`
             )
         ),
-        // Thumbnails (desktop)
-        !isMobile &&
+        // Thumbnails (desktop) - only show if images exist
+        !isMobile && displayImages.length > 1 &&
           displayImages.slice(1, 5).map((img, idx) => {
             const actualIndex = idx + 1;
             const isLastThumb = idx === 3 && remainingImages > 0;
@@ -1442,7 +1438,7 @@ function UnifiedBookingPage() {
                 )
             );
           }),
-        // Mobile thumbnails
+        // Mobile thumbnails - only show if images exist
         isMobile && displayImages.length > 1 &&
           React.createElement(
             'div',
@@ -2280,84 +2276,6 @@ function UnifiedBookingPage() {
                     },
                     'Call'
                   )
-                ),
-              phoneNumbers.length > 0 &&
-                phoneNumbers.map((p, idx) =>
-                  p.number && p.number !== business.phone &&
-                    React.createElement(
-                      'div',
-                      {
-                        key: idx,
-                        style: {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '12px 16px',
-                          backgroundColor: '#f8fafc',
-                          borderRadius: '12px'
-                        }
-                      },
-                      React.createElement(Phone, { size: 20, color: '#94a3b8' }),
-                      React.createElement(
-                        'span',
-                        {
-                          style: {
-                            flex: 1,
-                            fontSize: '16px',
-                            color: '#1A1F36',
-                            fontWeight: '500'
-                          }
-                        },
-                        p.number
-                      ),
-                      React.createElement(
-                        'button',
-                        {
-                          onClick: () => copyPhone(p.number),
-                          style: {
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '4px 8px',
-                            color: '#4F46E5',
-                            fontSize: '13px',
-                            fontWeight: '500'
-                          }
-                        },
-                        'Copy'
-                      ),
-                      React.createElement(
-                        'button',
-                        {
-                          onClick: () => {
-                            window.location.href = `tel:${p.number}`;
-                          },
-                          style: {
-                            backgroundColor: '#4F46E5',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '6px 16px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '500'
-                          }
-                        },
-                        'Call'
-                      )
-                    )
-                ),
-              !business.phone && phoneNumbers.length === 0 &&
-                React.createElement(
-                  'p',
-                  {
-                    style: {
-                      textAlign: 'center',
-                      color: '#94a3b8',
-                      padding: '20px'
-                    }
-                  },
-                  'No phone numbers available'
                 )
             )
           )
@@ -2814,9 +2732,7 @@ function UnifiedBookingPage() {
               overflowY: 'auto'
             },
             onClick: (e) => {
-              if (e.target === e.currentTarget) {
-                // Don't close on backdrop click - require user to click Done
-              }
+              if (e.target === e.currentTarget) {}
             }
           },
           React.createElement(BookingReceipt, {
@@ -2835,8 +2751,8 @@ function UnifiedBookingPage() {
             onPrint: printReceipt
           })
         ),
-      // LIGHTBOX
-      lightboxOpen &&
+      // LIGHTBOX - Updated to use displayImages
+      lightboxOpen && displayImages.length > 0 &&
         React.createElement(
           'div',
           {

@@ -1,10 +1,10 @@
 ﻿// FILE: client/src/BusinessProfile.jsx
-// COMPLETE FIX - ALL FIELDS EDITABLE
+// CLEANED: Removed Cover Image and Gallery sections
+// KEPT: Logo upload and all business details
 
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Phone, Mail, Globe, Save, Camera, X, CheckCircle, AlertCircle, Edit3, ExternalLink, ArrowLeft, Layers, Image, Sparkles } from 'lucide-react';
 import ImageUpload from './components/forms/ImageUpload';
-import BusinessGallery from './components/forms/BusinessGallery';
 import API_BASE from './config';
 
 function BusinessProfile({ business, onBack, onUpdate }) {
@@ -19,7 +19,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     description: business?.description || '',
     about_text: business?.about_text || '',
     website: business?.website || '',
-    cover_image: business?.cover_image || '',
     logo_url: business?.logo_url || ''
   });
   const [saving, setSaving] = useState(false);
@@ -49,7 +48,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
         description: business.description || '',
         about_text: business.about_text || '',
         website: business.website || '',
-        cover_image: business.cover_image || '',
         logo_url: business.logo_url || ''
       });
     }
@@ -94,7 +92,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       description: formData.description,
       about_text: formData.about_text,
       website: formData.website,
-      cover_image: formData.cover_image,
       logo_url: formData.logo_url
     };
     
@@ -154,13 +151,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     }
   }
 
-  function handleCoverUpload(url) {
-    if (url) {
-      handleChange('cover_image', url);
-      refreshBusinessData();
-    }
-  }
-
   function refreshBusinessData() {
     var token = localStorage.getItem('auth_token');
     if (!token || !business || !business.id) return;
@@ -174,8 +164,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
           setFormData(function(prev) {
             return {
               ...prev,
-              logo_url: data.business.logo_url || '',
-              cover_image: data.business.cover_image || ''
+              logo_url: data.business.logo_url || ''
             };
           });
           localStorage.setItem('currentBusiness', JSON.stringify(data.business));
@@ -370,33 +359,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     boxSizing: 'border-box'
   };
 
-  var imageRowStyle = {
-    display: 'grid',
-    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-    gap: isMobile ? '16px' : '24px'
-  };
-
-  var imageCardStyle = {
-    background: '#fafbff',
-    borderRadius: '14px',
-    padding: isMobile ? '16px' : '24px',
-    textAlign: 'center',
-    border: '1px solid #eef2ff'
-  };
-
-  var imageTitleStyle = {
-    fontSize: isMobile ? '14px' : '16px',
-    fontWeight: '600',
-    color: '#0f172a',
-    margin: '0 0 4px 0'
-  };
-
-  var imageHintStyle = {
-    fontSize: isMobile ? '11px' : '12px',
-    color: '#64748b',
-    marginBottom: '12px'
-  };
-
   // ========== RENDER ==========
   return React.createElement('div', { style: containerStyle },
     // Header
@@ -576,54 +538,27 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       )
     ),
 
-    // Brand Images Section
-    React.createElement('div', { style: { ...cardStyle, marginTop: '16px' } },
+    // Logo Upload Section (ONLY - Cover and Gallery removed)
+    React.createElement('div', { style: { ...cardStyle, marginTop: '16px', marginBottom: '24px' } },
       React.createElement('div', { style: cardHeaderStyle },
         React.createElement('div', { style: cardHeaderIconStyle },
           React.createElement(Camera, { size: isMobile ? 16 : 20, color: '#4f46e5' })
         ),
-        React.createElement('h3', { style: cardTitleStyle }, 'Brand Images')
+        React.createElement('h3', { style: cardTitleStyle }, 'Business Logo')
       ),
       React.createElement('div', { style: cardBodyStyle },
-        React.createElement('div', { style: imageRowStyle },
-          // Business Logo
-          React.createElement('div', { style: imageCardStyle },
-            React.createElement('h4', { style: imageTitleStyle }, 'Business Logo'),
-            React.createElement('p', { style: imageHintStyle }, 'Square format recommended'),
-            React.createElement(ImageUpload, {
-              businessId: business.id,
-              currentImage: formData.logo_url,
-              type: 'logo',
-              onUpload: handleLogoUpload,
-              onRefresh: refreshBusinessData
-            })
+        React.createElement('div', { style: { maxWidth: isMobile ? '100%' : '400px', margin: '0 auto' } },
+          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', textAlign: 'center', marginBottom: '16px' } },
+            'Upload your business logo. Square format (1:1 ratio) recommended.'
           ),
-          // Cover Photo
-          React.createElement('div', { style: imageCardStyle },
-            React.createElement('h4', { style: imageTitleStyle }, 'Cover Photo'),
-            React.createElement('p', { style: imageHintStyle }, '1200x400px recommended'),
-            React.createElement(ImageUpload, {
-              businessId: business.id,
-              currentImage: formData.cover_image,
-              type: 'cover',
-              onUpload: handleCoverUpload,
-              onRefresh: refreshBusinessData
-            })
-          )
+          React.createElement(ImageUpload, {
+            businessId: business.id,
+            currentImage: formData.logo_url,
+            type: 'logo',
+            onUpload: handleLogoUpload,
+            onRefresh: refreshBusinessData
+          })
         )
-      )
-    ),
-
-    // Photo Gallery Section
-    React.createElement('div', { style: { ...cardStyle, marginTop: '16px', marginBottom: '24px' } },
-      React.createElement('div', { style: cardHeaderStyle },
-        React.createElement('div', { style: cardHeaderIconStyle },
-          React.createElement(Image, { size: isMobile ? 16 : 20, color: '#4f46e5' })
-        ),
-        React.createElement('h3', { style: cardTitleStyle }, 'Photo Gallery')
-      ),
-      React.createElement('div', { style: cardBodyStyle },
-        React.createElement(BusinessGallery, { businessId: business.id })
       )
     )
   );
