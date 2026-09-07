@@ -2,6 +2,7 @@
 // COMPLETE FIX - SEPTEMBER 2026
 // UPDATED: Uses ONLY venue.images for gallery display
 // Professional placeholder when no images exist
+// FIXED: Book Now button uses selected venue instead of rooms[0]
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -616,7 +617,13 @@ function UnifiedBookingPage() {
       toast.error('This business has reached its booking limit. Please contact them directly.');
       return;
     }
-    setSelectedRoom(room || rooms[0]);
+    // Use passed room, or selectedRoom, or rooms[0] as fallback
+    const roomToBook = room || selectedRoom || (rooms.length > 0 ? rooms[0] : null);
+    if (!roomToBook) {
+      toast.error('No venue selected');
+      return;
+    }
+    setSelectedRoom(roomToBook);
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     setEventDate(tomorrow.toISOString().split('T')[0]);
@@ -2106,8 +2113,10 @@ function UnifiedBookingPage() {
             'button',
             {
               onClick: () => {
-                if (rooms.length > 0) {
-                  openBookingModal(rooms[0]);
+                // FIXED: Use selectedRoom instead of always rooms[0]
+                const roomToBook = selectedRoom || (rooms.length > 0 ? rooms[0] : null);
+                if (roomToBook) {
+                  openBookingModal(roomToBook);
                 } else {
                   toast.error('No venues available for booking');
                 }
