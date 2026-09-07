@@ -1,6 +1,6 @@
 ﻿// client/src/App.jsx
 // =============================================
-// COMPLETE APP - FIXED IMPORT
+// COMPLETE APP - WITH OWNER PROPERTIES ROUTE
 // =============================================
 
 import React from 'react';
@@ -9,9 +9,9 @@ import './styles.css';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import HomePage from './HomePage';
 import BusinessLogin from './BusinessLogin';
-// FIXED: Import from ./BusinessDashboard (NOT ./pages/)
 import BusinessDashboard from './BusinessDashboard';
 import UnifiedBookingPage from './UnifiedBookingPage';
+import OwnerPropertiesPage from './OwnerPropertiesPage';
 import AdminDashboard from './AdminDashboard';
 import AdminLogin from './AdminLogin';
 import HostLanding from './HostLanding';
@@ -149,6 +149,7 @@ function App() {
       React.createElement(Route, { path: '/login', element: React.createElement(LoginPage, null) }),
       React.createElement(Route, { path: '/dashboard', element: React.createElement(DashboardPage, null) }),
       React.createElement(Route, { path: '/book/:businessSlug', element: React.createElement(UnifiedBookingPage, null) }),
+      React.createElement(Route, { path: '/owner/:businessId/properties', element: React.createElement(OwnerPropertiesPage, null) }),
       React.createElement(Route, { path: '/admin', element: React.createElement(AdminRoute, null) })
     )
   );

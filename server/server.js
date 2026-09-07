@@ -1,8 +1,17 @@
-﻿﻿// FILE: server.js
+﻿// FILE: server.js
 // COMPLETE PRODUCTION-READY VERSION WITH SUBSCRIPTION SYSTEM
 // DEPLOY TO RENDER: Replace your server.js with this
 
-require('dotenv').config();
+// ============================================================
+// LOAD ENVIRONMENT VARIABLES FROM server/.env
+// ============================================================
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+// Debug: Check if env loaded
+console.log('[server.js] Loading .env from:', path.join(__dirname, '.env'));
+console.log('[server.js] SUPABASE_URL exists:', !!process.env.SUPABASE_URL);
+
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -14,14 +23,41 @@ const detectBusinessFromDomain = require('./src/middleware/domainDetector');
 const { verifyDomainTxtRecord } = require('./src/services/dnsService');
 
 // ============================================================
+// ENHANCED BUSINESS ROUTES
+// ============================================================
+const {
+    getEnhancedBusinessRoute,
+    getPublicGalleryRoute,
+    getPublicPhoneNumbersRoute,
+    updateFeaturesRoute,
+    updateAmenitiesRoute,
+    updateAreaGuideRoute,
+    updatePhoneNumbersRoute,
+    updatePropertyDetailsRoute,
+    addGalleryImageRoute,
+    deleteGalleryImageRoute
+} = require('./src/routes/businessRoutes');
+
+// ============================================================
 // SUPABASE INITIALIZATION
 // ============================================================
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+// Debug logging
+console.log('[server.js] Checking Supabase credentials...');
+console.log('[server.js] SUPABASE_URL:', supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING');
+console.log('[server.js] SUPABASE_KEY exists:', !!supabaseKey);
+
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase credentials');
+  console.error('[server.js] ❌ Missing Supabase credentials');
+  console.error('[server.js] SUPABASE_URL:', supabaseUrl);
+  console.error('[server.js] SUPABASE_KEY:', supabaseKey ? 'Present' : 'Missing');
+  console.error('[server.js] Please check your .env file in the server/ folder');
   process.exit(1);
 }
+
+console.log('[server.js] ✅ Supabase credentials found, creating client...');
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
@@ -341,7 +377,8 @@ app.get('/api/businesses/:businessId/rooms', async function(req, res) {
       .from('rooms')
       .select('*')
       .eq('business_id', businessId)
-      .eq('status', 'available');
+      .eq('status', 'available')
+      .order('sort_order', { ascending: true });
     
     if (error) throw error;
     res.json({ success: true, rooms: data });
@@ -495,7 +532,8 @@ app.post('/api/businesses/register', async function(req, res) {
         status: 'pending',
         booking_limit: 50,
         current_booking_count: 0,
-        subscription_status: 'free'
+        subscription_status: 'free',
+        ref_id: 'BH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()
       })
       .select()
       .single();
@@ -809,7 +847,6 @@ app.post('/api/businesses/:businessId/upgrade-request', authenticateBusiness, as
       return res.status(400).json({ success: false, error: 'Invalid plan selected' });
     }
     
-    // Generate payment reference if not provided
     const ref = paymentReference || `UPG-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
     
     const { data: upgrade, error } = await supabase
@@ -859,7 +896,6 @@ app.post('/api/admin/subscription/verify', authenticateAdmin, async function(req
       return res.status(400).json({ success: false, error: 'Upgrade ID is required' });
     }
     
-    // Get the upgrade request
     const { data: upgrade, error: fetchError } = await supabase
       .from('subscription_upgrades')
       .select('*')
@@ -874,7 +910,6 @@ app.post('/api/admin/subscription/verify', authenticateAdmin, async function(req
       return res.status(400).json({ success: false, error: 'Upgrade already processed' });
     }
     
-    // Update upgrade status
     await supabase
       .from('subscription_upgrades')
       .update({ 
@@ -884,7 +919,6 @@ app.post('/api/admin/subscription/verify', authenticateAdmin, async function(req
       })
       .eq('id', upgradeId);
     
-    // Update business subscription
     const newLimit = upgrade.plan === 'starter' ? 100 : 999999;
     const newStatus = upgrade.plan === 'starter' ? 'starter' : 'pro';
     
@@ -1000,10 +1034,20 @@ app.put('/api/businesses/:id', authenticateBusiness, async function(req, res) {
   }
 });
 
-// ROOM MANAGEMENT
+// ============================================================
+// ROOM MANAGEMENT - ENHANCED WITH ALL VENUE FIELDS (FIXED)
+// ============================================================
+
+// POST: Create room with all enhanced fields
 app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async function(req, res) {
   try {
-    var { name, type, capacity, price_per_night, description, amenities } = req.body;
+    var { 
+      name, type, capacity, price_per_night, description, 
+      address, images, venue_description, sort_order,
+      property_type, bathrooms, parking_spaces, year_built, 
+      furnishing_status, listing_status, features, amenities, area_guide
+    } = req.body;
+    
     if (!name || name.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Room name is required.' });
     }
@@ -1011,23 +1055,41 @@ app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async
       return res.status(400).json({ success: false, error: 'A valid price is required.' });
     }
     
+    var imagesArray = Array.isArray(images) ? images : [];
+    
     var { data, error } = await supabase
       .from('rooms')
       .insert({
         business_id: req.params.businessId,
         name: name.trim(),
         type: type || 'Standard',
-        capacity: capacity || 2,
-        base_price: price_per_night,
-        price_per_night: price_per_night,
+        capacity: parseInt(capacity) || 0,
+        base_price: parseFloat(price_per_night),
+        price_per_night: parseFloat(price_per_night),
         description: description || '',
-        amenities: amenities || [],
-        status: 'available'
+        venue_description: venue_description || description || '',
+        address: address || '',
+        images: imagesArray,
+        status: 'available',
+        sort_order: parseInt(sort_order) || 0,
+        property_type: property_type || '',
+        bathrooms: parseInt(bathrooms) || 0,
+        parking_spaces: parseInt(parking_spaces) || 0,
+        year_built: year_built ? parseInt(year_built) : null,
+        furnishing_status: furnishing_status || 'unfurnished',
+        listing_status: listing_status || 'for_rent',
+        features: Array.isArray(features) ? features : [],
+        amenities: Array.isArray(amenities) ? amenities : [],
+        area_guide: Array.isArray(area_guide) ? area_guide : []
       })
       .select()
       .single();
     
-    if (error) return res.status(500).json({ success: false, error: 'Failed to create room.' });
+    if (error) {
+      console.error('Create room error:', error);
+      return res.status(500).json({ success: false, error: 'Failed to create room: ' + error.message });
+    }
+    
     res.json({ success: true, room: data });
   } catch (error) {
     console.error('Create room error:', error);
@@ -1035,9 +1097,16 @@ app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async
   }
 });
 
+// PUT: Update room with all enhanced fields (FIXED - uses 'amenities' not 'venueAmenities')
 app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async function(req, res) {
   try {
-    var { name, type, capacity, price_per_night, description, amenities, status } = req.body;
+    var { 
+      name, type, capacity, price_per_night, description, 
+      address, images, venue_description, sort_order,
+      property_type, bathrooms, parking_spaces, year_built,
+      furnishing_status, listing_status, features, amenities, area_guide
+    } = req.body;
+    
     if (!name || name.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Room name is required.' });
     }
@@ -1045,15 +1114,28 @@ app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async
       return res.status(400).json({ success: false, error: 'A valid price is required.' });
     }
     
+    var imagesArray = Array.isArray(images) ? images : [];
+    
     var updateData = {
       name: name.trim(),
       type: type || 'Standard',
-      capacity: parseInt(capacity) || 2,
+      capacity: parseInt(capacity) || 0,
       price_per_night: parseFloat(price_per_night),
       base_price: parseFloat(price_per_night),
       description: description || '',
+      venue_description: venue_description || description || '',
+      address: address || '',
+      images: imagesArray,
+      sort_order: parseInt(sort_order) || 0,
+      property_type: property_type || '',
+      bathrooms: parseInt(bathrooms) || 0,
+      parking_spaces: parseInt(parking_spaces) || 0,
+      year_built: year_built ? parseInt(year_built) : null,
+      furnishing_status: furnishing_status || 'unfurnished',
+      listing_status: listing_status || 'for_rent',
+      features: Array.isArray(features) ? features : [],
       amenities: Array.isArray(amenities) ? amenities : [],
-      status: status || 'available'
+      area_guide: Array.isArray(area_guide) ? area_guide : []
     };
     
     var { data, error } = await supabase
@@ -1064,7 +1146,11 @@ app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async
       .select()
       .single();
     
-    if (error) return res.status(500).json({ success: false, error: 'Failed to update room.' });
+    if (error) {
+      console.error('Update room error:', error);
+      return res.status(500).json({ success: false, error: 'Failed to update room: ' + error.message });
+    }
+    
     res.json({ success: true, room: data });
   } catch (error) {
     console.error('Update room error:', error);
@@ -1072,6 +1158,7 @@ app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async
   }
 });
 
+// DELETE: Delete room
 app.delete('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async function(req, res) {
   try {
     var { error } = await supabase
@@ -1080,13 +1167,204 @@ app.delete('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, as
       .eq('id', req.params.roomId)
       .eq('business_id', req.params.businessId);
     
-    if (error) return res.status(500).json({ success: false, error: 'Failed to delete room.' });
+    if (error) {
+      console.error('Delete room error:', error);
+      return res.status(500).json({ success: false, error: 'Failed to delete room: ' + error.message });
+    }
+    
     res.json({ success: true, message: 'Room deleted successfully.' });
   } catch (error) {
     console.error('Delete room error:', error);
     res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' });
   }
 });
+
+// ============================================================
+// 🆕 VENUE IMAGE UPLOAD ROUTES
+// ============================================================
+
+// POST: Upload an image for a specific venue/room
+app.post('/api/businesses/:businessId/rooms/:roomId/upload-image', authenticateBusiness, async function(req, res) {
+  try {
+    const { businessId, roomId } = req.params;
+    const { fileName, fileType, fileData } = req.body;
+
+    if (!fileName || !fileData) {
+      return res.status(400).json({ success: false, error: 'File name and data are required.' });
+    }
+
+    const matches = fileData.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ success: false, error: 'Invalid image data format.' });
+    }
+
+    const fileBuffer = Buffer.from(matches[2], 'base64');
+    const mimeType = matches[1];
+
+    if (fileBuffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ success: false, error: 'File size must be under 5MB.' });
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowedTypes.includes(mimeType)) {
+      return res.status(400).json({ success: false, error: 'Only JPEG, PNG, and WEBP images are allowed.' });
+    }
+
+    const { data: room, error: roomError } = await supabase
+      .from('rooms')
+      .select('id, images')
+      .eq('id', roomId)
+      .eq('business_id', businessId)
+      .single();
+
+    if (roomError || !room) {
+      return res.status(404).json({ success: false, error: 'Venue not found or access denied.' });
+    }
+
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 10);
+    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `venue-images/${businessId}/${roomId}/${timestamp}-${randomStr}-${safeName}`;
+
+    console.log('[Venue Upload] Uploading to:', filePath);
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('venue-images')
+      .upload(filePath, fileBuffer, {
+        contentType: mimeType,
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('[Venue Upload] Storage error:', uploadError);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to upload image: ' + uploadError.message 
+      });
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('venue-images')
+      .getPublicUrl(filePath);
+
+    const publicUrl = urlData.publicUrl;
+
+    const currentImages = room.images || [];
+    const updatedImages = [...currentImages, publicUrl];
+
+    const { data: updatedRoom, error: updateError } = await supabase
+      .from('rooms')
+      .update({ images: updatedImages })
+      .eq('id', roomId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('[Venue Upload] Update error:', updateError);
+      await supabase.storage.from('venue-images').remove([filePath]);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to update venue with new image: ' + updateError.message 
+      });
+    }
+
+    console.log('[Venue Upload] Successfully uploaded image for room:', roomId);
+
+    res.json({
+      success: true,
+      message: 'Image uploaded successfully.',
+      imageUrl: publicUrl,
+      filePath: filePath,
+      room: updatedRoom
+    });
+  } catch (error) {
+    console.error('[Venue Upload] Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Something went wrong. Please try again.' 
+    });
+  }
+});
+
+// DELETE: Delete an image from a venue
+app.delete('/api/businesses/:businessId/rooms/:roomId/images', authenticateBusiness, async function(req, res) {
+  try {
+    const { businessId, roomId } = req.params;
+    const { imageUrl } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({ success: false, error: 'Image URL is required.' });
+    }
+
+    const { data: room, error: roomError } = await supabase
+      .from('rooms')
+      .select('id, images')
+      .eq('id', roomId)
+      .eq('business_id', businessId)
+      .single();
+
+    if (roomError || !room) {
+      return res.status(404).json({ success: false, error: 'Venue not found or access denied.' });
+    }
+
+    const currentImages = room.images || [];
+
+    if (!currentImages.includes(imageUrl)) {
+      return res.status(404).json({ success: false, error: 'Image not found in this venue.' });
+    }
+
+    try {
+      const parts = imageUrl.split('/venue-images/');
+      if (parts.length === 2) {
+        const storagePath = decodeURIComponent(parts[1]);
+        const { error: deleteError } = await supabase.storage
+          .from('venue-images')
+          .remove([storagePath]);
+        
+        if (deleteError) {
+          console.log('[Venue Delete] Storage delete warning:', deleteError.message);
+        } else {
+          console.log('[Venue Delete] Deleted from storage:', storagePath);
+        }
+      }
+    } catch (e) {
+      console.log('[Venue Delete] Storage delete skipped:', e.message);
+    }
+
+    const updatedImages = currentImages.filter(url => url !== imageUrl);
+
+    const { data: updatedRoom, error: updateError } = await supabase
+      .from('rooms')
+      .update({ images: updatedImages })
+      .eq('id', roomId)
+      .select()
+      .single();
+
+    if (updateError) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to update venue: ' + updateError.message 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Image deleted successfully.',
+      room: updatedRoom
+    });
+  } catch (error) {
+    console.error('[Venue Delete] Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Something went wrong. Please try again.' 
+    });
+  }
+});
+
+// ============================================================
+// BOOKING ROUTES
+// ============================================================
 
 app.get('/api/businesses/:businessId/bookings', authenticateBusiness, async function(req, res) {
   try {
@@ -1284,6 +1562,26 @@ app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness,
 });
 
 // ============================================================
+// ENHANCED BUSINESS ROUTES
+// ============================================================
+
+// Public enhanced business routes
+app.get('/api/businesses/:identifier/enhanced', getEnhancedBusinessRoute);
+app.get('/api/businesses/:businessId/gallery/public', getPublicGalleryRoute);
+app.get('/api/businesses/:businessId/phone-numbers/public', getPublicPhoneNumbersRoute);
+
+// Authenticated business routes
+app.put('/api/businesses/:businessId/features', authenticateBusiness, updateFeaturesRoute);
+app.put('/api/businesses/:businessId/amenities', authenticateBusiness, updateAmenitiesRoute);
+app.put('/api/businesses/:businessId/area-guide', authenticateBusiness, updateAreaGuideRoute);
+app.put('/api/businesses/:businessId/phone-numbers', authenticateBusiness, updatePhoneNumbersRoute);
+app.put('/api/businesses/:businessId/property-details', authenticateBusiness, updatePropertyDetailsRoute);
+
+// Gallery routes (authenticated)
+app.post('/api/businesses/:businessId/gallery', authenticateBusiness, addGalleryImageRoute);
+app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness, deleteGalleryImageRoute);
+
+// ============================================================
 // PUBLIC BOOKING ROUTES WITH LIMIT CHECK
 // ============================================================
 
@@ -1350,9 +1648,6 @@ app.post('/api/bookings', async function(req, res) {
       return res.status(400).json({ success: false, error: 'Valid total amount is required' });
     }
 
-    // ============================================================
-    // FETCH BUSINESS AND CHECK LIMIT
-    // ============================================================
     var { data: business, error: businessError } = await supabase
       .from('businesses')
       .select('*')
@@ -1364,19 +1659,12 @@ app.post('/api/bookings', async function(req, res) {
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
 
-    // ============================================================
-    // 🔴 CHECK BOOKING LIMIT - CRITICAL
-    // ============================================================
     const currentCount = business.current_booking_count || 0;
     const limit = business.booking_limit || 50;
 
-    // If limit reached, block booking
     if (currentCount >= limit) {
       console.log('[Booking] ⛔ Limit reached for:', business.name);
-      console.log('[Booking] - Current count:', currentCount);
-      console.log('[Booking] - Limit:', limit);
       
-      // Calculate how many more bookings they can take
       const remaining = limit - currentCount;
       
       return res.status(403).json({
@@ -1392,9 +1680,6 @@ app.post('/api/bookings', async function(req, res) {
       });
     }
 
-    // ============================================================
-    // CREATE BOOKING
-    // ============================================================
     var timestamp = Date.now();
     var randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
     var bookingRef = 'BK-' + timestamp + '-' + randomStr;
@@ -1450,7 +1735,6 @@ app.post('/api/bookings', async function(req, res) {
       });
     }
 
-    // Update booking count
     var { count: bookingCount } = await supabase
       .from('bookings')
       .select('*', { count: 'exact', head: true })
@@ -1481,7 +1765,6 @@ app.post('/api/bookings', async function(req, res) {
 
     console.log('Booking created successfully:', bookingRef);
 
-    // Return success with limit info
     const newCount = (bookingCount || 0) + 1;
     const remainingBookings = Math.max(0, limit - newCount);
     
@@ -2015,7 +2298,6 @@ async function ensureAdminUser() {
 // ============================================================
 async function ensureSubscriptionTable() {
   try {
-    // Check if subscription_upgrades table exists
     const { error: checkError } = await supabase
       .from('subscription_upgrades')
       .select('id')
@@ -2024,7 +2306,6 @@ async function ensureSubscriptionTable() {
     if (checkError && checkError.message.includes('does not exist')) {
       console.log('Creating subscription_upgrades table...');
       
-      // Create the table using raw SQL through Supabase
       const { error: createError } = await supabase.rpc('create_subscription_table');
       
       if (createError) {

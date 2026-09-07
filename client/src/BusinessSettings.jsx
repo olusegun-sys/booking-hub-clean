@@ -1,8 +1,12 @@
 ﻿// FILE: client/src/BusinessSettings.jsx
-// UPDATED - Added expiry warning and better UX
+// CLEANED: Removed Property Details, Features, Amenities, Area Guide
+// These now belong in RoomPage.jsx (per-venue settings)
 
 import React, { useState, useEffect } from 'react';
-import { Clock, X, Plus, Trash2, AlertCircle, CheckCircle, Globe, Copy, Check, Save, Calendar, ArrowLeft, Clock as TimerIcon } from 'lucide-react';
+import { 
+  Clock, X, Plus, Trash2, AlertCircle, CheckCircle, Globe, Copy, Check, Save, Calendar, ArrowLeft, TimerIcon,
+  Phone, MapPin, ChevronDown, ChevronRight
+} from 'lucide-react';
 import API_BASE from './config';
 
 function BusinessSettings({ business, onBack, onBusinessUpdate }) {
@@ -21,7 +25,6 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
   const [verifyingDomain, setVerifyingDomain] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [expiresAt, setExpiresAt] = useState(null);
-  const [verificationStatus, setVerificationStatus] = useState('');
 
   const token = localStorage.getItem('auth_token');
 
@@ -40,8 +43,11 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
 
   function fetchData() {
     setLoading(true);
-    Promise.all([fetchOperatingHours(), fetchBlockedDates()])
-      .finally(function() { setLoading(false); });
+    Promise.all([
+      fetchOperatingHours(),
+      fetchBlockedDates()
+    ])
+    .finally(function() { setLoading(false); });
   }
 
   function fetchOperatingHours() {
@@ -78,6 +84,9 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
     setTimeout(function() { setMessage({ type: '', text: '' }); }, 5000);
   }
 
+  // ============================================================
+  // OPERATING HOURS FUNCTIONS
+  // ============================================================
   function toggleDayOpen(index) {
     var updated = operatingHours.slice();
     updated[index].is_open = !updated[index].is_open;
@@ -109,6 +118,9 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
       .finally(function() { setSaving(false); });
   }
 
+  // ============================================================
+  // BLOCKED DATES FUNCTIONS
+  // ============================================================
   function addBlockedDate() {
     if (!newBlockedDate) {
       showMessage('error', 'Please select a date');
@@ -153,10 +165,11 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
       .finally(function() { setSaving(false); });
   }
 
-  // UPDATED: Generate verification code with expiry
+  // ============================================================
+  // DOMAIN FUNCTIONS
+  // ============================================================
   function generateVerificationCode() {
     setVerifyingDomain(true);
-    setVerificationStatus('Generating code...');
     
     fetch(API_BASE + '/api/businesses/generate-verification', {
       method: 'POST',
@@ -171,29 +184,23 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
           setVerificationCode(data.verificationCode);
           setExpiresAt(data.expiresAt);
           
-          // Calculate hours remaining
           if (data.expiresAt) {
             const expiryDate = new Date(data.expiresAt);
             const hoursLeft = Math.round((expiryDate - new Date()) / (1000 * 60 * 60));
-            showMessage('success', `Verification code generated! It expires in ${hoursLeft} hours.`);
+            showMessage('success', 'Verification code generated! It expires in ' + hoursLeft + ' hours.');
           } else {
             showMessage('success', 'Verification code generated! Add this TXT record to your DNS.');
           }
-          
-          setVerificationStatus('Code generated - add to DNS');
         } else {
           showMessage('error', data.error || 'Failed to generate code');
-          setVerificationStatus('');
         }
       })
       .catch(function() { 
         showMessage('error', 'Something went wrong');
-        setVerificationStatus('');
       })
       .finally(function() { setVerifyingDomain(false); });
   }
 
-  // UPDATED: Verify domain with DNS check
   function verifyDomain() {
     if (!customDomain) {
       showMessage('error', 'Please enter a domain');
@@ -206,7 +213,6 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
     }
     
     setVerifyingDomain(true);
-    setVerificationStatus('Checking DNS...');
     
     fetch(API_BASE + '/api/businesses/check-verification', {
       method: 'POST',
@@ -220,18 +226,15 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
       .then(function(data) {
         if (data.success) {
           showMessage('success', 'Domain verified successfully! Your booking page is now live at this domain.');
-          setVerificationStatus('Verified');
           setVerificationCode('');
           setExpiresAt(null);
           if (onBusinessUpdate) onBusinessUpdate();
         } else {
           showMessage('error', data.error || 'Verification failed. Please check DNS and try again.');
-          setVerificationStatus('Verification failed');
         }
       })
       .catch(function() { 
         showMessage('error', 'Something went wrong');
-        setVerificationStatus('');
       })
       .finally(function() { setVerifyingDomain(false); });
   }
@@ -242,12 +245,9 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
     setTimeout(function() { setDomainCopied(false); }, 2000);
   }
 
-  if (loading) {
-    return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' } },
-      React.createElement('div', { className: 'loading-spinner' })
-    );
-  }
-
+  // ============================================================
+  // STYLES
+  // ============================================================
   var containerStyle = {
     maxWidth: '1400px',
     margin: '0 auto',
@@ -294,7 +294,8 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
     backgroundColor: 'white',
     borderRadius: isDesktop ? '20px' : '16px',
     border: '1px solid #e2e8f0',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    marginBottom: '24px'
   };
 
   var cardHeaderStyle = {
@@ -317,11 +318,14 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
     padding: isDesktop ? '24px' : '20px'
   };
 
-  var hoursContainerStyle = {
-    display: 'grid',
-    gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr',
-    gap: isDesktop ? '16px' : '12px'
-  };
+  // ============================================================
+  // MAIN RENDER
+  // ============================================================
+  if (loading) {
+    return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' } },
+      React.createElement('div', { className: 'loading-spinner' })
+    );
+  }
 
   var hourRowStyle = {
     display: 'flex',
@@ -329,6 +333,12 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
     justifyContent: 'space-between',
     padding: isDesktop ? '12px 16px' : '12px 0',
     borderBottom: '1px solid #f1f5f9'
+  };
+
+  var hoursContainerStyle = {
+    display: 'grid',
+    gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr',
+    gap: isDesktop ? '16px' : '12px'
   };
 
   return React.createElement('div', { style: containerStyle },
@@ -445,7 +455,7 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
         )
       ),
 
-      // Custom Domain Settings Card - UPDATED
+      // Custom Domain Settings Card
       React.createElement('div', { style: cardStyle },
         React.createElement('div', { style: cardHeaderStyle },
           React.createElement(Globe, { size: isDesktop ? 20 : 18, color: '#4f46e5' }),
@@ -455,8 +465,6 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } }, 
             'Connect your own domain (e.g., book.yourbusiness.com). Once verified, your booking page will be available at your custom domain.'
           ),
-          
-          // Domain input
           React.createElement('div', { style: { marginBottom: '16px' } },
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px', color: '#475569' } }, 'Custom Domain'),
             React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap' } },
@@ -490,8 +498,6 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
               }, verifyingDomain ? 'Verifying...' : 'Verify Domain')
             )
           ),
-
-          // Status display
           business.custom_domain && business.is_domain_verified && React.createElement('div', { style: {
             backgroundColor: '#d1fae5',
             padding: '12px',
@@ -506,8 +512,6 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
             React.createElement(CheckCircle, { size: 16 }),
             'Domain verified: ', business.custom_domain
           ),
-
-          // Generate code button
           React.createElement('button', {
             onClick: generateVerificationCode,
             disabled: verifyingDomain,
@@ -523,8 +527,6 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
               cursor: 'pointer'
             }
           }, verifyingDomain ? 'Generating...' : 'Generate DNS Verification Code'),
-
-          // Show verification code with expiry
           verificationCode && React.createElement('div', { style: {
             marginTop: '16px',
             padding: '14px',
@@ -565,7 +567,6 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
                 }
               }, domainCopied ? React.createElement(Check, { size: 14 }) : React.createElement(Copy, { size: 14 }), domainCopied ? 'Copied!' : 'Copy')
             ),
-            // Show expiry warning
             expiresAt && React.createElement('div', { style: {
               marginTop: '12px',
               padding: '8px 12px',
@@ -658,6 +659,35 @@ function BusinessSettings({ business, onBack, onBusinessUpdate }) {
                 );
               })
             )
+        )
+      ),
+
+      // Phone Numbers Manager (KEPT - business level)
+      React.createElement('div', { style: cardStyle },
+        React.createElement('div', { style: cardHeaderStyle },
+          React.createElement(Phone, { size: isDesktop ? 20 : 18, color: '#4f46e5' }),
+          React.createElement('h3', { style: cardTitleStyle }, 'Contact Phone Numbers')
+        ),
+        React.createElement('div', { style: cardBodyStyle },
+          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
+            'Add phone numbers that customers can use to contact your business.'
+          ),
+          // Phone number display (read-only from business table)
+          business.phone && React.createElement('div', { style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 16px',
+            backgroundColor: '#f1f5f9',
+            borderRadius: '10px',
+            marginBottom: '8px'
+          } },
+            React.createElement('span', { style: { fontSize: '14px', fontWeight: '500' } }, business.phone),
+            React.createElement('span', { style: { fontSize: '12px', color: '#94a3b8' } }, 'Primary')
+          ),
+          React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', padding: '20px', fontSize: '13px' } },
+            'Phone numbers are managed in your Business Profile settings.'
+          )
         )
       )
     )

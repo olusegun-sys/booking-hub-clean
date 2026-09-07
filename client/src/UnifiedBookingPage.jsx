@@ -1,2566 +1,2996 @@
-﻿// client/src/UnifiedBookingPage.jsx
-// =============================================
-// UNIFIED BOOKING PAGE - PREMIUM DESIGN INTEGRATION
-// FIXED: Shareable link navigation - no routing back to homepage
-// Customers stay within the booking flow
-// =============================================
+﻿// FILE: client/src/UnifiedBookingPage.jsx
+// COMPLETE FIX - SEPTEMBER 2026
+// Includes professional receipt after booking confirmation
 
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, MapPin, Phone, Mail, Clock, DollarSign, 
-  Trophy, Users, Star, Building2, Wind, Car, X, 
-  ChevronLeft, ChevronRight, Wifi, Coffee, Tv, Bath, Calendar, Home,
-  CheckCircle, Download, Printer, CreditCard, Bed, Utensils, Sparkles,
-  Lock, CreditCard as CardIcon, Receipt, Check, Building, Loader,
-  HeartHandshake, Dumbbell, Map, Navigation, Award, Shield, Crown,
-  Headphones, Snowflake, Utensils as UtensilsIcon, ExternalLink, Info,
-  Camera, PartyPopper, Music, Cake, Briefcase, Gift, GlassWater
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+
+// ============================================================
+// ICON IMPORTS
+// ============================================================
+import {
+  ArrowLeft,
+  Users,
+  MapPin,
+  Phone,
+  Mail,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Bed,
+  Building,
+  Check,
+  Loader,
+  CreditCard,
+  Award,
+  Info,
+  AlertCircle,
+  Plus,
+  Minus,
+  Sparkles,
+  Compass,
+  Building2,
+  Image,
+  Star,
+  User,
+  Calendar,
+  Clock,
+  Eye,
+  Tag,
+  Home,
+  Car,
+  Sofa,
+  Wifi,
+  Zap,
+  Shield,
+  Droplets,
+  Thermometer,
+  Lock,
+  Camera,
+  Bell,
+  TreePine,
+  ParkingSquare,
+  Utensils,
+  Coffee,
+  Dumbbell,
+  CalendarDays,
+  Share2,
+  Heart,
+  Globe,
+  Briefcase,
+  Layers,
+  Grid3x3,
+  GalleryHorizontal,
+  GalleryVertical,
+  Printer,
+  Download,
+  CheckCircle,
+  ReceiptText,
+  Banknote,
+  CalendarCheck
 } from 'lucide-react';
-import RoomPage from './RoomPage';
-import SportsBooking from './SportsBooking';
-import EventBooking from './EventBooking';
-import API_BASE from './config';
 
 // ============================================================
-// FIX: isMobile detection hook with SSR support and debouncing
+// API HELPER
 // ============================================================
-function useIsMobile(breakpoint) {
-  if (breakpoint === undefined) breakpoint = 768;
-  
-  var getInitialState = function() {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth < breakpoint;
-  };
-  
-  var _useState = React.useState(getInitialState);
-  var isMobile = _useState[0];
-  var setIsMobile = _useState[1];
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://booking-backend-clean.onrender.com';
 
-  React.useEffect(function() {
-    if (typeof window === 'undefined') return;
-    
-    var handleResize = function() {
-      setIsMobile(window.innerWidth < breakpoint);
-    };
-    
-    var timeoutId = null;
-    var debouncedResize = function() {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleResize, 150);
-    };
-    
-    window.addEventListener('resize', debouncedResize);
-    handleResize();
-    
-    return function() {
-      window.removeEventListener('resize', debouncedResize);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [breakpoint]);
-
-  return isMobile;
+async function fetchAPI(endpoint, options = {}) {
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || error.message || 'Something went wrong');
+  }
+  return response.json();
 }
 
 // ============================================================
-// PREMIUM STYLES - Integrated from HotelBooking
+// HELPERS
 // ============================================================
-function createStyles(isMobile) {
-  return {
-    container: {
-      maxWidth: '100%',
-      margin: '0 auto',
-      padding: '0',
-      background: '#f5f7fa',
-      minHeight: '100vh',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-    },
-    
-    // ===== HEADER =====
-    header: {
-      background: 'rgba(255,255,255,0.85)',
-      backdropFilter: 'blur(20px)',
-      borderBottom: '1px solid rgba(226,232,240,0.3)',
-      padding: isMobile ? '0.5rem 1rem' : '0.75rem 1.5rem',
-      position: 'sticky',
-      top: 0,
-      zIndex: 50,
-      boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
-    },
-    headerContent: { 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: isMobile ? '0.25rem' : '0.75rem', 
-      justifyContent: 'space-between', 
-      flexWrap: 'nowrap', 
-      width: '100%', 
-      maxWidth: '100%', 
-      overflow: 'hidden', 
-    },
-    // FIXED: Back button now uses goBack() instead of navigate('/')
-    backButton: {
-      whiteSpace: 'nowrap',
-      background: 'rgba(79,70,229,0.08)',
-      border: '1px solid rgba(79,70,229,0.12)',
-      color: '#4f46e5',
-      padding: isMobile ? '0.2rem 0.4rem' : '0.4rem 0.8rem',
-      borderRadius: '40px',
-      fontSize: isMobile ? '0.65rem' : '0.75rem',
-      fontWeight: '500',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: isMobile ? '0.1rem' : '0.25rem',
-      transition: 'all 0.3s ease',
-      flexShrink: 0,
-      lineHeight: 1
-    },
-    logo: { width: isMobile ? '24px' : '36px', height: isMobile ? '24px' : '36px', borderRadius: '6px', objectFit: 'cover', background: 'white', padding: '0.1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', flexShrink: 0 },
-    businessNameContainer: { minWidth: 0, flex: '0 1 auto', overflow: 'hidden', maxWidth: isMobile ? '120px' : '200px', flexShrink: 1 },
-    businessName: {
-      margin: 0,
-      fontSize: isMobile ? '0.8rem' : '1rem',
-      fontWeight: '700',
-      color: '#0f172a',
-      letterSpacing: '-0.01em',
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      lineHeight: 1.2
-    },
-    businessBadge: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '0.1rem',
-      padding: isMobile ? '0.05rem 0.3rem' : '0.1rem 0.4rem',
-      borderRadius: '9999px',
-      fontSize: isMobile ? '0.4rem' : '0.5rem',
-      fontWeight: '600'
-    },
-    businessLocation: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.1rem',
-      color: '#64748b',
-      fontSize: isMobile ? '0.45rem' : '0.55rem'
-    },
-    
-    // ===== HERO =====
-    heroSection: {
-      position: 'relative',
-      width: '100%',
-      height: isMobile ? '350px' : '450px',
-      background: '#1a1a2e',
-      overflow: 'hidden'
-    },
-    heroImage: {
-      width: '100%',
-      height: '100%',
-      objectFit: 'cover'
-    },
-    heroOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)'
-    },
-    heroContent: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      padding: isMobile ? '20px 16px 24px' : '32px 40px 40px',
-      color: 'white'
-    },
-    heroTop: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      flexWrap: 'wrap',
-      gap: '12px',
-      marginBottom: '8px'
-    },
-    heroName: {
-      fontSize: isMobile ? '26px' : '36px',
-      fontWeight: '800',
-      margin: '0 0 2px',
-      letterSpacing: '-0.5px',
-      textShadow: '0 2px 20px rgba(0,0,0,0.3)',
-      color: 'white'
-    },
-    heroLocation: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      fontSize: isMobile ? '13px' : '15px',
-      opacity: 0.9,
-      textShadow: '0 1px 10px rgba(0,0,0,0.2)',
-      color: 'white'
-    },
-    heroBadges: {
-      display: 'flex',
-      gap: '8px',
-      flexWrap: 'wrap'
-    },
-    heroBadge: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      padding: '4px 12px',
-      borderRadius: '40px',
-      fontSize: '11px',
-      fontWeight: '600',
-      background: 'rgba(255,255,255,0.15)',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255,255,255,0.1)',
-      color: 'white'
-    },
-    heroDescription: {
-      fontSize: isMobile ? '13px' : '15px',
-      opacity: 0.9,
-      maxWidth: '80%',
-      lineHeight: '1.5',
-      marginBottom: '12px',
-      textShadow: '0 1px 10px rgba(0,0,0,0.2)',
-      color: 'white'
-    },
-    
-    // ===== DATE PICKER WIDGET =====
-    bookingWidget: {
-      background: 'white',
-      borderRadius: '16px',
-      padding: isMobile ? '12px 14px' : '16px 20px',
-      marginTop: '12px',
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '8px',
-      alignItems: 'center',
-      boxShadow: '0 8px 40px rgba(0,0,0,0.15)',
-      maxWidth: '100%'
-    },
-    widgetField: {
-      flex: 1,
-      minWidth: '80px',
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '2px'
-    },
-    widgetLabel: {
-      fontSize: '9px',
-      fontWeight: '600',
-      textTransform: 'uppercase',
-      color: '#94a3b8',
-      letterSpacing: '0.5px',
-      display: 'block'
-    },
-    widgetDateInput: {
-      width: '100%',
-      padding: '6px 0',
-      border: 'none',
-      background: 'transparent',
-      fontSize: isMobile ? '13px' : '14px',
-      fontWeight: '600',
-      color: '#0f172a',
-      cursor: 'pointer',
-      outline: 'none',
-      fontFamily: 'inherit',
-      borderBottom: '2px solid #4F46E5',
-      transition: 'border-color 0.2s ease'
-    },
-    widgetValue: {
-      fontSize: isMobile ? '13px' : '14px',
-      fontWeight: '600',
-      color: '#0f172a',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px'
-    },
-    widgetDivider: {
-      width: '1px',
-      height: '28px',
-      background: '#e2e8f0'
-    },
-    widgetButton: {
-      padding: isMobile ? '10px 16px' : '12px 28px',
-      background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
-      color: 'white',
-      border: 'none',
-      borderRadius: '12px',
-      fontSize: isMobile ? '13px' : '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      boxShadow: '0 4px 16px rgba(79,70,229,0.25)',
-      flexShrink: 0,
-      width: isMobile ? '100%' : 'auto'
-    },
-    
-    // ===== HIGHLIGHTS =====
-    highlightsSection: {
-      background: 'white',
-      borderRadius: '16px',
-      padding: isMobile ? '16px 18px' : '20px 24px',
-      margin: '20px 16px 16px',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-      border: '1px solid #f1f5f9'
-    },
-    highlightsGrid: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-      gap: '12px'
-    },
-    highlightItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      padding: '10px',
-      background: '#f8fafc',
-      borderRadius: '12px',
-      transition: 'all 0.2s ease'
-    },
-    highlightIcon: {
-      width: '36px',
-      height: '36px',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0
-    },
-    highlightText: {
-      fontSize: isMobile ? '12px' : '13px',
-      fontWeight: '500',
-      color: '#0f172a',
-      lineHeight: '1.3'
-    },
-    
-    // ===== CONTENT AREA =====
-    contentArea: {
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: isMobile ? '0 0 80px' : '0 20px 80px'
-    },
-    sectionCard: {
-      background: 'white',
-      borderRadius: '16px',
-      padding: isMobile ? '18px 16px' : '24px 28px',
-      marginBottom: '16px',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-      border: '1px solid #f1f5f9'
-    },
-    sectionHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '12px',
-      flexWrap: 'wrap',
-      gap: '8px'
-    },
-    sectionTitle: {
-      fontSize: isMobile ? '17px' : '19px',
-      fontWeight: '700',
-      color: '#0f172a',
-      margin: 0,
-      letterSpacing: '-0.3px'
-    },
-    sectionText: {
-      fontSize: isMobile ? '13px' : '14px',
-      color: '#475569',
-      lineHeight: '1.8',
-      margin: '0 0 12px'
-    },
-    amenitiesTags: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '8px',
-      paddingTop: '12px',
-      borderTop: '1px solid #f1f5f9'
-    },
-    amenityTag: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '6px 14px',
-      background: '#f8fafc',
-      borderRadius: '40px',
-      fontSize: '12px',
-      fontWeight: '500',
-      color: '#475569',
-      border: '1px solid #f1f5f9'
-    },
-    
-    // ===== GALLERY =====
-    galleryGrid: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-      gap: '6px',
-      marginTop: '10px'
-    },
-    galleryImage: {
-      width: '100%',
-      aspectRatio: '1/1',
-      objectFit: 'cover',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      transition: 'transform 0.3s ease'
-    },
-    
-    // ===== LOCATION =====
-    locationMap: {
-      width: '100%',
-      height: isMobile ? '200px' : '250px',
-      borderRadius: '12px',
-      background: '#e2e8f0',
-      marginTop: '10px',
-      overflow: 'hidden',
-      position: 'relative'
-    },
-    locationMapIframe: {
-      width: '100%',
-      height: '100%',
-      border: 'none'
-    },
-    locationPlaces: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '8px',
-      marginTop: '10px'
-    },
-    locationPlace: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '4px 12px',
-      background: '#f8fafc',
-      borderRadius: '40px',
-      fontSize: '12px',
-      color: '#475569',
-      border: '1px solid #f1f5f9'
-    },
-    
-    // ===== REVIEWS =====
-    reviewsHeader: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      marginBottom: '12px'
-    },
-    reviewsScore: {
-      fontSize: isMobile ? '28px' : '32px',
-      fontWeight: '800',
-      color: '#0f172a',
-      lineHeight: '1'
-    },
-    reviewsScoreLabel: {
-      fontSize: '14px',
-      fontWeight: '600',
-      color: '#0f172a'
-    },
-    reviewsScoreSub: {
-      fontSize: '12px',
-      color: '#94a3b8'
-    },
-    reviewsBreakdown: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-      gap: '8px',
-      marginTop: '12px'
-    },
-    reviewCategory: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '6px 0',
-      borderBottom: '1px solid #f1f5f9'
-    },
-    reviewCategoryName: {
-      fontSize: '12px',
-      color: '#64748b',
-      fontWeight: '500'
-    },
-    reviewCategoryScore: {
-      fontSize: '13px',
-      fontWeight: '600',
-      color: '#0f172a'
-    },
-    reviewBar: {
-      width: '100%',
-      height: '4px',
-      background: '#f1f5f9',
-      borderRadius: '4px',
-      marginTop: '2px',
-      overflow: 'hidden'
-    },
-    reviewBarFill: {
-      height: '100%',
-      borderRadius: '4px',
-      background: '#4F46E5'
-    },
-    
-    // ===== ROOMS =====
-    roomsSection: {
-      marginTop: '16px'
-    },
-    roomsHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '16px',
-      flexWrap: 'wrap',
-      gap: '12px',
-      padding: '0 16px'
-    },
-    roomsTitle: {
-      fontSize: isMobile ? '18px' : '22px',
-      fontWeight: '700',
-      color: '#0f172a',
-      letterSpacing: '-0.3px',
-      margin: 0
-    },
-    roomsCount: {
-      fontSize: '13px',
-      color: '#94a3b8',
-      fontWeight: '500'
-    },
-    roomsGrid: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))',
-      gap: '16px',
-      padding: '0 16px'
-    },
-    
-    // ===== ROOM CARD =====
-    roomCard: {
-      background: 'white',
-      borderRadius: '16px',
-      overflow: 'hidden',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-      border: '2px solid transparent',
-      position: 'relative'
-    },
-    roomCardSelected: {
-      background: 'white',
-      borderRadius: '16px',
-      overflow: 'hidden',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      boxShadow: '0 8px 40px rgba(79,70,229,0.12)',
-      border: '2px solid #4F46E5',
-      position: 'relative'
-    },
-    roomCardContent: {
-      display: 'flex',
-      flexDirection: isMobile ? 'column' : 'row',
-      height: isMobile ? 'auto' : '100%'
-    },
-    roomImageWrapper: {
-      position: 'relative',
-      width: isMobile ? '100%' : '160px',
-      minHeight: isMobile ? '160px' : '100%',
-      overflow: 'hidden',
-      background: '#f1f5f9',
-      flexShrink: 0
-    },
-    roomImage: {
-      width: '100%',
-      height: '100%',
-      objectFit: 'cover',
-      transition: 'transform 0.6s ease',
-      minHeight: isMobile ? '160px' : '100%'
-    },
-    roomBadge: {
-      position: 'absolute',
-      top: '8px',
-      left: '8px',
-      padding: '2px 10px',
-      borderRadius: '40px',
-      fontSize: '9px',
-      fontWeight: '700',
-      color: 'white',
-      letterSpacing: '0.3px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-    },
-    roomSelectedBadge: {
-      position: 'absolute',
-      top: '8px',
-      right: '8px',
-      background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
-      color: 'white',
-      padding: '2px 10px',
-      borderRadius: '40px',
-      fontSize: '9px',
-      fontWeight: '700',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      boxShadow: '0 2px 12px rgba(79,70,229,0.3)'
-    },
-    roomInfo: {
-      flex: 1,
-      padding: isMobile ? '12px 14px' : '14px 16px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between'
-    },
-    roomHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: '4px',
-      gap: '8px'
-    },
-    roomName: {
-      fontSize: isMobile ? '15px' : '16px',
-      fontWeight: '700',
-      color: '#0f172a',
-      margin: 0,
-      letterSpacing: '-0.3px'
-    },
-    roomTypeTag: {
-      fontSize: '9px',
-      color: '#64748b',
-      backgroundColor: '#f1f5f9',
-      padding: '2px 8px',
-      borderRadius: '40px',
-      fontWeight: '600',
-      whiteSpace: 'nowrap'
-    },
-    roomMeta: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '6px',
-      fontSize: '11px',
-      color: '#64748b',
-      marginBottom: '4px'
-    },
-    roomMetaItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px'
-    },
-    roomRating: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      marginBottom: '4px'
-    },
-    roomRatingStars: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1px'
-    },
-    roomRatingText: {
-      fontSize: '11px',
-      fontWeight: '600',
-      color: '#0f172a'
-    },
-    roomReviewCount: {
-      fontSize: '11px',
-      color: '#94a3b8'
-    },
-    roomPriceSection: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginTop: 'auto',
-      paddingTop: '10px',
-      borderTop: '1px solid #f1f5f9',
-      gap: '12px',
-      flexWrap: 'wrap'
-    },
-    roomPriceLeft: {
-      display: 'flex',
-      flexDirection: 'column',
-      flex: 1
-    },
-    roomPriceWas: {
-      fontSize: '12px',
-      color: '#94a3b8',
-      textDecoration: 'line-through'
-    },
-    roomPriceNow: {
-      fontSize: '18px',
-      fontWeight: '800',
-      color: '#4F46E5',
-      letterSpacing: '-0.5px',
-      whiteSpace: 'nowrap'
-    },
-    roomPricePer: {
-      fontSize: '10px',
-      fontWeight: '400',
-      color: '#94a3b8'
-    },
-    roomReserveButton: {
-      padding: '6px 14px',
-      background: '#4F46E5',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontSize: '12px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      boxShadow: '0 2px 8px rgba(79,70,229,0.2)',
-      whiteSpace: 'nowrap',
-      flexShrink: 0
-    },
-    roomReserveButtonSelected: {
-      padding: '6px 14px',
-      background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontSize: '12px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      boxShadow: '0 2px 12px rgba(79,70,229,0.3)',
-      whiteSpace: 'nowrap',
-      flexShrink: 0
-    },
-    
-    // ===== LIGHTBOX =====
-    lightboxOverlay: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.92)',
-      zIndex: 9999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: 'pointer'
-    },
-    lightboxImage: {
-      maxWidth: '90%',
-      maxHeight: '90%',
-      objectFit: 'contain'
-    },
-    lightboxNav: {
-      position: 'absolute',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      background: 'rgba(255,255,255,0.15)',
-      border: 'none',
-      color: 'white',
-      padding: '16px 20px',
-      borderRadius: '50%',
-      cursor: 'pointer',
-      fontSize: '24px',
-      transition: 'background 0.3s ease',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    lightboxClose: {
-      position: 'absolute',
-      top: '20px',
-      right: '20px',
-      background: 'none',
-      border: 'none',
-      color: 'white',
-      fontSize: '32px',
-      cursor: 'pointer',
-      padding: '8px',
-      transition: 'transform 0.3s ease'
-    },
-    
-    // ===== MODAL =====
-    modalOverlay: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(15,23,42,0.6)',
-      backdropFilter: 'blur(20px)',
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '0'
-    },
-    modalContent: {
-      backgroundColor: 'white',
-      borderRadius: '28px 28px 0 0',
-      maxWidth: '560px',
-      width: '100%',
-      maxHeight: '92vh',
-      overflowY: 'auto',
-      boxShadow: '0 -20px 80px rgba(0,0,0,0.15)',
-      paddingBottom: 'env(safe-area-inset-bottom)'
-    },
-    modalHandle: {
-      width: '36px',
-      height: '4px',
-      borderRadius: '4px',
-      background: '#e2e8f0',
-      margin: '12px auto 8px'
-    },
-    modalHeader: {
-      padding: '16px 24px 16px',
-      borderBottom: '1px solid #f1f5f9',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      background: 'white'
-    },
-    modalTitle: {
-      fontSize: '18px',
-      fontWeight: '700',
-      color: '#0f172a',
-      margin: 0,
-      letterSpacing: '-0.3px'
-    },
-    modalClose: {
-      background: '#f1f5f9',
-      border: 'none',
-      cursor: 'pointer',
-      color: '#64748b',
-      padding: '8px',
-      borderRadius: '12px',
-      transition: 'all 0.2s ease',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '36px',
-      height: '36px'
-    },
-    modalBody: {
-      padding: '24px'
-    },
-    modalSummary: {
-      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f4f9 100%)',
-      borderRadius: '16px',
-      padding: '16px 20px',
-      marginBottom: '20px',
-      border: '1px solid #e2e8f0'
-    },
-    modalSummaryRow: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      padding: '6px 0',
-      fontSize: '13px'
-    },
-    modalSummaryLabel: {
-      color: '#94a3b8',
-      fontWeight: '500'
-    },
-    modalSummaryValue: {
-      fontWeight: '600',
-      color: '#0f172a'
-    },
-    formGroup: {
-      marginBottom: '16px'
-    },
-    formLabel: {
-      display: 'block',
-      fontSize: '12px',
-      fontWeight: '600',
-      color: '#475569',
-      marginBottom: '4px',
-      letterSpacing: '0.2px'
-    },
-    formInput: {
-      width: '100%',
-      padding: '12px 14px',
-      border: '2px solid #e2e8f0',
-      borderRadius: '12px',
-      fontSize: '14px',
-      transition: 'all 0.2s ease',
-      boxSizing: 'border-box',
-      fontFamily: 'inherit',
-      background: 'white'
-    },
-    paymentOptions: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '12px',
-      marginTop: '8px'
-    },
-    paymentOption: {
-      padding: '14px 12px',
-      border: '2px solid #e2e8f0',
-      borderRadius: '12px',
-      cursor: 'pointer',
-      textAlign: 'center',
-      transition: 'all 0.3s ease',
-      background: 'white'
-    },
-    paymentOptionSelected: {
-      padding: '14px 12px',
-      border: '2px solid #4F46E5',
-      borderRadius: '12px',
-      cursor: 'pointer',
-      textAlign: 'center',
-      background: '#EEF2FF'
-    },
-    paymentOptionPrimary: {
-      padding: '16px 12px',
-      border: '2px solid #e2e8f0',
-      borderRadius: '12px',
-      cursor: 'pointer',
-      textAlign: 'center',
-      transition: 'all 0.3s ease',
-      background: 'white',
-      position: 'relative'
-    },
-    paymentOptionPrimarySelected: {
-      padding: '16px 12px',
-      border: '2px solid #4F46E5',
-      borderRadius: '12px',
-      cursor: 'pointer',
-      textAlign: 'center',
-      background: '#EEF2FF',
-      boxShadow: '0 0 0 3px rgba(79,70,229,0.08)',
-      position: 'relative'
-    },
-    paymentOptionIcon: {
-      display: 'block',
-      margin: '0 auto 6px'
-    },
-    paymentOptionLabel: {
-      fontSize: '13px',
-      fontWeight: '600',
-      color: '#0f172a',
-      display: 'block'
-    },
-    paymentOptionDesc: {
-      fontSize: '10px',
-      color: '#94a3b8',
-      display: 'block',
-      marginTop: '2px'
-    },
-    submitButton: {
-      width: '100%',
-      padding: '16px',
-      background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
-      color: 'white',
-      border: 'none',
-      borderRadius: '12px',
-      fontSize: '15px',
-      fontWeight: '700',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      marginTop: '8px',
-      boxShadow: '0 4px 20px rgba(79,70,229,0.2)',
-      letterSpacing: '0.2px'
-    },
-    submitButtonDisabled: {
-      width: '100%',
-      padding: '16px',
-      backgroundColor: '#94a3b8',
-      color: 'white',
-      border: 'none',
-      borderRadius: '12px',
-      fontSize: '15px',
-      fontWeight: '600',
-      cursor: 'not-allowed',
-      marginTop: '8px'
-    },
-    recommendedBadge: {
-      marginTop: '6px',
-      padding: '2px 12px',
-      background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
-      borderRadius: '20px',
-      display: 'inline-block',
-      fontSize: '9px',
-      fontWeight: '700',
-      color: '#4F46E5',
-      letterSpacing: '0.3px'
-    },
-    
-    // ===== SPORTS/EVENT CTA =====
-    ctaCard: {
-      textAlign: 'center',
-      marginTop: isMobile ? '1rem' : '1.5rem',
-      borderRadius: isMobile ? '16px' : '20px',
-      padding: isMobile ? '1.5rem' : '2rem',
-      background: 'white',
-      border: '1px solid rgba(226,232,240,0.4)',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.04)'
-    },
-    ctaButton: {
-      padding: isMobile ? '0.6rem 1.5rem' : '0.75rem 2rem',
-      fontSize: isMobile ? '0.8rem' : '0.85rem',
-      fontWeight: '600',
-      borderRadius: '40px',
-      background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
-      border: 'none',
-      color: 'white',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      boxShadow: '0 4px 12px rgba(79,70,229,0.2)',
-      width: isMobile ? '100%' : 'auto'
-    }
-  };
+function formatCurrency(amount) {
+  if (!amount && amount !== 0) return '₦0';
+  return '₦' + Number(amount).toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  });
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+}
+
+function formatDateShort(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
+function timeAgo(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 60) return diffMins + ' minutes ago';
+  if (diffHours < 24) return diffHours + ' hours ago';
+  if (diffDays < 7) return diffDays + ' days ago';
+  if (diffDays < 30) return Math.floor(diffDays / 7) + ' weeks ago';
+  if (diffDays < 365) return Math.floor(diffDays / 30) + ' months ago';
+  return Math.floor(diffDays / 365) + ' years ago';
+}
+
+function generateOrderId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = 'BH-';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
 // ============================================================
-// HELPER FUNCTIONS
+// RECEIPT COMPONENT
 // ============================================================
-var sportsImages = [
-  'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=1200&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1533563906091-fdfdffc3e3c2?w=1200&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=1200&h=400&fit=crop'
-];
+function BookingReceipt({ booking, business, venue, onClose, onPrint }) {
+  const isMobile = window.innerWidth < 640;
 
-var eventImages = [
-  'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1200&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=1200&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1505236858219-8359eb29e329?w=1200&h=400&fit=crop'
-];
-
-var defaultHotelHero = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600&h=600&fit=crop';
-var defaultEventHero = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1600&h=600&fit=crop';
-
-function getRoomImage(roomName) {
-  var name = roomName.toLowerCase();
-  if (name.includes('suite')) return 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&h=400&fit=crop';
-  if (name.includes('king') || name.includes('executive')) return 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&h=400&fit=crop';
-  if (name.includes('family')) return 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600&h=400&fit=crop';
-  if (name.includes('deluxe')) return 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=600&h=400&fit=crop';
-  if (name.includes('penthouse')) return 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&h=400&fit=crop';
-  return 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&h=400&fit=crop';
-}
-
-function formatPrice(price) {
-  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(price || 0);
-}
-
-function getBadgeColor(type) {
-  var colors = {
-    'Suite': '#8B5CF6',
-    'Deluxe': '#F59E0B',
-    'Executive': '#10B981',
-    'Presidential': '#EC4899',
-    'Family': '#3B82F6',
-    'Standard': '#6B7280',
-    'Premium': '#EC4899'
-  };
-  return colors[type] || '#6B7280';
-}
-
-function renderStars(rating) {
-  var fullStars = Math.floor(rating);
-  var halfStar = rating % 1 >= 0.5;
-  var emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-  var stars = [];
-  for (var i = 0; i < fullStars; i++) {
-    stars.push(React.createElement(Star, { key: 'full-' + i, size: 12, fill: '#F59E0B', color: '#F59E0B' }));
-  }
-  if (halfStar) {
-    stars.push(React.createElement(Star, { key: 'half', size: 12, fill: '#F59E0B', color: '#F59E0B', style: { opacity: 0.5 } }));
-  }
-  for (var j = 0; j < emptyStars; j++) {
-    stars.push(React.createElement(Star, { key: 'empty-' + j, size: 12, color: '#E2E8F0' }));
-  }
-  return React.createElement('span', { style: { display: 'flex', gap: '1px' } }, ...stars);
-}
-
-// ============================================================
-// MAIN COMPONENT - UnifiedBookingPage
-// ============================================================
-function UnifiedBookingPage() {
-  var _useParams = useParams();
-  var businessSlug = _useParams.businessSlug;
-  var navigate = useNavigate();
-  
-  var isMobile = useIsMobile();
-  var styles = createStyles(isMobile);
-  
-  var _useState = React.useState(null);
-  var business = _useState[0];
-  var setBusiness = _useState[1];
-  var _useState2 = React.useState([]);
-  var rooms = _useState2[0];
-  var setRooms = _useState2[1];
-  var _useState3 = React.useState([]);
-  var galleryImages = _useState3[0];
-  var setGalleryImages = _useState3[1];
-  var _useState4 = React.useState(true);
-  var loading = _useState4[0];
-  var setLoading = _useState4[1];
-  var _useState5 = React.useState('');
-  var error = _useState5[0];
-  var setError = _useState5[1];
-  var _useState6 = React.useState(false);
-  var bookingStarted = _useState6[0];
-  var setBookingStarted = _useState6[1];
-  var _useState7 = React.useState(Math.floor(Math.random() * 3));
-  var imageIndex = _useState7[0];
-  var _useState8 = React.useState(false);
-  var lightboxOpen = _useState8[0];
-  var setLightboxOpen = _useState8[1];
-  var _useState9 = React.useState(0);
-  var lightboxIndex = _useState9[0];
-  var setLightboxIndex = _useState9[1];
-  var _useState10 = React.useState({ checkIn: '', checkOut: '' });
-  var dateRange = _useState10[0];
-  var setDateRange = _useState10[1];
-  var _useState11 = React.useState(1);
-  var guests = _useState11[0];
-  var setGuests = _useState11[1];
-  var _useState12 = React.useState(false);
-  var showGuestPicker = _useState12[0];
-  var setShowGuestPicker = _useState12[1];
-  var _useState13 = React.useState(null);
-  var selectedRoom = _useState13[0];
-  var setSelectedRoom = _useState13[1];
-  var _useState14 = React.useState(false);
-  var showBookingForm = _useState14[0];
-  var setShowBookingForm = _useState14[1];
-  var _useState15 = React.useState(false);
-  var expandedStory = _useState15[0];
-  var setExpandedStory = _useState15[1];
-
-  // ============================================================
-  // FIXED: Navigation handler - goes back in history, not to homepage
-  // ============================================================
-  function handleGoBack() {
-    // Check if there's history to go back to
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      // If no history, stay on current page (don't navigate to homepage)
-      // This prevents the user from leaving the booking flow
-      console.log('[UnifiedBookingPage] No history to go back to - staying on page');
-      // Optional: show a toast or notification
-    }
-  }
-
-  // ============================================================
-  // FETCH BUSINESS DATA
-  // ============================================================
-  function fetchBusinessData() {
-    setLoading(true);
-    
-    var url = API_BASE + '/api/businesses/slug/' + businessSlug;
-    
-    fetch(url)
-      .then(function (response) {
-        if (!response.ok) {
-          throw new Error('HTTP ' + response.status + ': ' + response.statusText);
-        }
-        return response.json();
-      })
-      .then(function (data) {
-        if (data.success && data.business) {
-          setBusiness(data.business);
-          return fetch(API_BASE + '/api/businesses/' + data.business.id + '/rooms')
-            .then(function (r) { return r.json(); })
-            .then(function (roomsData) {
-              if (roomsData.success) {
-                setRooms(roomsData.rooms || []);
-              }
-              return fetch(API_BASE + '/api/businesses/' + data.business.id + '/gallery')
-                .then(function (r) { return r.json(); })
-                .then(function (galleryData) {
-                  if (galleryData && galleryData.images) {
-                    setGalleryImages(galleryData.images);
-                  }
-                  setLoading(false);
-                });
-            });
-        } else {
-          setError(data.error || 'Business not found');
-          setLoading(false);
-        }
-      })
-      .catch(function (err) {
-        console.error('[UnifiedBookingPage] Fetch error:', err);
-        if (err.message.includes('Failed to fetch')) {
-          setError('Cannot connect to server. Please check your network connection.');
-        } else if (err.message.includes('404')) {
-          setError('Business not found. The page you\'re looking for doesn\'t exist.');
-        } else {
-          setError('Could not load business: ' + err.message);
-        }
-        setLoading(false);
-      });
-  }
-
-  React.useEffect(function () { 
-    fetchBusinessData(); 
-  }, [businessSlug]);
-
-  React.useEffect(function () {
-    if (!lightboxOpen) return;
-    function handleKey(e) {
-      if (e.key === 'Escape') { closeLightbox(); return; }
-      if (e.key === 'ArrowLeft') { goToPrev(); return; }
-      if (e.key === 'ArrowRight') { goToNext(); return; }
-    }
-    document.addEventListener('keydown', handleKey);
-    document.body.style.overflow = 'hidden';
-    return function () {
-      document.removeEventListener('keydown', handleKey);
-      document.body.style.overflow = '';
-    };
-  }, [lightboxOpen, lightboxIndex, galleryImages.length]);
-
-  function openLightbox(index) { setLightboxIndex(index); setLightboxOpen(true); }
-  function closeLightbox() { setLightboxOpen(false); }
-  function goToPrev() { setLightboxIndex(function (prev) { return prev === 0 ? galleryImages.length - 1 : prev - 1; }); }
-  function goToNext() { setLightboxIndex(function (prev) { return prev === galleryImages.length - 1 ? 0 : prev + 1; }); }
-
-  function handleBookNow(room) {
-    if (!dateRange.checkIn || !dateRange.checkOut) {
-      alert('Please select check-in and check-out dates first');
-      return;
-    }
-    setSelectedRoom(room);
-    setShowBookingForm(true);
-  }
-
-  function getHeroImage() {
-    if (business && business.cover_image) return business.cover_image;
-    if (business && business.business_type === 'hotel') return defaultHotelHero;
-    if (business && business.business_type === 'sports') return sportsImages[imageIndex];
-    if (business && business.business_type === 'event') return eventImages[imageIndex];
-    return defaultHotelHero;
-  }
-
-  if (loading) {
-    return React.createElement('div', { className: 'app-container', style: { textAlign: 'center', padding: '3rem' } },
-      React.createElement('div', { className: 'loading-spinner' }),
-      React.createElement('p', { style: { marginTop: '1rem', color: '#64748b' } }, 'Loading...')
-    );
-  }
-
-  if (error || !business) {
-    return React.createElement('div', { className: 'app-container' },
-      React.createElement('div', { className: 'empty-state' },
-        React.createElement(MapPin, { size: 48, strokeWidth: 1.5, color: '#94a3b8', style: { marginBottom: '1rem' } }),
-        React.createElement('h3', null, 'Business not found'),
-        React.createElement('p', null, error || "The page you're looking for doesn't exist."),
-        React.createElement('button', { 
-          className: 'btn btn-primary', 
-          onClick: function () { 
-            // FIXED: Use goBack instead of navigate to homepage
-            if (window.history.length > 1) {
-              navigate(-1);
-            } else {
-              // Stay on page if no history
-              window.location.reload();
-            }
-          },
-          style: {
-            padding: '0.75rem 2rem',
-            background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '40px',
-            cursor: 'pointer',
-            fontSize: '0.9rem',
-            fontWeight: '600',
-            boxShadow: '0 4px 16px rgba(79,70,229,0.25)'
-          }
-        }, 'Go Back')
-      )
-    );
-  }
-
-  if (bookingStarted) {
-    if (business.business_type === 'hotel') {
-      return React.createElement(RoomPage, { 
-        businessId: business.id, 
-        businessName: business.name, 
-        businessType: business.business_type, 
-        onBack: function () { 
-          // FIXED: Go back in history, not to homepage
-          navigate(-1);
-        } 
-      });
-    }
-    if (business.business_type === 'sports') {
-      return React.createElement(SportsBooking, { 
-        business: business, 
-        onBack: function () { 
-          // FIXED: Go back in history, not to homepage
-          setBookingStarted(false);
-          navigate(-1);
-        } 
-      });
-    }
-    if (business.business_type === 'event') {
-      return React.createElement(EventBooking, { 
-        business: business, 
-        onBack: function () { 
-          // FIXED: Go back in history, not to homepage
-          setBookingStarted(false);
-          navigate(-1);
-        } 
-      });
-    }
-  }
-
-  var availableRooms = rooms.filter(function (r) { return r.status === 'available'; });
-  var badgeType = business.business_type === 'hotel' ? 'Hotel' : business.business_type === 'sports' ? 'Sports Facility' : 'Event Venue';
-  var badgeColor = business.business_type === 'hotel' ? '#4F46E5' : business.business_type === 'sports' ? '#059669' : '#d97706';
-
-  // ===== HIGHLIGHTS - EVENT SPECIFIC =====
-  var isEvent = business.business_type === 'event';
-  
-  var highlights = isEvent ? [
-    { icon: Sparkles, color: '#d97706', bgColor: '#FEF3C7', label: 'Perfect for celebrations' },
-    { icon: Users, color: '#8B5CF6', bgColor: '#EDE9FE', label: 'Hosts up to 300 guests' },
-    { icon: Calendar, color: '#EC4899', bgColor: '#FCE4EC', label: 'Flexible booking' },
-    { icon: Crown, color: '#F59E0B', bgColor: '#FEF3C7', label: 'Premium venue' }
-  ] : [
-    { icon: HeartHandshake, color: '#EC4899', bgColor: '#FCE4EC', label: 'Loved by couples' },
-    { icon: UtensilsIcon, color: '#F59E0B', bgColor: '#FEF3C7', label: 'Top rated breakfast' },
-    { icon: Dumbbell, color: '#10B981', bgColor: '#D1FAE5', label: 'Fitness center' },
-    { icon: Map, color: '#3B82F6', bgColor: '#DBEAFE', label: 'Central location' }
-  ];
-
-  var nearbyPlaces = [
-    { name: 'City Center', distance: '5 min walk' },
-    { name: 'Shopping Mall', distance: '10 min walk' },
-    { name: 'Business District', distance: '15 min drive' },
-    { name: 'Airport', distance: '30 min drive' }
-  ];
-
-  var reviewCategories = [
-    { name: 'Cleanliness', score: 9.4 },
-    { name: 'Amenities', score: 8.8 },
-    { name: 'Service', score: 9.2 },
-    { name: 'Location', score: 9.6 },
-    { name: 'Value', score: 8.5 },
-    { name: 'Comfort', score: 9.0 }
-  ];
-
-  var amenityIcons = {
-    'Free Wi-Fi': { icon: Wifi, color: '#3B82F6' },
-    'Air Conditioning': { icon: Snowflake, color: '#06B6D4' },
-    '24/7 Support': { icon: Headphones, color: '#8B5CF6' },
-    'Secure Booking': { icon: Shield, color: '#10B981' },
-    'Restaurant': { icon: UtensilsIcon, color: '#F59E0B' },
-    'Room Service': { icon: Coffee, color: '#EC4899' },
-    'Parking': { icon: Car, color: '#6B7280' },
-    'Laundry': { icon: Sparkles, color: '#3B82F6' }
-  };
-
-  var defaultAmenities = ['Free Wi-Fi', 'Air Conditioning', '24/7 Support', 'Secure Booking', 'Restaurant', 'Room Service', 'Parking', 'Laundry'];
-
-  // ============================================================
-  // RENDER - HEADER WITH FIXED BACK BUTTON
-  // ============================================================
-  return React.createElement('div', { style: styles.container },
-
-    // ===== HEADER - FIXED: Back button uses goBack =====
-    React.createElement('div', { style: styles.header },
-      React.createElement('div', { style: { ...styles.headerContent, width: '100%' } },
-        // Left section: Back button + logo
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: isMobile ? '0.25rem' : '0.75rem', flex: '0 1 auto', overflow: 'hidden' } },
-          React.createElement('button', { 
-            className: 'btn btn-secondary', 
-            onClick: handleGoBack, 
-            style: styles.backButton,
-            onMouseEnter: function(e) { 
-              e.currentTarget.style.background = 'rgba(79,70,229,0.15)';
-            },
-            onMouseLeave: function(e) { 
-              e.currentTarget.style.background = 'rgba(79,70,229,0.08)';
-            }
-          },
-            React.createElement(ArrowLeft, { size: isMobile ? 12 : 14 }), 
-            React.createElement('span', { style: { display: isMobile ? 'none' : 'inline' } }, 'Back')
-          ),
-          business.logo_url && React.createElement('img', { 
-            src: business.logo_url, 
-            alt: business.name, 
-            style: styles.logo
-          }),
-          React.createElement('div', { style: styles.businessNameContainer },
-            React.createElement('h1', { style: styles.businessName }, business.name),
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '0.2rem', flexWrap: 'wrap' } },
-              React.createElement('span', { 
-                style: { ...styles.businessBadge, background: badgeColor + '15', color: badgeColor } 
-              }, badgeType),
-              React.createElement('span', { style: styles.businessLocation },
-                React.createElement(MapPin, { size: isMobile ? 8 : 10 }), 
-                business.city
-              )
-            )
-          )
-        )
-      )
-    ),
-
-    // ===== HERO =====
-    React.createElement('div', { style: styles.heroSection },
-      React.createElement('img', {
-        src: getHeroImage(),
-        alt: business?.name || 'Venue',
-        style: styles.heroImage,
-        onError: function(e) { e.currentTarget.src = isEvent ? defaultEventHero : defaultHotelHero; }
-      }),
-      React.createElement('div', { style: styles.heroOverlay }),
-      React.createElement('div', { style: styles.heroContent },
-        React.createElement('div', { style: styles.heroTop },
-          React.createElement('div', null,
-            React.createElement('h1', { style: styles.heroName }, business?.name || 'Venue'),
-            React.createElement('div', { style: styles.heroLocation },
-              React.createElement(MapPin, { size: 14 }),
-              business?.city || 'Lagos', ', ', business?.state || 'Lagos'
-            )
-          ),
-          React.createElement('div', { style: styles.heroBadges },
-            React.createElement('div', { style: styles.heroBadge },
-              React.createElement(Star, { size: 12, fill: '#F59E0B', color: '#F59E0B' }),
-              '4.9'
-            ),
-            isEvent ? 
-              React.createElement('div', { style: { ...styles.heroBadge, background: 'rgba(251, 146, 60, 0.3)', border: '1px solid rgba(251, 146, 60, 0.3)' } },
-                React.createElement(Sparkles, { size: 12 }),
-                'Premium Event Venue'
-              ) :
-              React.createElement('div', { style: { ...styles.heroBadge, background: 'rgba(79,70,229,0.3)', border: '1px solid rgba(79,70,229,0.3)' } },
-                React.createElement(Crown, { size: 12 }),
-                'Premium Host'
-              ),
-            React.createElement('div', { style: { ...styles.heroBadge, background: 'rgba(16,185,129,0.3)', border: '1px solid rgba(16,185,129,0.3)' } },
-              React.createElement(Shield, { size: 12 }),
-              'Verified'
-            ),
-            isEvent && React.createElement('div', { style: { ...styles.heroBadge, background: 'rgba(236, 72, 153, 0.3)', border: '1px solid rgba(236, 72, 153, 0.3)' } },
-              React.createElement(PartyPopper, { size: 12 }),
-              'Celebration Ready'
-            )
-          )
-        ),
-        business?.description && React.createElement('p', { style: styles.heroDescription }, business.description),
-        
-        // Date Picker Widget
-        business.business_type === 'hotel' && React.createElement('div', { style: styles.bookingWidget },
-          React.createElement('div', { style: styles.widgetField },
-            React.createElement('span', { style: styles.widgetLabel }, 'Check-in'),
-            React.createElement('input', {
-              type: 'date',
-              value: dateRange.checkIn || '',
-              onChange: function(e) {
-                var newDate = e.target.value;
-                setDateRange({ ...dateRange, checkIn: newDate });
-                if (newDate && !dateRange.checkOut) {
-                  var nextDay = new Date(newDate);
-                  nextDay.setDate(nextDay.getDate() + 1);
-                  setDateRange({ checkIn: newDate, checkOut: nextDay.toISOString().split('T')[0] });
-                }
-              },
-              style: { ...styles.widgetDateInput, borderBottom: '2px solid #4F46E5' },
-              min: new Date().toISOString().split('T')[0]
-            })
-          ),
-          React.createElement('div', { style: styles.widgetDivider }),
-          React.createElement('div', { style: styles.widgetField },
-            React.createElement('span', { style: styles.widgetLabel }, 'Check-out'),
-            React.createElement('input', {
-              type: 'date',
-              value: dateRange.checkOut || '',
-              onChange: function(e) { setDateRange({ ...dateRange, checkOut: e.target.value }); },
-              style: { ...styles.widgetDateInput, borderBottom: '2px solid #4F46E5' },
-              min: dateRange.checkIn || new Date().toISOString().split('T')[0]
-            })
-          ),
-          React.createElement('div', { style: styles.widgetDivider }),
-          React.createElement('div', { style: styles.widgetField },
-            React.createElement('span', { style: styles.widgetLabel }, 'Guests'),
-            React.createElement('button', {
-              onClick: function() { setShowGuestPicker(!showGuestPicker); },
-              style: { background: 'transparent', border: 'none', cursor: 'pointer', fontSize: isMobile ? '13px' : '14px', fontWeight: '600', padding: '6px 0', display: 'flex', alignItems: 'center', gap: '4px', color: '#0f172a', width: '100%' }
-            },
-              React.createElement(Users, { size: 14, color: '#4F46E5' }),
-              guests + ' guest' + (guests > 1 ? 's' : '')
-            ),
-            showGuestPicker && React.createElement('div', { 
-              style: { 
-                position: 'absolute', 
-                top: '100%', 
-                left: '50%', 
-                transform: 'translateX(-50%)', 
-                marginTop: '0.5rem', 
-                background: 'white', 
-                borderRadius: '14px', 
-                padding: '0.75rem', 
-                boxShadow: '0 20px 60px rgba(0,0,0,0.15)', 
-                minWidth: '140px', 
-                zIndex: 10,
-                textAlign: 'center',
-                border: '1px solid #e2e8f0'
-              } 
-            },
-              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' } },
-                React.createElement('button', { 
-                  onClick: function() { setGuests(Math.max(1, guests - 1)); }, 
-                  style: { width: '30px', height: '30px', borderRadius: '50%', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: '#0f172a' } 
-                }, '-'),
-                React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: '#0f172a' } }, guests),
-                React.createElement('button', { 
-                  onClick: function() { setGuests(Math.min(20, guests + 1)); }, 
-                  style: { width: '30px', height: '30px', borderRadius: '50%', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500', color: '#0f172a' } 
-                }, '+')
-              ),
-              React.createElement('button', { 
-                onClick: function() { setShowGuestPicker(false); }, 
-                style: { width: '100%', padding: '0.4rem', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.7rem' } 
-              }, 'Apply')
-            )
-          ),
-          React.createElement('button', {
-            style: styles.widgetButton,
-            onMouseEnter: function(e) {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 30px rgba(79,70,229,0.35)';
-            },
-            onMouseLeave: function(e) {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(79,70,229,0.25)';
-            },
-            onClick: function() {
-              if (!dateRange.checkIn || !dateRange.checkOut) {
-                alert('Please select check-in and check-out dates');
-                return;
-              }
-              document.querySelector('.rooms-section')?.scrollIntoView({ behavior: 'smooth' });
-            }
-          }, 'Find Rooms')
-        )
-      )
-    ),
-
-    // ===== HIGHLIGHTS =====
-    React.createElement('div', { style: styles.highlightsSection },
-      React.createElement('div', { style: styles.highlightsGrid },
-        highlights.map(function(highlight, idx) {
-          var IconComponent = highlight.icon;
-          return React.createElement('div', { key: idx, style: styles.highlightItem },
-            React.createElement('div', { style: { ...styles.highlightIcon, background: highlight.bgColor } },
-              React.createElement(IconComponent, { size: 16, color: highlight.color })
-            ),
-            React.createElement('span', { style: styles.highlightText }, highlight.label)
-          );
-        })
-      )
-    ),
-
-    // ===== CONTENT AREA =====
-    React.createElement('div', { style: styles.contentArea },
-
-      // ===== STORY SECTION =====
-      (business.about_text || business.description) && React.createElement('div', { style: styles.sectionCard },
-        React.createElement('div', { style: styles.sectionHeader },
-          React.createElement('h2', { style: styles.sectionTitle }, business.about_text ? 'Our Story' : 'About ' + business.name),
-          React.createElement('span', { style: { fontSize: '11px', color: '#94a3b8', fontWeight: '500' } }, 
-            business?.city || 'Lagos', ', Nigeria'
-          )
-        ),
-        React.createElement('p', { style: styles.sectionText },
-          expandedStory 
-            ? (business.about_text || business.description) 
-            : (business.about_text || business.description || '').substring(0, isMobile ? 120 : 200) + ((business.about_text || business.description || '').length > (isMobile ? 120 : 200) ? '...' : '')
-        ),
-        (business.about_text || business.description || '').length > (isMobile ? 120 : 200) && React.createElement('button', {
-          onClick: function() { setExpandedStory(!expandedStory); },
-          style: { background: 'none', border: 'none', color: '#4F46E5', cursor: 'pointer', fontWeight: '600', fontSize: isMobile ? '0.7rem' : '0.8rem', padding: '0.25rem 0' }
-        }, expandedStory ? 'Show less' : 'Read more'),
-        
-        React.createElement('div', { style: styles.amenitiesTags },
-          defaultAmenities.map(function(amenity, idx) {
-            var amenityData = amenityIcons[amenity];
-            var IconComponent = amenityData?.icon || Check;
-            var iconColor = amenityData?.color || '#10B981';
-            return React.createElement('span', { key: idx, style: styles.amenityTag },
-              React.createElement(IconComponent, { size: 14, color: iconColor }),
-              amenity
-            );
-          })
-        )
-      ),
-
-      // ===== GALLERY =====
-      galleryImages.length > 0 && React.createElement('div', { style: styles.sectionCard },
-        React.createElement('div', { style: styles.sectionHeader },
-          React.createElement('h2', { style: styles.sectionTitle }, 'Photo Gallery'),
-          React.createElement('span', { style: { fontSize: '12px', color: '#94a3b8', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' } },
-            React.createElement(Camera, { size: 14 }),
-            galleryImages.length + ' photos'
-          )
-        ),
-        React.createElement('div', { style: styles.galleryGrid },
-          galleryImages.slice(0, isMobile ? 6 : galleryImages.length).map(function(img, i) {
-            return React.createElement('img', {
-              key: img.id || i,
-              src: img.image_url || img,
-              alt: img.file_name || 'Gallery ' + (i + 1),
-              style: styles.galleryImage,
-              onError: function(e) { e.currentTarget.src = isEvent ? defaultEventHero : defaultHotelHero; },
-              onClick: function() { openLightbox(i); }
-            });
-          })
-        )
-      ),
-
-      // ===== LOCATION =====
-      React.createElement('div', { style: styles.sectionCard },
-        React.createElement('div', { style: styles.sectionHeader },
-          React.createElement('h2', { style: styles.sectionTitle }, 'Explore the area'),
-          React.createElement('span', { style: { fontSize: '11px', color: '#94a3b8', fontWeight: '500' } }, 
-            business?.city || 'Lagos', ', Nigeria'
-          )
-        ),
-        React.createElement('div', { style: styles.locationMap },
-          React.createElement('iframe', {
-            src: 'https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=' + encodeURIComponent(business?.city + ', ' + business?.state || 'Lagos, Nigeria'),
-            style: styles.locationMapIframe,
-            allowFullScreen: true,
-            loading: 'lazy',
-            referrerPolicy: 'no-referrer-when-downgrade',
-            title: 'Location map'
-          })
-        ),
-        React.createElement('div', { style: styles.locationPlaces },
-          nearbyPlaces.map(function(place, idx) {
-            return React.createElement('span', { key: idx, style: styles.locationPlace },
-              React.createElement(MapPin, { size: 10, color: '#64748b' }),
-              place.name,
-              React.createElement('span', { style: { color: '#94a3b8', fontSize: '10px' } }, '\u00b7 ' + place.distance)
-            );
-          })
-        )
-      ),
-
-      // ===== REVIEWS =====
-      React.createElement('div', { style: styles.sectionCard },
-        React.createElement('div', { style: styles.reviewsHeader },
-          React.createElement('span', { style: styles.reviewsScore }, '4.9'),
-          React.createElement('div', null,
-            React.createElement('div', { style: styles.reviewsScoreLabel }, 'Wonderful'),
-            React.createElement('span', { style: styles.reviewsScoreSub }, 'See all 5,356 reviews >')
-          )
-        ),
-        React.createElement('div', { style: styles.reviewsBreakdown },
-          reviewCategories.map(function(cat, idx) {
-            return React.createElement('div', { key: idx },
-              React.createElement('div', { style: styles.reviewCategory },
-                React.createElement('span', { style: styles.reviewCategoryName }, cat.name),
-                React.createElement('span', { style: styles.reviewCategoryScore }, cat.score.toFixed(1))
-              ),
-              React.createElement('div', { style: styles.reviewBar },
-                React.createElement('div', { style: { ...styles.reviewBarFill, width: (cat.score / 10) * 100 + '%' } })
-              )
-            );
-          })
-        )
-      ),
-
-      // ===== ROOMS =====
-      business.business_type === 'hotel' && React.createElement('div', { className: 'rooms-section' },
-        React.createElement('div', { style: styles.roomsHeader },
-          React.createElement('h2', { style: styles.roomsTitle }, 'Choose your room'),
-          React.createElement('span', { style: styles.roomsCount }, availableRooms.length + ' rooms available')
-        ),
-        React.createElement('div', { style: styles.roomsGrid },
-          availableRooms.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '16px' } },
-            React.createElement(Bed, { size: 48, color: '#cbd5e1' }),
-            React.createElement('h3', { style: { fontSize: '18px', fontWeight: '700', color: '#0f172a', marginTop: '12px' } }, 'No Rooms Available'),
-            React.createElement('p', { style: { color: '#94a3b8', fontSize: '14px', marginTop: '4px' } }, 'No rooms available for your selected dates')
-          ),
-          availableRooms.map(function(room) {
-            var isSelected = selectedRoom && selectedRoom.id === room.id;
-            var roomBadgeColor = getBadgeColor(room.type || 'Standard');
-            
-            return React.createElement('div', { 
-              key: room.id,
-              style: isSelected ? styles.roomCardSelected : styles.roomCard,
-              onClick: function() {
-                if (!dateRange.checkIn || !dateRange.checkOut) {
-                  alert('Please select check-in and check-out dates first');
-                  return;
-                }
-                setSelectedRoom(isSelected ? null : room);
-              },
-              onMouseEnter: function(e) {
-                if (!isSelected) {
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)';
-                }
-              },
-              onMouseLeave: function(e) {
-                if (!isSelected) {
-                  e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
-                }
-              }
-            },
-              React.createElement('div', { style: styles.roomCardContent },
-                React.createElement('div', { style: styles.roomImageWrapper },
-                  React.createElement('img', {
-                    src: getRoomImage(room.name),
-                    alt: room.name,
-                    style: styles.roomImage,
-                    onError: function(e) { e.currentTarget.src = 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400&h=300&fit=crop'; }
-                  }),
-                  React.createElement('div', { style: { ...styles.roomBadge, background: roomBadgeColor } }, 
-                    room.type || 'Standard'
-                  ),
-                  isSelected && React.createElement('div', { style: styles.roomSelectedBadge },
-                    React.createElement(Check, { size: 10 }),
-                    'Selected'
-                  ),
-                  React.createElement('div', { 
-                    style: { 
-                      position: 'absolute', 
-                      bottom: '8px', 
-                      left: '8px',
-                      background: room.status === 'available' ? '#10B981' : '#EF4444',
-                      color: 'white',
-                      padding: '2px 8px',
-                      borderRadius: '40px',
-                      fontSize: '8px',
-                      fontWeight: '600'
-                    } 
-                  }, room.status || 'available')
-                ),
-                React.createElement('div', { style: styles.roomInfo },
-                  React.createElement('div', null,
-                    React.createElement('div', { style: styles.roomHeader },
-                      React.createElement('h4', { style: styles.roomName }, room.name),
-                      React.createElement('span', { style: styles.roomTypeTag }, room.type || 'Standard')
-                    ),
-                    React.createElement('div', { style: styles.roomMeta },
-                      React.createElement('span', { style: styles.roomMetaItem },
-                        React.createElement(Users, { size: 11 }),
-                        'Sleeps ' + (room.capacity || 2)
-                      ),
-                      React.createElement('span', { style: styles.roomMetaItem },
-                        React.createElement(Bed, { size: 11 }),
-                        room.bed_type || 'Standard'
-                      ),
-                      React.createElement('span', { style: styles.roomMetaItem },
-                        React.createElement(Check, { size: 11, color: '#10B981' }),
-                        'Free Wi-Fi'
-                      )
-                    ),
-                    React.createElement('div', { style: styles.roomRating },
-                      React.createElement('span', { style: styles.roomRatingStars },
-                        renderStars(4.9)
-                      ),
-                      React.createElement('span', { style: styles.roomRatingText }, '4.9'),
-                      React.createElement('span', { style: styles.roomReviewCount }, '(124 reviews)')
-                    ),
-                    room.description && React.createElement('p', { 
-                      style: { 
-                        fontSize: '12px', 
-                        color: '#64748b', 
-                        lineHeight: '1.4', 
-                        margin: '4px 0', 
-                        display: '-webkit-box', 
-                        WebkitLineClamp: 2, 
-                        WebkitBoxOrient: 'vertical', 
-                        overflow: 'hidden' 
-                      } 
-                    }, room.description)
-                  ),
-                  React.createElement('div', { style: styles.roomPriceSection },
-                    React.createElement('div', { style: styles.roomPriceLeft },
-                      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } },
-                        React.createElement('span', { style: styles.roomPriceNow },
-                          formatPrice(room.price_per_night || 0),
-                          React.createElement('span', { style: styles.roomPricePer }, ' / night')
-                        )
-                      ),
-                      React.createElement('span', { style: { fontSize: '9px', color: '#94a3b8', marginTop: '2px' } }, 
-                        'Reserve now, pay later'
-                      )
-                    ),
-                    React.createElement('button', {
-                      onClick: function(e) {
-                        e.stopPropagation();
-                        if (!dateRange.checkIn || !dateRange.checkOut) {
-                          alert('Please select check-in and check-out dates first');
-                          return;
-                        }
-                        handleBookNow(room);
-                      },
-                      style: isSelected ? styles.roomReserveButtonSelected : styles.roomReserveButton,
-                      onMouseEnter: function(e) {
-                        if (!isSelected) {
-                          e.currentTarget.style.backgroundColor = '#4338CA';
-                          e.currentTarget.style.transform = 'scale(1.05)';
-                        } else {
-                          e.currentTarget.style.transform = 'scale(1.05)';
-                          e.currentTarget.style.boxShadow = '0 4px 16px rgba(79,70,229,0.3)';
-                        }
-                      },
-                      onMouseLeave: function(e) {
-                        if (!isSelected) {
-                          e.currentTarget.style.backgroundColor = '#4F46E5';
-                          e.currentTarget.style.transform = 'scale(1)';
-                        } else {
-                          e.currentTarget.style.transform = 'scale(1)';
-                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(79,70,229,0.2)';
-                        }
-                      }
-                    }, isSelected ? 'Book Now' : 'Reserve')
-                  )
-                )
-              )
-            );
-          })
-        )
-      ),
-
-      // ===== SPORTS/EVENT CTA =====
-      business.business_type !== 'hotel' && React.createElement('div', { style: styles.ctaCard },
-        React.createElement('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: isMobile ? '0.5rem' : '0.75rem' } },
-          business.business_type === 'sports' 
-            ? React.createElement(Trophy, { size: isMobile ? 32 : 40, color: '#4F46E5', strokeWidth: 1.5 })
-            : React.createElement(PartyPopper, { size: isMobile ? 32 : 40, color: '#d97706', strokeWidth: 1.5 })
-        ),
-        React.createElement('h2', { 
-          style: { 
-            fontSize: isMobile ? '1.1rem' : '1.25rem', 
-            fontWeight: '700', 
-            marginBottom: '0.25rem', 
-            letterSpacing: '-0.02em',
-            color: '#0f172a'
-          } 
-        }, 
-          business.business_type === 'sports' ? 'Ready to Play?' : 'Ready to Celebrate?'
-        ),
-        React.createElement('p', { 
-          style: { 
-            color: '#64748b', 
-            marginBottom: '1rem', 
-            fontSize: isMobile ? '0.8rem' : '0.85rem', 
-            maxWidth: '400px', 
-            margin: '0 auto 1rem' 
-          } 
-        }, 
-          isEvent ? 'Find the perfect venue for your event. Select your date and time to get started.' : 'Select your date and time to get started with your booking.'
-        ),
-        React.createElement('button', { 
-          className: 'btn btn-primary', 
-          onClick: function() { setBookingStarted(true); }, 
-          style: styles.ctaButton,
-          onMouseEnter: function(e) {
-            e.currentTarget.style.transform = 'scale(1.02)';
-            e.currentTarget.style.boxShadow = '0 6px 24px rgba(79,70,229,0.3)';
-          },
-          onMouseLeave: function(e) {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(79,70,229,0.2)';
-          }
-        },
-          business.business_type === 'sports' ? 'Book a Court →' : 'Plan Your Event →'
-        ),
-        React.createElement('p', { 
-          style: { 
-            color: '#94a3b8', 
-            fontSize: isMobile ? '0.55rem' : '0.65rem', 
-            marginTop: '0.5rem' 
-          } 
-        }, 
-          isEvent ? 'No payment required to book. Secure your date now.' : 'No payment required to book'
-        )
-      )
-    ),
-
-    // ===== LIGHTBOX =====
-    lightboxOpen && React.createElement('div', { 
-      style: styles.lightboxOverlay,
-      onClick: closeLightbox
-    },
-      React.createElement('button', {
-        style: { ...styles.lightboxNav, left: isMobile ? '0.5rem' : '20px' },
-        onClick: function(e) {
-          e.stopPropagation();
-          goToPrev();
-        },
-        onMouseEnter: function(e) { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; },
-        onMouseLeave: function(e) { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }
-      }, '‹'),
-      React.createElement('img', {
-        src: galleryImages[lightboxIndex]?.image_url || galleryImages[lightboxIndex] || '',
-        alt: 'Gallery',
-        style: styles.lightboxImage
-      }),
-      React.createElement('button', {
-        style: { ...styles.lightboxNav, right: isMobile ? '0.5rem' : '20px' },
-        onClick: function(e) {
-          e.stopPropagation();
-          goToNext();
-        },
-        onMouseEnter: function(e) { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; },
-        onMouseLeave: function(e) { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }
-      }, '›'),
-      React.createElement('button', {
-        style: styles.lightboxClose,
-        onClick: function(e) {
-          e.stopPropagation();
-          closeLightbox();
-        },
-        onMouseEnter: function(e) { e.currentTarget.style.transform = 'scale(1.1)'; },
-        onMouseLeave: function(e) { e.currentTarget.style.transform = 'scale(1)'; }
-      }, '\u00d7')
-    ),
-
-    // ===== BOOKING MODAL =====
-    showBookingForm && selectedRoom && React.createElement(BookingFormModal, {
-      business: business,
-      room: selectedRoom,
-      dateRange: dateRange,
-      guests: guests,
-      onClose: function() { setShowBookingForm(false); },
-      onSuccess: function() { setShowBookingForm(false); },
-      API_BASE: API_BASE,
-      formatPrice: formatPrice,
-      businessName: business.name,
-      isMobile: isMobile,
-      styles: styles
-    })
-  );
-}
-
-// ============================================================
-// BOOKING FORM MODAL - COMPLETE FIX
-// ============================================================
-function BookingFormModal({ business, room, dateRange, guests, onClose, onSuccess, API_BASE, formatPrice, businessName, isMobile, styles }) {
-  // ===== STATE DECLARATIONS =====
-  var _useState = React.useState({ name: '', email: '', phone: '', specialRequests: '' });
-  var formData = _useState[0];
-  var setFormData = _useState[1];
-  
-  var _useState2 = React.useState(null);
-  var createdBooking = _useState2[0];
-  var setCreatedBooking = _useState2[1];
-  
-  var _useState3 = React.useState(false);
-  var isCreatingBooking = _useState3[0];
-  var setIsCreatingBooking = _useState3[1];
-  
-  var _useState4 = React.useState(false);
-  var showReceipt = _useState4[0];
-  var setShowReceipt = _useState4[1];
-  
-  var _useState5 = React.useState(null);
-  var paymentReceipt = _useState5[0];
-  var setPaymentReceipt = _useState5[1];
-  
-  var _useState6 = React.useState(false);
-  var showPaystack = _useState6[0];
-  var setShowPaystack = _useState6[1];
-  
-  var _useState7 = React.useState(false);
-  var paystackLoaded = _useState7[0];
-  var setPaystackLoaded = _useState7[1];
-  
-  var _useState8 = React.useState(false);
-  var isPaying = _useState8[0];
-  var setIsPaying = _useState8[1];
-  
-  var _useState9 = React.useState('');
-  var paymentError = _useState9[0];
-  var setPaymentError = _useState9[1];
-  
-  var _useState10 = React.useState(window.innerWidth >= 768);
-  var isDesktop = _useState10[0];
-  var setIsDesktop = _useState10[1];
-  
-  var _useState11 = React.useState('venue');
-  var paymentMethod = _useState11[0];
-  var setPaymentMethod = _useState11[1];
-
-  React.useEffect(function() {
-    function handleResize() {
-      setIsDesktop(window.innerWidth >= 768);
-    }
-    window.addEventListener('resize', handleResize);
-    return function() { window.removeEventListener('resize', handleResize); };
-  }, []);
-
-  React.useEffect(function() {
-    document.body.style.overflow = 'hidden';
-    return function() {
-      document.body.style.overflow = '';
-    };
-  }, []);
-
-  var nights = dateRange.checkIn && dateRange.checkOut 
-    ? Math.ceil((new Date(dateRange.checkOut) - new Date(dateRange.checkIn)) / (1000 * 60 * 60 * 24))
-    : 1;
-  var totalAmount = (room.price_per_night || 0) * nights;
-
-  function createAndProcessBooking(paymentMethod) {
-    if (!formData.name || !formData.email || !formData.phone) {
-      alert('Please fill in all required fields');
-      return;
-    }
-    
-    setIsCreatingBooking(true);
-    setPaymentError('');
-    
-    var bookingData = {
-      businessId: business.id,
-      roomId: room.id,
-      customerName: formData.name,
-      customerEmail: formData.email,
-      customerPhone: formData.phone,
-      totalAmount: totalAmount,
-      checkIn: dateRange.checkIn,
-      checkOut: dateRange.checkOut,
-      guests: guests,
-      specialRequests: formData.specialRequests
-    };
-    
-    fetch(API_BASE + '/api/bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bookingData)
-    })
-      .then(function (response) { 
-        if (!response.ok) {
-          return response.json().then(function(errData) {
-            throw new Error(errData.error || 'HTTP ' + response.status);
-          });
-        }
-        return response.json(); 
-      })
-      .then(function (data) {
-        if (data.success && data.booking) {
-          setCreatedBooking(data.booking);
-          setIsCreatingBooking(false);
-          
-          if (paymentMethod === 'venue') {
-            setPaymentReceipt({
-              bookingReference: data.booking.booking_reference,
-              paymentMethod: 'Pay at Venue',
-              amountPaid: totalAmount,
-              paidAt: new Date().toLocaleString()
-            });
-            setShowReceipt(true);
-          } else if (paymentMethod === 'card') {
-            setShowPaystack(true);
-          }
-        } else {
-          alert('Failed to create booking. Please try again.');
-          setIsCreatingBooking(false);
-        }
-      })
-      .catch(function (err) { 
-        console.error('[BookingFormModal] Create booking error:', err);
-        var errorMessage = err.message || 'Something went wrong. Please try again.';
-        if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
-          alert('You do not have permission to create bookings. Please contact the business owner.');
-        } else if (errorMessage.includes('429')) {
-          alert('Booking limit reached. Please contact the business owner.');
-        } else if (errorMessage.includes('Failed to fetch')) {
-          alert('Cannot connect to server. Please check your internet connection.');
-        } else {
-          alert(errorMessage);
-        }
-        setIsCreatingBooking(false);
-      });
-  }
-
-  React.useEffect(function () {
-    if (showPaystack && !window.PaystackPop) {
-      var script = document.createElement('script');
-      script.src = 'https://js.paystack.co/v1/inline.js';
-      script.async = true;
-      script.onload = function () {
-        setTimeout(function() { setPaystackLoaded(true); }, 100);
-      };
-      script.onerror = function () {
-        setPaymentError('Failed to load payment gateway. Please use "Pay at Venue".');
-        setShowPaystack(false);
-      };
-      document.body.appendChild(script);
-    } else if (showPaystack && window.PaystackPop) {
-      setPaystackLoaded(true);
-    }
-  }, [showPaystack]);
-
-  function handlePaystackPayment() {
-    if (!window.PaystackPop) {
-      setPaymentError('Payment gateway not ready. Please use "Pay at Venue".');
-      return;
-    }
-    
-    setIsPaying(true);
-    setPaymentError('');
-    
-    var amountInKobo = totalAmount * 100;
-    
-    fetch(API_BASE + '/api/create-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bookingReference: createdBooking.booking_reference,
-        email: formData.email,
-        amount: amountInKobo
-      })
-    })
-      .then(function (response) { return response.json(); })
-      .then(function (data) {
-        if (!data.success) {
-          throw new Error(data.error || 'Could not initialize payment');
-        }
-        
-        var paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-        if (!paystackKey) {
-          throw new Error('Payment configuration error');
-        }
-        
-        var handler = window.PaystackPop.setup({
-          key: paystackKey,
-          email: formData.email,
-          amount: amountInKobo,
-          ref: data.reference,
-          currency: 'NGN',
-          metadata: {
-            custom_fields: [{
-              display_name: "Booking Reference",
-              variable_name: "booking_reference",
-              value: createdBooking.booking_reference
-            }]
-          },
-          onClose: function () {
-            setIsPaying(false);
-          },
-          callback: function (response) {
-            verifyPayment(response.reference);
-          }
-        });
-        
-        handler.openIframe();
-      })
-      .catch(function (err) {
-        console.error('Payment init error:', err);
-        setPaymentError(err.message || 'Something went wrong. Please use "Pay at Venue".');
-        setIsPaying(false);
-      });
-  }
-  
-  function verifyPayment(reference) {
-    fetch(API_BASE + '/api/verify-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reference: reference,
-        bookingReference: createdBooking.booking_reference
-      })
-    })
-      .then(function (response) { return response.json(); })
-      .then(function (data) {
-        if (data.success) {
-          setPaymentReceipt({
-            bookingReference: createdBooking.booking_reference,
-            paymentMethod: 'Card (Paystack)',
-            amountPaid: totalAmount,
-            paidAt: new Date().toLocaleString(),
-            transactionId: reference
-          });
-          setShowReceipt(true);
-          setShowPaystack(false);
-        } else {
-          setPaymentError('Payment verification failed. Your booking is confirmed but payment needs verification.');
-        }
-        setIsPaying(false);
-      })
-      .catch(function () {
-        setPaymentError('Payment verification failed. Your booking is confirmed but payment needs verification.');
-        setIsPaying(false);
-      });
-  }
-
-  if (showReceipt && paymentReceipt) {
-    return React.createElement(ReceiptModal, {
-      receipt: paymentReceipt,
-      booking: createdBooking,
-      room: room,
-      dateRange: dateRange,
-      guests: guests,
-      businessName: businessName,
-      onClose: onClose,
-      onSuccess: onSuccess,
-      formatPrice: formatPrice,
-      isMobile: isMobile
-    });
-  }
-
-  // ===== Modal Render =====
-  var modalOverlayStyle = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(15,23,42,0.6)',
-    backdropFilter: 'blur(20px)',
-    display: 'flex',
-    alignItems: isMobile ? 'flex-end' : 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: 0
-  };
-
-  var modalContentStyle = {
+  const receiptStyle = {
     backgroundColor: 'white',
-    borderRadius: isMobile ? '28px 28px 0 0' : '28px',
-    maxWidth: '560px',
+    borderRadius: isMobile ? '16px' : '20px',
+    maxWidth: '600px',
     width: '100%',
-    maxHeight: isMobile ? '92vh' : '85vh',
+    maxHeight: '90vh',
     overflowY: 'auto',
-    boxShadow: isMobile ? '0 -20px 80px rgba(0,0,0,0.15)' : '0 25px 50px -12px rgba(0,0,0,0.25)',
-    paddingBottom: 'env(safe-area-inset-bottom)'
+    boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+    position: 'relative'
   };
 
-  return React.createElement('div', { 
-    className: 'modal-overlay', 
-    onClick: function(e) { if (e.target === e.currentTarget) onClose(); },
-    style: modalOverlayStyle
-  },
-    React.createElement('div', { 
-      className: 'modal-content', 
-      onClick: function (e) { e.stopPropagation(); },
-      style: modalContentStyle
-    },
-      React.createElement('div', { style: styles.modalHandle }),
-      React.createElement('div', { style: styles.modalHeader },
-        React.createElement('h3', { style: styles.modalTitle }, 'Complete Your Booking'),
-        React.createElement('button', { 
-          onClick: onClose,
-          style: styles.modalClose,
-          onMouseEnter: function(e) { e.currentTarget.style.backgroundColor = '#e2e8f0'; },
-          onMouseLeave: function(e) { e.currentTarget.style.backgroundColor = '#f1f5f9'; }
-        }, React.createElement(X, { size: 18 }))
+  const headerStyle = {
+    background: 'linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)',
+    padding: isMobile ? '20px 20px 16px' : '28px 28px 20px',
+    color: 'white',
+    borderTopLeftRadius: isMobile ? '16px' : '20px',
+    borderTopRightRadius: isMobile ? '16px' : '20px',
+    textAlign: 'center'
+  };
+
+  const bodyStyle = {
+    padding: isMobile ? '20px' : '24px'
+  };
+
+  const sectionStyle = {
+    marginBottom: '20px'
+  };
+
+  const sectionTitleStyle = {
+    fontSize: isMobile ? '12px' : '13px',
+    fontWeight: '600',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    marginBottom: '10px'
+  };
+
+  const rowStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: isMobile ? '8px 0' : '10px 0',
+    borderBottom: '1px solid #f1f5f9'
+  };
+
+  const labelStyle = {
+    fontSize: isMobile ? '13px' : '14px',
+    color: '#64748b'
+  };
+
+  const valueStyle = {
+    fontSize: isMobile ? '13px' : '14px',
+    fontWeight: '500',
+    color: '#1A1F36',
+    textAlign: 'right'
+  };
+
+  const totalStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: isMobile ? '12px 0' : '16px 0',
+    borderTop: '2px solid #e2e8f0',
+    marginTop: '8px'
+  };
+
+  const totalLabelStyle = {
+    fontSize: isMobile ? '16px' : '18px',
+    fontWeight: '700',
+    color: '#1A1F36'
+  };
+
+  const totalValueStyle = {
+    fontSize: isMobile ? '20px' : '24px',
+    fontWeight: '700',
+    color: '#4F46E5'
+  };
+
+  const statusBadgeStyle = {
+    display: 'inline-block',
+    padding: '4px 16px',
+    borderRadius: '999px',
+    backgroundColor: '#d1fae5',
+    color: '#065f46',
+    fontSize: '13px',
+    fontWeight: '500'
+  };
+
+  return React.createElement(
+    'div',
+    { style: receiptStyle },
+    // Header
+    React.createElement(
+      'div',
+      { style: headerStyle },
+      React.createElement(
+        'div',
+        { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '8px' } },
+        React.createElement(CheckCircle, { size: isMobile ? 32 : 40 }),
+        React.createElement(
+          'h2',
+          { style: { fontSize: isMobile ? '20px' : '24px', fontWeight: '700', margin: 0 } },
+          'Booking Confirmed!'
+        )
       ),
-      React.createElement('div', { style: styles.modalBody },
-        React.createElement('div', { style: styles.modalSummary },
-          React.createElement('div', { style: styles.modalSummaryRow },
-            React.createElement('span', { style: styles.modalSummaryLabel }, 'Room'),
-            React.createElement('span', { style: styles.modalSummaryValue }, room.name)
-          ),
-          React.createElement('div', { style: styles.modalSummaryRow },
-            React.createElement('span', { style: styles.modalSummaryLabel }, 'Total'),
-            React.createElement('span', { style: { ...styles.modalSummaryValue, color: '#4F46E5', fontWeight: '700' } }, 
-              formatPrice(totalAmount)
-            )
+      React.createElement(
+        'p',
+        { style: { fontSize: isMobile ? '13px' : '15px', opacity: 0.9, margin: 0 } },
+        'Your booking has been confirmed successfully'
+      )
+    ),
+    // Body
+    React.createElement(
+      'div',
+      { style: bodyStyle },
+      // Status & Reference
+      React.createElement(
+        'div',
+        { style: { ...sectionStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } },
+        React.createElement(
+          'span',
+          { style: statusBadgeStyle },
+          'Confirmed'
+        ),
+        React.createElement(
+          'span',
+          { style: { fontSize: '13px', color: '#94a3b8' } },
+          'Ref: ' + (booking?.booking_reference || generateOrderId())
+        )
+      ),
+      // Venue Info
+      React.createElement(
+        'div',
+        { style: sectionStyle },
+        React.createElement(
+          'h4',
+          { style: sectionTitleStyle },
+          React.createElement(Building2, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
+          'Venue Details'
+        ),
+        React.createElement(
+          'div',
+          { style: { marginBottom: '4px', fontSize: isMobile ? '16px' : '18px', fontWeight: '600', color: '#1A1F36' } },
+          venue?.name || business?.name
+        ),
+        React.createElement(
+          'div',
+          { style: { fontSize: '13px', color: '#64748b' } },
+          venue?.address || business?.address || business?.city || ''
+        )
+      ),
+      // Customer Info
+      React.createElement(
+        'div',
+        { style: sectionStyle },
+        React.createElement(
+          'h4',
+          { style: sectionTitleStyle },
+          React.createElement(User, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
+          'Customer Details'
+        ),
+        React.createElement(
+          'div',
+          { style: rowStyle },
+          React.createElement('span', { style: labelStyle }, 'Full Name'),
+          React.createElement('span', { style: valueStyle }, booking?.customer_name || '')
+        ),
+        React.createElement(
+          'div',
+          { style: rowStyle },
+          React.createElement('span', { style: labelStyle }, 'Email'),
+          React.createElement('span', { style: valueStyle }, booking?.customer_email || '')
+        ),
+        React.createElement(
+          'div',
+          { style: { ...rowStyle, borderBottom: 'none' } },
+          React.createElement('span', { style: labelStyle }, 'Phone'),
+          React.createElement('span', { style: valueStyle }, booking?.customer_phone || '')
+        )
+      ),
+      // Booking Details
+      React.createElement(
+        'div',
+        { style: sectionStyle },
+        React.createElement(
+          'h4',
+          { style: sectionTitleStyle },
+          React.createElement(CalendarCheck, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
+          'Booking Details'
+        ),
+        React.createElement(
+          'div',
+          { style: rowStyle },
+          React.createElement('span', { style: labelStyle }, 'Event Date'),
+          React.createElement('span', { style: valueStyle }, formatDate(booking?.check_in_date || ''))
+        ),
+        React.createElement(
+          'div',
+          { style: rowStyle },
+          React.createElement('span', { style: labelStyle }, 'Venue'),
+          React.createElement('span', { style: valueStyle }, venue?.name || '')
+        ),
+        React.createElement(
+          'div',
+          { style: { ...rowStyle, borderBottom: 'none' } },
+          React.createElement('span', { style: labelStyle }, 'Payment Method'),
+          React.createElement('span', { style: valueStyle }, 
+            booking?.payment_method === 'paystack' ? 'Pay Online' : 'Pay at Venue'
           )
+        )
+      ),
+      // Payment Summary
+      React.createElement(
+        'div',
+        { style: sectionStyle },
+        React.createElement(
+          'h4',
+          { style: sectionTitleStyle },
+          React.createElement(Banknote, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
+          'Payment Summary'
         ),
-        // ===== FULL NAME FIELD =====
-        React.createElement('div', { style: styles.formGroup },
-          React.createElement('label', { style: styles.formLabel },
-            React.createElement(Users, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
-            'Full Name *'
-          ),
-          React.createElement('input', {
-            type: 'text',
-            name: 'name',
-            value: formData.name,
-            onChange: function(e) { setFormData({ ...formData, name: e.target.value }); },
-            placeholder: 'Enter your full name',
-            style: styles.formInput,
-            onFocus: function(e) { e.target.style.borderColor = '#4F46E5'; },
-            onBlur: function(e) { e.target.style.borderColor = '#e2e8f0'; }
-          })
+        React.createElement(
+          'div',
+          { style: rowStyle },
+          React.createElement('span', { style: labelStyle }, 'Venue Fee'),
+          React.createElement('span', { style: valueStyle }, formatCurrency(booking?.total_amount || 0))
         ),
-        // ===== EMAIL FIELD =====
-        React.createElement('div', { style: styles.formGroup },
-          React.createElement('label', { style: styles.formLabel },
-            React.createElement(Mail, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
-            'Email Address *'
-          ),
-          React.createElement('input', {
-            type: 'email',
-            name: 'email',
-            value: formData.email,
-            onChange: function(e) { setFormData({ ...formData, email: e.target.value }); },
-            placeholder: 'your@email.com',
-            style: styles.formInput,
-            onFocus: function(e) { e.target.style.borderColor = '#4F46E5'; },
-            onBlur: function(e) { e.target.style.borderColor = '#e2e8f0'; }
-          })
+        React.createElement(
+          'div',
+          { style: totalStyle },
+          React.createElement('span', { style: totalLabelStyle }, 'Total'),
+          React.createElement('span', { style: totalValueStyle }, formatCurrency(booking?.total_amount || 0))
         ),
-        // ===== PHONE FIELD =====
-        React.createElement('div', { style: styles.formGroup },
-          React.createElement('label', { style: styles.formLabel },
-            React.createElement(Phone, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
-            'Phone Number *'
-          ),
-          React.createElement('input', {
-            type: 'tel',
-            name: 'phone',
-            value: formData.phone,
-            onChange: function(e) { setFormData({ ...formData, phone: e.target.value }); },
-            placeholder: '080 1234 5678',
-            style: styles.formInput,
-            onFocus: function(e) { e.target.style.borderColor = '#4F46E5'; },
-            onBlur: function(e) { e.target.style.borderColor = '#e2e8f0'; }
-          })
-        ),
-        // ===== SPECIAL REQUESTS =====
-        React.createElement('div', { style: styles.formGroup },
-          React.createElement('label', { style: styles.formLabel }, 'Special Requests'),
-          React.createElement('textarea', {
-            name: 'specialRequests',
-            value: formData.specialRequests,
-            onChange: function(e) { setFormData({ ...formData, specialRequests: e.target.value }); },
-            placeholder: 'Any special requests...',
-            style: { ...styles.formInput, minHeight: '50px', resize: 'vertical', fontFamily: 'inherit' },
-            onFocus: function(e) { e.target.style.borderColor = '#4F46E5'; },
-            onBlur: function(e) { e.target.style.borderColor = '#e2e8f0'; }
-          })
-        ),
-        // ===== PAYMENT METHOD =====
-        React.createElement('div', { style: styles.formGroup },
-          React.createElement('label', { style: styles.formLabel },
-            React.createElement(CreditCard, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
-            'Payment Method'
-          ),
-          React.createElement('div', { style: styles.paymentOptions },
-            React.createElement('div', {
-              style: paymentMethod === 'venue' ? styles.paymentOptionPrimarySelected : styles.paymentOptionPrimary,
-              onClick: function() { setPaymentMethod('venue'); }
-            },
-              React.createElement(MapPin, { size: 20, color: paymentMethod === 'venue' ? '#4F46E5' : '#64748b', style: styles.paymentOptionIcon }),
-              React.createElement('span', { style: styles.paymentOptionLabel }, 'Pay at Venue'),
-              React.createElement('span', { style: styles.paymentOptionDesc }, 'Pay when you arrive'),
-              paymentMethod === 'venue' && React.createElement('div', { style: styles.recommendedBadge }, 'RECOMMENDED')
-            ),
-            React.createElement('div', {
-              style: paymentMethod === 'card' ? styles.paymentOptionSelected : styles.paymentOption,
-              onClick: function() { setPaymentMethod('card'); }
-            },
-              React.createElement(CreditCard, { size: 20, color: paymentMethod === 'card' ? '#4F46E5' : '#64748b', style: styles.paymentOptionIcon }),
-              React.createElement('span', { style: styles.paymentOptionLabel }, 'Pay with Card'),
-              React.createElement('span', { style: styles.paymentOptionDesc }, 'Secure online payment')
-            )
+        booking?.payment_method === 'paystack' ?
+          React.createElement(
+            'div',
+            { style: { marginTop: '12px', padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '8px', textAlign: 'center', fontSize: '13px', color: '#065f46' } },
+            React.createElement(CheckCircle, { size: 16, style: { display: 'inline', marginRight: '6px' } }),
+            'Payment processed successfully'
+          ) :
+          React.createElement(
+            'div',
+            { style: { marginTop: '12px', padding: '12px', backgroundColor: '#fef3c7', borderRadius: '8px', textAlign: 'center', fontSize: '13px', color: '#92400e' } },
+            'Pay at venue on the day of your event'
           )
-        ),
-        // ===== SUBMIT BUTTON =====
-        React.createElement('button', {
-          onClick: function() { createAndProcessBooking(paymentMethod); },
-          disabled: isCreatingBooking,
-          style: isCreatingBooking ? styles.submitButtonDisabled : styles.submitButton,
-          onMouseEnter: function(e) {
-            if (!isCreatingBooking) {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 30px rgba(79,70,229,0.3)';
+      ),
+      // Footer Actions
+      React.createElement(
+        'div',
+        { style: { display: 'flex', gap: '10px', marginTop: '16px', flexDirection: isMobile ? 'column' : 'row' } },
+        React.createElement(
+          'button',
+          {
+            onClick: onPrint,
+            style: {
+              flex: 1,
+              padding: isMobile ? '12px' : '14px',
+              backgroundColor: '#f1f5f9',
+              color: '#475569',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
             }
           },
-          onMouseLeave: function(e) {
-            if (!isCreatingBooking) {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 20px rgba(79,70,229,0.2)';
+          React.createElement(Printer, { size: 18 }),
+          'Print Receipt'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: onClose,
+            style: {
+              flex: 2,
+              padding: isMobile ? '12px' : '14px',
+              backgroundColor: '#4F46E5',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
             }
+          },
+          React.createElement(Check, { size: 18 }),
+          'Done'
+        )
+      ),
+      // Email note
+      React.createElement(
+        'p',
+        {
+          style: {
+            textAlign: 'center',
+            fontSize: '12px',
+            color: '#94a3b8',
+            marginTop: '16px',
+            paddingTop: '12px',
+            borderTop: '1px solid #f1f5f9'
           }
         },
-          isCreatingBooking ? 
-            React.createElement(Loader, { size: 18, style: { animation: 'spin 1s linear infinite', display: 'inline', marginRight: '8px' } }) :
-            React.createElement(Check, { size: 18, style: { display: 'inline', marginRight: '8px' } }),
-          isCreatingBooking ? 'Processing...' : paymentMethod === 'venue' ? 'Confirm & Pay at Venue' : 'Pay with Card'
-        )
+        'A confirmation email has been sent to your inbox'
       )
     )
   );
 }
 
 // ============================================================
-// RECEIPT MODAL - Mobile Responsive
+// MAIN COMPONENT
 // ============================================================
-function ReceiptModal({ receipt, booking, room, dateRange, guests, businessName, onClose, onSuccess, formatPrice, isMobile }) {
-  var _useState = React.useState(false);
-  var isClosing = _useState[0];
-  var setIsClosing = _useState[1];
-  var _useState2 = React.useState(window.innerWidth >= 768);
-  var isDesktop = _useState2[0];
+function UnifiedBookingPage() {
+  const params = useParams();
+  const navigate = useNavigate();
+  const businessSlug = params.businessSlug || params.slug;
 
-  React.useEffect(function() {
-    document.body.style.overflow = 'hidden';
-    return function() {
-      document.body.style.overflow = '';
-    };
-  }, []);
+  // ============================================================
+  // STATE
+  // ============================================================
+  const [loading, setLoading] = useState(true);
+  const [business, setBusiness] = useState(null);
+  const [rooms, setRooms] = useState([]);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [selectedRoomIndex, setSelectedRoomIndex] = useState(0);
+  const [gallery, setGallery] = useState([]);
+  const [phoneNumbers, setPhoneNumbers] = useState([]);
+  const [bookingLimit, setBookingLimit] = useState({ canBook: true, remaining: 50 });
+  const [viewCount, setViewCount] = useState(0);
 
-  function handleDone() {
-    setIsClosing(true);
-    setTimeout(function() {
-      onSuccess();
-      onClose();
-    }, 300);
-  }
+  // Gallery
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [galleryMainIndex, setGalleryMainIndex] = useState(0);
 
-  function handleDownload() {
-    var receiptHtml = document.getElementById('receipt-content');
-    if (receiptHtml) {
-      var printWindow = window.open('', '_blank');
-      printWindow.document.write('<!DOCTYPE html><html><head><title>Booking Receipt</title><style>');
-      printWindow.document.write('body { font-family: Inter, system-ui, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; background: #f8fafc; }');
-      printWindow.document.write('.receipt-card { background: white; border-radius: 20px; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }');
-      printWindow.document.write('</style></head><body>');
-      printWindow.document.write('<div class="receipt-card">');
-      printWindow.document.write(receiptHtml.cloneNode(true).outerHTML);
-      printWindow.document.write('</div></body></html>');
-      printWindow.document.close();
-      printWindow.print();
+  // Description
+  const [showFullDescription, setShowFullDescription] = useState(false);
+
+  // Booking modal
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [eventDate, setEventDate] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [specialRequests, setSpecialRequests] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('pay_at_venue');
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+
+  // Receipt state
+  const [receiptData, setReceiptData] = useState(null);
+  const [showReceipt, setShowReceipt] = useState(false);
+
+  // Call modal
+  const [callModalOpen, setCallModalOpen] = useState(false);
+
+  // ============================================================
+  // FETCH DATA
+  // ============================================================
+  useEffect(() => {
+    if (!businessSlug) {
+      toast.error('No business specified');
+      setLoading(false);
+      return;
+    }
+    fetchAllData();
+  }, [businessSlug]);
+
+  async function fetchAllData() {
+    setLoading(true);
+    try {
+      const businessRes = await fetchAPI(`/api/businesses/slug/${businessSlug}`);
+      if (!businessRes.success || !businessRes.business) {
+        toast.error('Business not found');
+        setLoading(false);
+        return;
+      }
+      const biz = businessRes.business;
+      setBusiness(biz);
+      setViewCount(biz.view_count || 0);
+
+      const roomsRes = await fetchAPI(`/api/businesses/${biz.id}/rooms`);
+      if (roomsRes.success) {
+        const roomData = roomsRes.rooms || [];
+        setRooms(roomData);
+        if (roomData.length > 0) {
+          setSelectedRoom(roomData[0]);
+          setSelectedRoomIndex(0);
+        }
+      }
+
+      const galleryRes = await fetchAPI(`/api/businesses/${biz.id}/gallery`);
+      if (galleryRes.success) {
+        setGallery(galleryRes.images || []);
+      }
+
+      const phoneRes = await fetchAPI(`/api/businesses/${biz.id}/phone-numbers/public`);
+      if (phoneRes.success) {
+        setPhoneNumbers(phoneRes.phoneNumbers || []);
+      }
+
+      const capacityRes = await fetchAPI(`/api/businesses/${biz.id}/booking-capacity`);
+      if (capacityRes.success) {
+        setBookingLimit({
+          canBook: capacityRes.canBook,
+          remaining: capacityRes.remaining || 0
+        });
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      toast.error('Failed to load business data');
+    } finally {
+      setLoading(false);
     }
   }
 
-  return React.createElement('div', { 
-    className: 'modal-overlay', 
-    onClick: function() { if (!isClosing) handleDone(); },
-    style: { 
-      position: 'fixed', 
-      inset: 0, 
-      background: 'rgba(0,0,0,0.7)', 
-      backdropFilter: 'blur(8px)', 
-      display: 'flex', 
-      alignItems: isMobile ? 'flex-end' : 'center',
-      justifyContent: 'center', 
-      zIndex: 9999, 
-      padding: isMobile ? '0' : '20px'
-    } 
-  },
-    React.createElement('div', { 
-      className: 'modal-content', 
-      onClick: function (e) { e.stopPropagation(); },
-      style: { 
-        maxWidth: '480px', 
-        width: '100%', 
-        padding: 0,
-        overflow: 'visible',
-        background: 'white',
-        borderRadius: isMobile ? '24px 24px 0 0' : '28px',
-        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-        maxHeight: 'none',
-        height: 'auto',
-        marginTop: isMobile ? 'auto' : 0
-      } 
-    },
-      React.createElement('div', { style: { 
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-        padding: isMobile ? '20px 16px' : '28px 24px',
-        textAlign: 'center',
-        color: 'white',
-        borderRadius: isMobile ? '24px 24px 0 0' : '28px 28px 0 0'
-      } },
-        React.createElement('div', { style: { 
-          width: isMobile ? '48px' : '64px', 
-          height: isMobile ? '48px' : '64px', 
-          background: 'rgba(255,255,255,0.2)', 
-          borderRadius: '50%', 
-          display: 'flex', 
-          alignItems: 'center', 
+  // ============================================================
+  // GALLERY NAVIGATION
+  // ============================================================
+  const allImages = [
+    business?.cover_image,
+    ...gallery.map(g => g.image_url)
+  ].filter(Boolean);
+
+  const mainImage = allImages.length > 0 ? allImages[galleryMainIndex] : null;
+  const thumbnails = allImages.slice(0, 4);
+  const remainingImages = allImages.length - 4;
+
+  function goToPrevMain() {
+    setGalleryMainIndex(prev => (prev > 0 ? prev - 1 : allImages.length - 1));
+  }
+
+  function goToNextMain() {
+    setGalleryMainIndex(prev => (prev < allImages.length - 1 ? prev + 1 : 0));
+  }
+
+  function openLightbox(index) {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    setLightboxOpen(false);
+    document.body.style.overflow = 'auto';
+  }
+
+  function goToPrevLightbox() {
+    setLightboxIndex(prev => (prev > 0 ? prev - 1 : allImages.length - 1));
+  }
+
+  function goToNextLightbox() {
+    setLightboxIndex(prev => (prev < allImages.length - 1 ? prev + 1 : 0));
+  }
+
+  // ============================================================
+  // VENUE SELECTION
+  // ============================================================
+  function selectVenue(index) {
+    if (rooms[index]) {
+      setSelectedRoom(rooms[index]);
+      setSelectedRoomIndex(index);
+      setGalleryMainIndex(0);
+    }
+  }
+
+  // ============================================================
+  // BOOKING HANDLERS
+  // ============================================================
+  function openBookingModal(room) {
+    if (!bookingLimit.canBook) {
+      toast.error('This business has reached its booking limit. Please contact them directly.');
+      return;
+    }
+    setSelectedRoom(room || rooms[0]);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setEventDate(tomorrow.toISOString().split('T')[0]);
+    setCustomerName('');
+    setCustomerEmail('');
+    setCustomerPhone('');
+    setSpecialRequests('');
+    setPaymentMethod('pay_at_venue');
+    setBookingModalOpen(true);
+  }
+
+  function closeBookingModal() {
+    setBookingModalOpen(false);
+  }
+
+  async function handleBookingSubmit(e) {
+    e.preventDefault();
+    if (!selectedRoom) {
+      toast.error('Please select a venue');
+      return;
+    }
+    if (!customerName || customerName.trim().length < 2) {
+      toast.error('Please enter your full name');
+      return;
+    }
+    if (!customerEmail || !customerEmail.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    if (!customerPhone || customerPhone.trim().length < 10) {
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+    if (!eventDate) {
+      toast.error('Please select an event date');
+      return;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(eventDate);
+    if (selectedDate < today) {
+      toast.error('Event date cannot be in the past');
+      return;
+    }
+
+    setBookingSubmitting(true);
+
+    const totalAmount = selectedRoom.price_per_night;
+
+    const payload = {
+      businessId: business.id,
+      roomId: selectedRoom.id,
+      customerName: customerName.trim(),
+      customerEmail: customerEmail.trim(),
+      customerPhone: customerPhone.trim(),
+      totalAmount: totalAmount,
+      checkIn: eventDate,
+      checkOut: eventDate,
+      guests: 1,
+      specialRequests: specialRequests.trim(),
+      paymentMethod: paymentMethod,
+      bookingDetails: {
+        roomName: selectedRoom.name,
+        hotelName: business.name,
+        checkIn: eventDate,
+        checkOut: eventDate,
+        guests: 1,
+        nights: 1,
+        total: totalAmount,
+        paymentMethod: paymentMethod === 'pay_at_venue' ? 'Pay at Venue' : 'Paystack'
+      }
+    };
+
+    try {
+      const result = await fetchAPI('/api/bookings', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (result.success) {
+        // Close booking modal
+        closeBookingModal();
+        
+        // Show receipt with booking data
+        setReceiptData({
+          booking: result.booking,
+          customerName: customerName.trim(),
+          customerEmail: customerEmail.trim(),
+          customerPhone: customerPhone.trim(),
+          eventDate: eventDate,
+          totalAmount: totalAmount,
+          paymentMethod: paymentMethod,
+          bookingReference: result.booking?.booking_reference || generateOrderId(),
+          venue: selectedRoom,
+          business: business
+        });
+        setShowReceipt(true);
+        
+        // Refresh booking limit
+        const capacityRes = await fetchAPI(`/api/businesses/${business.id}/booking-capacity`);
+        if (capacityRes.success) {
+          setBookingLimit({
+            canBook: capacityRes.canBook,
+            remaining: capacityRes.remaining || 0
+          });
+        }
+      } else {
+        toast.error(result.error || 'Booking failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setBookingSubmitting(false);
+    }
+  }
+
+  // ============================================================
+  // RECEIPT HANDLERS
+  // ============================================================
+  function closeReceipt() {
+    setShowReceipt(false);
+    setReceiptData(null);
+  }
+
+  function printReceipt() {
+    window.print();
+  }
+
+  // ============================================================
+  // CALL HANDLER
+  // ============================================================
+  function getPrimaryPhone() {
+    return business?.phone || '';
+  }
+
+  function copyPhone(phone) {
+    if (!phone) {
+      toast.error('No phone number available');
+      return;
+    }
+    navigator.clipboard.writeText(phone).then(() => {
+      toast.success('Phone number copied!');
+    }).catch(() => {
+      toast.error('Could not copy phone number');
+    });
+  }
+
+  // ============================================================
+  // RENDER HELPERS
+  // ============================================================
+  const isMobile = window.innerWidth < 640;
+
+  // ============================================================
+  // RENDER: LOADING
+  // ============================================================
+  if (loading) {
+    return React.createElement(
+      'div',
+      {
+        style: {
+          display: 'flex',
           justifyContent: 'center',
-          margin: '0 auto 12px'
-        } },
-          React.createElement(Check, { size: isMobile ? 24 : 32, strokeWidth: 2 })
-        ),
-        React.createElement('h2', { style: { fontSize: isMobile ? '1.25rem' : '1.5rem', fontWeight: '700', marginBottom: '4px' } }, 'Booking Confirmed!'),
-        React.createElement('p', { style: { fontSize: isMobile ? '0.75rem' : '0.9rem', opacity: 0.9, margin: 0 } }, 
-          receipt.paymentMethod === 'Pay at Venue' 
-            ? 'Your booking has been confirmed. Pay upon arrival.'
-            : 'Payment successful! Your booking is confirmed.'
-        )
-      ),
-      
-      React.createElement('div', { id: 'receipt-content', style: { padding: isMobile ? '16px' : '24px' } },
-        React.createElement('div', { style: { textAlign: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' } },
-          React.createElement('h3', { style: { fontSize: isMobile ? '1rem' : '1.125rem', fontWeight: '700', marginBottom: '2px', color: '#0f172a' } }, businessName),
-          React.createElement('p', { style: { fontSize: isMobile ? '0.6rem' : '0.7rem', color: '#94a3b8' } }, 'Booking Confirmation')
-        ),
-        
-        React.createElement('div', { style: { 
-          background: '#f8fafc', 
-          padding: isMobile ? '8px' : '12px', 
-          borderRadius: '12px', 
-          textAlign: 'center',
-          marginBottom: '16px'
-        } },
-          React.createElement('p', { style: { fontSize: isMobile ? '0.55rem' : '0.65rem', color: '#64748b', marginBottom: '2px' } }, 'Booking Reference'),
-          React.createElement('p', { style: { fontSize: isMobile ? '0.8rem' : '0.9rem', fontWeight: '700', fontFamily: 'monospace', letterSpacing: '1px', color: '#0f172a' } }, receipt.bookingReference)
-        ),
-        
-        booking && React.createElement('div', { style: { marginBottom: '16px', padding: isMobile ? '12px' : '16px', background: '#f8fafc', borderRadius: '16px' } },
-          React.createElement('p', { style: { fontSize: isMobile ? '0.6rem' : '0.7rem', fontWeight: '600', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' } }, 'Customer Details'),
-          React.createElement('p', { style: { fontSize: isMobile ? '0.8rem' : '0.85rem', fontWeight: '500', color: '#0f172a', marginBottom: '2px' } }, booking.customer_name),
-          React.createElement('p', { style: { fontSize: isMobile ? '0.65rem' : '0.75rem', color: '#64748b', marginBottom: '1px' } }, booking.customer_email),
-          React.createElement('p', { style: { fontSize: isMobile ? '0.65rem' : '0.75rem', color: '#64748b' } }, booking.customer_phone)
-        ),
-        
-        React.createElement('div', { style: { 
-          display: 'flex', 
-          justifyContent: 'space-between', 
           alignItems: 'center',
-          paddingTop: '12px',
-          marginTop: '4px',
-          borderTop: '2px solid #4f46e5'
-        } },
-          React.createElement('span', { style: { fontSize: isMobile ? '0.8rem' : '0.9rem', fontWeight: '600', color: '#0f172a' } }, 'Total ' + (receipt.paymentMethod === 'Pay at Venue' ? 'to pay' : 'paid')),
-          React.createElement('span', { style: { fontSize: isMobile ? '1rem' : '1.25rem', fontWeight: '800', color: receipt.paymentMethod === 'Pay at Venue' ? '#d97706' : '#10b981' } }, formatPrice(receipt.amountPaid))
-        ),
-        
-        React.createElement('p', { style: { fontSize: isMobile ? '0.55rem' : '0.65rem', color: '#94a3b8', textAlign: 'center', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' } }, 
-          receipt.paymentMethod === 'Pay at Venue' 
-            ? 'A confirmation email has been sent. Please pay upon arrival.'
-            : 'A confirmation email has been sent to your email address.'
-        )
-      ),
-      
-      React.createElement('div', { style: { 
-        padding: isMobile ? '12px 16px 16px' : '16px 24px 24px',
-        display: 'flex',
-        gap: '10px',
-        borderTop: '1px solid #e2e8f0',
-        background: '#f8fafc',
-        borderRadius: '0 0 24px 24px'
-      } },
-        React.createElement('button', { 
-          onClick: handleDownload, 
-          style: { 
-            flex: 1, 
-            padding: isMobile ? '10px' : '12px',
-            background: 'white',
-            border: '1.5px solid #e2e8f0',
-            borderRadius: '40px',
-            color: '#475569',
-            fontSize: isMobile ? '0.75rem' : '0.85rem',
-            fontWeight: '600',
+          minHeight: '100vh',
+          backgroundColor: '#f8fafc'
+        }
+      },
+      React.createElement(Loader, { 
+        size: 48, 
+        className: 'animate-spin', 
+        color: '#4F46E5',
+        style: { animation: 'spin 1s linear infinite' }
+      })
+    );
+  }
+
+  if (!business) {
+    return React.createElement(
+      'div',
+      {
+        style: {
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          flexDirection: 'column',
+          backgroundColor: '#f8fafc'
+        }
+      },
+      React.createElement(AlertCircle, { size: 48, color: '#EF4444' }),
+      React.createElement('h2', { style: { marginTop: '16px', color: '#1A1F36' } }, 'Business Not Found'),
+      React.createElement('p', { style: { color: '#64748B' } }, 'The business you\'re looking for doesn\'t exist.'),
+      React.createElement(
+        'button',
+        {
+          onClick: () => navigate('/'),
+          style: {
+            marginTop: '20px',
+            padding: '12px 24px',
+            backgroundColor: '#4F46E5',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
             cursor: 'pointer',
+            fontSize: '16px'
+          }
+        },
+        'Go Home'
+      )
+    );
+  }
+
+  if (rooms.length === 0) {
+    return React.createElement(
+      'div',
+      {
+        style: {
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          flexDirection: 'column',
+          backgroundColor: '#f8fafc',
+          padding: '20px'
+        }
+      },
+      React.createElement(Building2, { size: 48, color: '#94a3b8' }),
+      React.createElement('h2', { style: { marginTop: '16px', color: '#1A1F36' } }, 'No Venues Available'),
+      React.createElement('p', { style: { color: '#64748B', textAlign: 'center' } }, 
+        'This business has no venues listed yet. Check back later!'
+      ),
+      React.createElement(
+        'button',
+        {
+          onClick: () => navigate('/'),
+          style: {
+            marginTop: '20px',
+            padding: '12px 24px',
+            backgroundColor: '#4F46E5',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '16px'
+          }
+        },
+        'Go Home'
+      )
+    );
+  }
+
+  // ============================================================
+  // RENDER: MAIN - USE VENUE DATA
+  // ============================================================
+  const venue = selectedRoom || rooms[0];
+  const venueName = venue?.name || business.name;
+  const venueAddress = venue?.address || business.address || business.city || 'Address not specified';
+  const venuePrice = venue?.price_per_night || 0;
+  const venueDescription = venue?.description || venue?.venue_description || business.description || '';
+  const venueImages = venue?.images || [];
+
+  const venueFeatures = venue?.features || [];
+  const venueAmenities = venue?.amenities || [];
+  const venueAreaGuide = venue?.area_guide || [];
+  
+  const venuePropertyDetails = {
+    ref_id: venue?.ref_id || '',
+    property_type: venue?.property_type || business?.business_type || 'Venue',
+    property_size: venue?.property_size || '',
+    bedrooms: venue?.bedrooms || 0,
+    bathrooms: venue?.bathrooms || 0,
+    parking_spaces: venue?.parking_spaces || 0,
+    year_built: venue?.year_built || '',
+    furnishing_status: venue?.furnishing_status || 'unfurnished',
+    listing_status: venue?.listing_status || 'for_rent'
+  };
+
+  const statusDisplay = venuePropertyDetails.listing_status.split('_').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+
+  const furnishingDisplay = venuePropertyDetails.furnishing_status.charAt(0).toUpperCase() + 
+    venuePropertyDetails.furnishing_status.slice(1);
+
+  const allVenueImages = [...venueImages, ...gallery.map(g => g.image_url)].filter(Boolean);
+  const displayImages = allVenueImages.length > 0 ? allVenueImages : [business?.cover_image].filter(Boolean);
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+  return React.createElement(
+    'div',
+    {
+      className: 'unified-booking-page',
+      style: {
+        minHeight: '100vh',
+        backgroundColor: '#f8fafc',
+        fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
+      }
+    },
+    // BACK BUTTON
+    React.createElement(
+      'div',
+      {
+        style: {
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(12px)',
+          padding: '12px 16px',
+          borderBottom: '1px solid rgba(226,232,240,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }
+      },
+      React.createElement(
+        'button',
+        {
+          onClick: () => navigate('/'),
+          style: {
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            justifyContent: 'center'
-          },
-          onMouseEnter: function(e) { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.borderColor = '#cbd5e1'; },
-          onMouseLeave: function(e) { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.borderColor = '#e2e8f0'; }
-        }, React.createElement(Download, { size: isMobile ? 14 : 16 }), 'Receipt'),
-        React.createElement('button', { 
-          onClick: handleDone, 
-          style: { 
-            flex: 1, 
-            padding: isMobile ? '10px' : '12px', 
-            background: 'linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%)',
+            gap: '8px',
+            background: 'none',
             border: 'none',
-            borderRadius: '40px',
-            color: 'white',
-            fontSize: isMobile ? '0.75rem' : '0.85rem',
-            fontWeight: '600',
             cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(79,70,229,0.25)'
+            padding: '8px 12px',
+            borderRadius: '999px',
+            backgroundColor: 'rgba(79, 70, 229, 0.08)',
+            color: '#4F46E5',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        },
+        React.createElement(ArrowLeft, { size: 20 }),
+        React.createElement('span', { style: { display: isMobile ? 'none' : 'inline' } }, 'Back')
+      ),
+      React.createElement(
+        'span',
+        {
+          style: {
+            fontSize: '14px',
+            color: '#64748B',
+            fontWeight: '400',
+            flex: 1,
+            textAlign: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }
+        },
+        venueName
+      ),
+      React.createElement(
+        'button',
+        {
+          onClick: () => {
+            if (navigator.share) {
+              navigator.share({
+                title: venueName,
+                url: window.location.href
+              });
+            }
           },
-          onMouseEnter: function(e) { e.currentTarget.style.transform = 'scale(1.01)'; },
-          onMouseLeave: function(e) { e.currentTarget.style.transform = 'scale(1)'; }
-        }, 'Done')
+          style: {
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '8px',
+            color: '#64748B'
+          }
+        },
+        React.createElement(Share2, { size: 20 })
       )
+    ),
+    // VENUE SELECTOR
+    rooms.length > 1 &&
+      React.createElement(
+        'div',
+        {
+          style: {
+            display: 'flex',
+            gap: '8px',
+            overflowX: 'auto',
+            padding: '12px 16px',
+            backgroundColor: 'white',
+            borderBottom: '1px solid #e2e8f0'
+          }
+        },
+        rooms.map((room, idx) =>
+          React.createElement(
+            'button',
+            {
+              key: room.id,
+              onClick: () => selectVenue(idx),
+              style: {
+                padding: '6px 16px',
+                borderRadius: '20px',
+                border: selectedRoomIndex === idx ? '2px solid #4F46E5' : '1px solid #e2e8f0',
+                backgroundColor: selectedRoomIndex === idx ? '#EEF2FF' : 'white',
+                color: selectedRoomIndex === idx ? '#4F46E5' : '#64748B',
+                fontSize: '13px',
+                fontWeight: selectedRoomIndex === idx ? '600' : '400',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }
+            },
+            room.name
+          )
+        )
+      ),
+    // MAIN CONTENT
+    React.createElement(
+      'div',
+      {
+        style: {
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '16px 16px 100px',
+          width: '100%'
+        }
+      },
+      // VENUE INFO HEADER CARD
+      React.createElement(
+        'div',
+        {
+          style: {
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '20px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            border: '1px solid rgba(226,232,240,0.6)'
+          }
+        },
+        React.createElement(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              flexWrap: 'wrap',
+              gap: '12px',
+              marginBottom: '8px'
+            }
+          },
+          React.createElement(
+            'div',
+            { style: { flex: 1 } },
+            React.createElement(
+              'div',
+              {
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  flexWrap: 'wrap',
+                  marginBottom: '4px'
+                }
+              },
+              React.createElement(
+                'span',
+                {
+                  style: {
+                    backgroundColor: '#4F46E5',
+                    color: 'white',
+                    padding: '2px 12px',
+                    borderRadius: '999px',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    textTransform: 'uppercase'
+                  }
+                },
+                'Premium'
+              ),
+              React.createElement(
+                'span',
+                {
+                  style: {
+                    backgroundColor: '#f1f5f9',
+                    color: '#475569',
+                    padding: '2px 12px',
+                    borderRadius: '999px',
+                    fontSize: '11px',
+                    fontWeight: '500'
+                  }
+                },
+                statusDisplay
+              )
+            ),
+            React.createElement(
+              'h1',
+              {
+                style: {
+                  fontSize: isMobile ? '22px' : '28px',
+                  fontWeight: '700',
+                  color: '#1A1F36',
+                  margin: '4px 0 4px 0'
+                }
+              },
+              venueName
+            ),
+            React.createElement(
+              'div',
+              {
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  fontSize: '13px',
+                  color: '#64748B'
+                }
+              },
+              React.createElement(
+                'span',
+                { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+                React.createElement(MapPin, { size: 14 }),
+                venueAddress
+              ),
+              venuePropertyDetails.ref_id &&
+                React.createElement(
+                  'span',
+                  { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+                  React.createElement(Tag, { size: 14 }),
+                  'Ref: ' + venuePropertyDetails.ref_id
+                ),
+              React.createElement(
+                'span',
+                { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+                React.createElement(Calendar, { size: 14 }),
+                'Posted ' + timeAgo(venue?.created_at || business.created_at)
+              ),
+              React.createElement(
+                'span',
+                { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+                React.createElement(Eye, { size: 14 }),
+                (venue?.view_count || viewCount) + ' views'
+              )
+            )
+          ),
+          React.createElement(
+            'div',
+            {
+              style: {
+                textAlign: 'right',
+                minWidth: '100px',
+                backgroundColor: '#EEF2FF',
+                padding: '8px 16px',
+                borderRadius: '12px'
+              }
+            },
+            React.createElement(
+              'div',
+              {
+                style: {
+                  fontSize: isMobile ? '20px' : '28px',
+                  fontWeight: '700',
+                  color: '#4F46E5'
+                }
+              },
+              formatCurrency(venuePrice)
+            ),
+            React.createElement(
+              'div',
+              {
+                style: {
+                  fontSize: '12px',
+                  color: '#64748B'
+                }
+              },
+              'per day'
+            )
+          )
+        ),
+        business.phone &&
+          React.createElement(
+            'div',
+            {
+              style: {
+                marginTop: '12px',
+                paddingTop: '12px',
+                borderTop: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }
+            },
+            React.createElement(
+              'button',
+              {
+                onClick: () => setCallModalOpen(true),
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  backgroundColor: '#4F46E5',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }
+              },
+              React.createElement(Phone, { size: 16 }),
+              'Call Business'
+            ),
+            React.createElement(
+              'span',
+              {
+                style: {
+                  fontSize: '13px',
+                  color: '#64748B'
+                }
+              },
+              business.phone
+            )
+          )
+      ),
+      // GALLERY GRID
+      React.createElement(
+        'div',
+        {
+          style: {
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr',
+            gridTemplateRows: isMobile ? 'auto' : 'auto auto',
+            gap: '4px',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            backgroundColor: '#e2e8f0',
+            marginBottom: '16px'
+          }
+        },
+        // Main image
+        React.createElement(
+          'div',
+          {
+            style: {
+              position: 'relative',
+              gridRow: isMobile ? '1' : '1 / 3',
+              gridColumn: isMobile ? '1' : '1',
+              aspectRatio: isMobile ? '4/3' : '3/2',
+              cursor: 'pointer',
+              overflow: 'hidden',
+              backgroundColor: '#e2e8f0'
+            },
+            onClick: () => openLightbox(galleryMainIndex)
+          },
+          displayImages.length > 0 && displayImages[galleryMainIndex]
+            ? React.createElement('img', {
+                src: displayImages[galleryMainIndex],
+                alt: venueName,
+                style: {
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }
+              })
+            : React.createElement(
+                'div',
+                {
+                  style: {
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#94a3b8'
+                  }
+                },
+                React.createElement(Image, { size: 48 }),
+                React.createElement('span', { style: { marginLeft: '12px' } }, 'No images')
+              ),
+          displayImages.length > 1 &&
+            React.createElement(
+              'button',
+              {
+                onClick: (e) => { e.stopPropagation(); goToPrevMain(); },
+                style: {
+                  position: 'absolute',
+                  left: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }
+              },
+              React.createElement(ChevronLeft, { size: 18 })
+            ),
+          displayImages.length > 1 &&
+            React.createElement(
+              'button',
+              {
+                onClick: (e) => { e.stopPropagation(); goToNextMain(); },
+                style: {
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }
+              },
+              React.createElement(ChevronRight, { size: 18 })
+            ),
+          displayImages.length > 1 &&
+            React.createElement(
+              'div',
+              {
+                style: {
+                  position: 'absolute',
+                  bottom: '8px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  color: 'white',
+                  padding: '2px 10px',
+                  borderRadius: '999px',
+                  fontSize: '11px'
+                }
+              },
+              `${galleryMainIndex + 1} / ${displayImages.length}`
+            )
+        ),
+        // Thumbnails (desktop)
+        !isMobile &&
+          displayImages.slice(1, 5).map((img, idx) => {
+            const actualIndex = idx + 1;
+            const isLastThumb = idx === 3 && remainingImages > 0;
+            return React.createElement(
+              'div',
+              {
+                key: idx,
+                style: {
+                  position: 'relative',
+                  gridRow: idx < 2 ? '1' : '2',
+                  gridColumn: '2',
+                  aspectRatio: '3/2',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  backgroundColor: '#e2e8f0'
+                },
+                onClick: () => {
+                  if (actualIndex < displayImages.length) {
+                    setGalleryMainIndex(actualIndex);
+                    openLightbox(actualIndex);
+                  } else {
+                    openLightbox(0);
+                  }
+                }
+              },
+              React.createElement('img', {
+                src: img,
+                alt: `Thumbnail ${idx + 1}`,
+                style: {
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }
+              }),
+              isLastThumb &&
+                React.createElement(
+                  'div',
+                  {
+                    style: {
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '20px',
+                      fontWeight: '700'
+                    }
+                  },
+                  `+${remainingImages}`
+                )
+            );
+          }),
+        // Mobile thumbnails
+        isMobile && displayImages.length > 1 &&
+          React.createElement(
+            'div',
+            {
+              style: {
+                display: 'flex',
+                gap: '4px',
+                padding: '4px',
+                overflowX: 'auto',
+                backgroundColor: 'white',
+                gridRow: '2'
+              }
+            },
+            displayImages.map((img, idx) =>
+              React.createElement(
+                'div',
+                {
+                  key: idx,
+                  style: {
+                    flexShrink: 0,
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    border: galleryMainIndex === idx ? '2px solid #4F46E5' : '2px solid transparent'
+                  },
+                  onClick: () => setGalleryMainIndex(idx)
+                },
+                React.createElement('img', {
+                  src: img,
+                  alt: `Thumbnail ${idx + 1}`,
+                  style: {
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }
+                })
+              )
+            )
+          )
+      ),
+      // TYPE ICON CARD
+      React.createElement(
+        'div',
+        {
+          style: {
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '20px',
+            flexWrap: 'wrap',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            border: '1px solid rgba(226,232,240,0.6)'
+          }
+        },
+        React.createElement(
+          'span',
+          {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              color: '#475569'
+            }
+          },
+          React.createElement(Building, { size: 18, color: '#4F46E5' }),
+          venuePropertyDetails.property_type
+        ),
+        React.createElement(
+          'span',
+          {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              color: '#475569'
+            }
+          },
+          React.createElement(Car, { size: 18, color: '#4F46E5' }),
+          venuePropertyDetails.parking_spaces > 0 ? venuePropertyDetails.parking_spaces + ' Parking Spaces' : 'No Parking'
+        ),
+        React.createElement(
+          'span',
+          {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              color: '#475569'
+            }
+          },
+          React.createElement(Sofa, { size: 18, color: '#4F46E5' }),
+          furnishingDisplay
+        )
+      ),
+      // ABOUT PROPERTY
+      venueDescription &&
+        React.createElement(
+          'div',
+          {
+            style: {
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              border: '1px solid rgba(226,232,240,0.6)'
+            }
+          },
+          React.createElement(
+            'h2',
+            {
+              style: {
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#1A1F36',
+                margin: '0 0 8px 0'
+              }
+            },
+            'About This Property'
+          ),
+          React.createElement(
+            'p',
+            {
+              style: {
+                fontSize: '14px',
+                color: '#475569',
+                lineHeight: '1.7',
+                margin: 0,
+                display: '-webkit-box',
+                WebkitLineClamp: showFullDescription ? 'none' : 4,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }
+            },
+            venueDescription
+          ),
+          venueDescription.length > 200 &&
+            React.createElement(
+              'button',
+              {
+                onClick: () => setShowFullDescription(!showFullDescription),
+                style: {
+                  background: 'none',
+                  border: 'none',
+                  color: '#4F46E5',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  padding: '4px 0',
+                  marginTop: '4px'
+                }
+              },
+              showFullDescription ? 'Show less' : 'Show full description'
+            )
+        ),
+      // FEATURES & AMENITIES
+      (venueFeatures.length > 0 || venueAmenities.length > 0) &&
+        React.createElement(
+          'div',
+          {
+            style: {
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              border: '1px solid rgba(226,232,240,0.6)'
+            }
+          },
+          React.createElement(
+            'h2',
+            {
+              style: {
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#1A1F36',
+                margin: '0 0 12px 0'
+              }
+            },
+            'Features & Amenities'
+          ),
+          venueFeatures.length > 0 &&
+            React.createElement(
+              'div',
+              { style: { marginBottom: '16px' } },
+              ['interior', 'exterior', 'safety', 'utilities', 'outdoor'].map(cat => {
+                const catFeatures = venueFeatures.filter(f => f.category === cat);
+                if (catFeatures.length === 0) return null;
+                const catLabels = {
+                  interior: '🏠 Interior & Finishing',
+                  exterior: '🏡 Exterior Features',
+                  safety: '🛡️ Safety & Security',
+                  utilities: '⚡ Power & Utilities',
+                  outdoor: '🌳 Outdoor & Communal'
+                };
+                return React.createElement(
+                  'div',
+                  { key: cat, style: { marginBottom: '8px' } },
+                  React.createElement(
+                    'h3',
+                    {
+                      style: {
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#475569',
+                        margin: '0 0 6px 0'
+                      }
+                    },
+                    catLabels[cat] || cat
+                  ),
+                  React.createElement(
+                    'div',
+                    {
+                      style: {
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '6px'
+                      }
+                    },
+                    catFeatures.map((f, idx) =>
+                      React.createElement(
+                        'span',
+                        {
+                          key: idx,
+                          style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 12px',
+                            backgroundColor: '#EEF2FF',
+                            borderRadius: '16px',
+                            fontSize: '12px',
+                            color: '#4F46E5'
+                          }
+                        },
+                        React.createElement(Check, { size: 12 }),
+                        f.name
+                      )
+                    )
+                  )
+                );
+              })
+            ),
+          venueAmenities.length > 0 &&
+            React.createElement(
+              'div',
+              null,
+              ['interior', 'safety', 'outdoor', 'utilities'].map(cat => {
+                const catAmenities = venueAmenities.filter(a => a.category === cat);
+                if (catAmenities.length === 0) return null;
+                const catLabels = {
+                  interior: '🏠 Interior & Finishing',
+                  safety: '🛡️ Security & Safety',
+                  outdoor: '🌳 Outdoor & Communal',
+                  utilities: '⚡ Power & Utilities'
+                };
+                return React.createElement(
+                  'div',
+                  { key: cat, style: { marginBottom: '8px' } },
+                  React.createElement(
+                    'h3',
+                    {
+                      style: {
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#475569',
+                        margin: '0 0 6px 0'
+                      }
+                    },
+                    catLabels[cat] || cat
+                  ),
+                  React.createElement(
+                    'div',
+                    {
+                      style: {
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '6px'
+                      }
+                    },
+                    catAmenities.map((a, idx) =>
+                      React.createElement(
+                        'span',
+                        {
+                          key: idx,
+                          style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 12px',
+                            backgroundColor: '#f1f5f9',
+                            borderRadius: '16px',
+                            fontSize: '12px',
+                            color: '#475569'
+                          }
+                        },
+                        React.createElement(Check, { size: 12, color: '#4F46E5' }),
+                        a.name
+                      )
+                    )
+                  )
+                );
+              })
+            )
+        ),
+      // PROPERTY DETAILS
+      (venuePropertyDetails.ref_id || venuePropertyDetails.bedrooms > 0 || venuePropertyDetails.bathrooms > 0 ||
+       venuePropertyDetails.parking_spaces > 0 || venuePropertyDetails.year_built || venuePropertyDetails.property_size) &&
+        React.createElement(
+          'div',
+          {
+            style: {
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              border: '1px solid rgba(226,232,240,0.6)'
+            }
+          },
+          React.createElement(
+            'h2',
+            {
+              style: {
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#1A1F36',
+                margin: '0 0 12px 0'
+              }
+            },
+            'Property Details'
+          ),
+          React.createElement(
+            'div',
+            {
+              style: {
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: '6px 16px'
+              }
+            },
+            venuePropertyDetails.ref_id &&
+              React.createElement(
+                'div',
+                { style: { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Reference ID'),
+                React.createElement('span', { style: { color: '#1A1F36', fontSize: '13px', fontWeight: '500' } }, venuePropertyDetails.ref_id)
+              ),
+            venuePropertyDetails.property_type &&
+              React.createElement(
+                'div',
+                { style: { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Property Type'),
+                React.createElement('span', { style: { color: '#1A1F36', fontSize: '13px', fontWeight: '500' } }, venuePropertyDetails.property_type)
+              ),
+            venuePropertyDetails.bedrooms > 0 &&
+              React.createElement(
+                'div',
+                { style: { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Bedrooms'),
+                React.createElement('span', { style: { color: '#1A1F36', fontSize: '13px', fontWeight: '500' } }, venuePropertyDetails.bedrooms)
+              ),
+            venuePropertyDetails.bathrooms > 0 &&
+              React.createElement(
+                'div',
+                { style: { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Bathrooms'),
+                React.createElement('span', { style: { color: '#1A1F36', fontSize: '13px', fontWeight: '500' } }, venuePropertyDetails.bathrooms)
+              ),
+            venuePropertyDetails.parking_spaces > 0 &&
+              React.createElement(
+                'div',
+                { style: { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Parking Spaces'),
+                React.createElement('span', { style: { color: '#1A1F36', fontSize: '13px', fontWeight: '500' } }, venuePropertyDetails.parking_spaces)
+              ),
+            venuePropertyDetails.property_size &&
+              React.createElement(
+                'div',
+                { style: { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Property Size'),
+                React.createElement('span', { style: { color: '#1A1F36', fontSize: '13px', fontWeight: '500' } }, venuePropertyDetails.property_size)
+              ),
+            venuePropertyDetails.year_built &&
+              React.createElement(
+                'div',
+                { style: { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Year Built'),
+                React.createElement('span', { style: { color: '#1A1F36', fontSize: '13px', fontWeight: '500' } }, venuePropertyDetails.year_built)
+              ),
+            furnishingDisplay &&
+              React.createElement(
+                'div',
+                { style: { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Furnishing'),
+                React.createElement('span', { style: { color: '#1A1F36', fontSize: '13px', fontWeight: '500' } }, furnishingDisplay)
+              ),
+            statusDisplay &&
+              React.createElement(
+                'div',
+                { style: { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Listing Status'),
+                React.createElement('span', { style: { color: '#1A1F36', fontSize: '13px', fontWeight: '500' } }, statusDisplay)
+              )
+          )
+        ),
+      // AREA GUIDE
+      venueAreaGuide.length > 0 &&
+        React.createElement(
+          'div',
+          {
+            style: {
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              border: '1px solid rgba(226,232,240,0.6)'
+            }
+          },
+          React.createElement(
+            'h2',
+            {
+              style: {
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#1A1F36',
+                margin: '0 0 12px 0'
+              }
+            },
+            'Area Guide'
+          ),
+          React.createElement(
+            'div',
+            {
+              style: {
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: '12px'
+              }
+            },
+            venueAreaGuide.map((section, idx) =>
+              React.createElement(
+                'div',
+                {
+                  key: idx,
+                  style: {
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '10px',
+                    padding: '14px',
+                    border: '1px solid #f1f5f9'
+                  }
+                },
+                React.createElement(
+                  'h3',
+                  {
+                    style: {
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#1A1F36',
+                      margin: '0 0 4px 0'
+                    }
+                  },
+                  section.title || 'Section'
+                ),
+                React.createElement(
+                  'p',
+                  {
+                    style: {
+                      fontSize: '13px',
+                      color: '#475569',
+                      lineHeight: '1.6',
+                      margin: 0
+                    }
+                  },
+                  section.content || ''
+                )
+              )
+            )
+          )
+        ),
+      // MARKETED BY CARD
+      React.createElement(
+        'div',
+        {
+          style: {
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            border: '1px solid rgba(226,232,240,0.6)'
+          }
+        },
+        React.createElement(
+          'h2',
+          {
+            style: {
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#1A1F36',
+              margin: '0 0 12px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }
+          },
+          React.createElement(Award, { size: 18, color: '#4F46E5' }),
+          'Marketed by'
+        ),
+        React.createElement(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              gap: '16px',
+              alignItems: 'flex-start'
+            }
+          },
+          React.createElement(
+            'div',
+            {
+              style: {
+                width: '56px',
+                height: '56px',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                backgroundColor: '#f1f5f9',
+                flexShrink: 0,
+                border: '1px solid #e2e8f0'
+              }
+            },
+            business.logo_url
+              ? React.createElement('img', {
+                  src: business.logo_url,
+                  alt: business.name,
+                  style: {
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }
+                })
+              : React.createElement(
+                  'div',
+                  {
+                    style: {
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#4F46E5',
+                      fontSize: '20px',
+                      fontWeight: '700'
+                    }
+                  },
+                  business.name.charAt(0).toUpperCase()
+                )
+          ),
+          React.createElement(
+            'div',
+            { style: { flex: 1 } },
+            React.createElement(
+              'div',
+              {
+                style: {
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#1A1F36'
+                }
+              },
+              business.name
+            ),
+            React.createElement(
+              'div',
+              {
+                style: {
+                  fontSize: '13px',
+                  color: '#64748B',
+                  marginTop: '2px'
+                }
+              },
+              business.address || business.city || 'Address not specified'
+            ),
+            React.createElement(
+              'div',
+              {
+                style: {
+                  fontSize: '12px',
+                  color: '#94a3b8',
+                  marginTop: '2px'
+                }
+              },
+              'Member since ' + formatDate(business.created_at)
+            ),
+            React.createElement(
+              Link,
+              {
+                to: `/owner/${business.id}/properties`,
+                style: {
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  marginTop: '8px',
+                  color: '#4F46E5',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  textDecoration: 'none'
+                }
+              },
+              'View all properties from this owner',
+              React.createElement(ChevronRight, { size: 16 })
+            )
+          )
+        )
+      ),
+      // FLOATING ACTION BUTTONS
+      React.createElement(
+        'div',
+        {
+          style: {
+            position: 'fixed',
+            bottom: isMobile ? '80px' : '32px',
+            right: isMobile ? '16px' : '32px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            zIndex: 50
+          }
+        },
+        business.phone &&
+          React.createElement(
+            'button',
+            {
+              onClick: () => setCallModalOpen(true),
+              style: {
+                backgroundColor: '#4F46E5',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '56px',
+                height: '56px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 4px 20px rgba(79, 70, 229, 0.35)',
+                transition: 'transform 0.2s'
+              },
+              onMouseEnter: (e) => { e.currentTarget.style.transform = 'scale(1.05)'; },
+              onMouseLeave: (e) => { e.currentTarget.style.transform = 'scale(1)'; }
+            },
+            React.createElement(Phone, { size: 24 })
+          ),
+        bookingLimit.canBook &&
+          React.createElement(
+            'button',
+            {
+              onClick: () => {
+                if (rooms.length > 0) {
+                  openBookingModal(rooms[0]);
+                } else {
+                  toast.error('No venues available for booking');
+                }
+              },
+              style: {
+                backgroundColor: '#4F46E5',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '56px',
+                height: '56px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 4px 20px rgba(79, 70, 229, 0.35)',
+                transition: 'transform 0.2s'
+              },
+              onMouseEnter: (e) => { e.currentTarget.style.transform = 'scale(1.05)'; },
+              onMouseLeave: (e) => { e.currentTarget.style.transform = 'scale(1)'; }
+            },
+            React.createElement(CalendarDays, { size: 24 })
+          )
+      ),
+      // CALL MODAL
+      callModalOpen &&
+        React.createElement(
+          'div',
+          {
+            style: {
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 200,
+              backdropFilter: 'blur(4px)',
+              padding: '16px'
+            },
+            onClick: (e) => {
+              if (e.target === e.currentTarget) setCallModalOpen(false);
+            }
+          },
+          React.createElement(
+            'div',
+            {
+              style: {
+                backgroundColor: 'white',
+                borderRadius: '20px',
+                padding: '24px',
+                maxWidth: '400px',
+                width: '100%',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
+              }
+            },
+            React.createElement(
+              'div',
+              {
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '16px'
+                }
+              },
+              React.createElement(
+                'h3',
+                {
+                  style: {
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#1A1F36',
+                    margin: 0
+                  }
+                },
+                'Contact'
+              ),
+              React.createElement(
+                'button',
+                {
+                  onClick: () => setCallModalOpen(false),
+                  style: {
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    color: '#94a3b8'
+                  }
+                },
+                React.createElement(X, { size: 24 })
+              )
+            ),
+            React.createElement(
+              'div',
+              {
+                style: {
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }
+              },
+              business.phone &&
+                React.createElement(
+                  'div',
+                  {
+                    key: 'primary',
+                    style: {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0'
+                    }
+                  },
+                  React.createElement(Phone, { size: 20, color: '#4F46E5' }),
+                  React.createElement(
+                    'span',
+                    {
+                      style: {
+                        flex: 1,
+                        fontSize: '16px',
+                        color: '#1A1F36',
+                        fontWeight: '500'
+                      }
+                    },
+                    business.phone
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => copyPhone(business.phone),
+                      style: {
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px 8px',
+                        color: '#4F46E5',
+                        fontSize: '13px',
+                        fontWeight: '500'
+                      }
+                    },
+                    'Copy'
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => {
+                        window.location.href = `tel:${business.phone}`;
+                      },
+                      style: {
+                        backgroundColor: '#4F46E5',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '6px 16px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }
+                    },
+                    'Call'
+                  )
+                ),
+              phoneNumbers.length > 0 &&
+                phoneNumbers.map((p, idx) =>
+                  p.number && p.number !== business.phone &&
+                    React.createElement(
+                      'div',
+                      {
+                        key: idx,
+                        style: {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          backgroundColor: '#f8fafc',
+                          borderRadius: '12px'
+                        }
+                      },
+                      React.createElement(Phone, { size: 20, color: '#94a3b8' }),
+                      React.createElement(
+                        'span',
+                        {
+                          style: {
+                            flex: 1,
+                            fontSize: '16px',
+                            color: '#1A1F36',
+                            fontWeight: '500'
+                          }
+                        },
+                        p.number
+                      ),
+                      React.createElement(
+                        'button',
+                        {
+                          onClick: () => copyPhone(p.number),
+                          style: {
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                            color: '#4F46E5',
+                            fontSize: '13px',
+                            fontWeight: '500'
+                          }
+                        },
+                        'Copy'
+                      ),
+                      React.createElement(
+                        'button',
+                        {
+                          onClick: () => {
+                            window.location.href = `tel:${p.number}`;
+                          },
+                          style: {
+                            backgroundColor: '#4F46E5',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '6px 16px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500'
+                          }
+                        },
+                        'Call'
+                      )
+                    )
+                ),
+              !business.phone && phoneNumbers.length === 0 &&
+                React.createElement(
+                  'p',
+                  {
+                    style: {
+                      textAlign: 'center',
+                      color: '#94a3b8',
+                      padding: '20px'
+                    }
+                  },
+                  'No phone numbers available'
+                )
+            )
+          )
+        ),
+      // BOOKING MODAL
+      bookingModalOpen &&
+        React.createElement(
+          'div',
+          {
+            style: {
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 200,
+              backdropFilter: 'blur(4px)',
+              padding: '16px',
+              overflowY: 'auto'
+            },
+            onClick: (e) => {
+              if (e.target === e.currentTarget && !bookingSubmitting) closeBookingModal();
+            }
+          },
+          React.createElement(
+            'div',
+            {
+              style: {
+                backgroundColor: 'white',
+                borderRadius: '20px',
+                padding: '24px',
+                maxWidth: '520px',
+                width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                position: 'relative'
+              }
+            },
+            React.createElement(
+              'button',
+              {
+                onClick: closeBookingModal,
+                disabled: bookingSubmitting,
+                style: {
+                  position: 'sticky',
+                  top: 0,
+                  float: 'right',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  color: '#94a3b8',
+                  zIndex: 10
+                }
+              },
+              React.createElement(X, { size: 24 })
+            ),
+            React.createElement(
+              'h2',
+              {
+                style: {
+                  fontSize: '22px',
+                  fontWeight: '700',
+                  color: '#1A1F36',
+                  margin: '0 0 4px 0'
+                }
+              },
+              'Book Now'
+            ),
+            selectedRoom &&
+              React.createElement(
+                'p',
+                {
+                  style: {
+                    fontSize: '16px',
+                    color: '#64748B',
+                    margin: '0 0 20px 0'
+                  }
+                },
+                React.createElement('span', { style: { fontWeight: '600', color: '#1A1F36' } }, selectedRoom.name),
+                ` — ${formatCurrency(selectedRoom.price_per_night)} per day`,
+                React.createElement(
+                  'span',
+                  {
+                    style: {
+                      display: 'block',
+                      fontSize: '13px',
+                      color: '#94a3b8',
+                      marginTop: '4px'
+                    }
+                  },
+                  'Capacity: ' + (selectedRoom.capacity || 'Contact venue for capacity')
+                )
+              ),
+            React.createElement(
+              'form',
+              { onSubmit: handleBookingSubmit },
+              React.createElement(
+                'div',
+                { style: { marginBottom: '16px' } },
+                React.createElement(
+                  'label',
+                  {
+                    style: {
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#475569',
+                      marginBottom: '4px'
+                    }
+                  },
+                  'Full Name *'
+                ),
+                React.createElement('input', {
+                  type: 'text',
+                  value: customerName,
+                  onChange: (e) => setCustomerName(e.target.value),
+                  placeholder: 'Enter your full name',
+                  required: true,
+                  style: {
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    fontSize: '15px',
+                    outline: 'none'
+                  },
+                  onFocus: (e) => { e.currentTarget.style.borderColor = '#4F46E5'; },
+                  onBlur: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; }
+                })
+              ),
+              React.createElement(
+                'div',
+                { style: { marginBottom: '16px' } },
+                React.createElement(
+                  'label',
+                  {
+                    style: {
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#475569',
+                      marginBottom: '4px'
+                    }
+                  },
+                  'Email Address *'
+                ),
+                React.createElement('input', {
+                  type: 'email',
+                  value: customerEmail,
+                  onChange: (e) => setCustomerEmail(e.target.value),
+                  placeholder: 'you@example.com',
+                  required: true,
+                  style: {
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    fontSize: '15px',
+                    outline: 'none'
+                  },
+                  onFocus: (e) => { e.currentTarget.style.borderColor = '#4F46E5'; },
+                  onBlur: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; }
+                })
+              ),
+              React.createElement(
+                'div',
+                { style: { marginBottom: '16px' } },
+                React.createElement(
+                  'label',
+                  {
+                    style: {
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#475569',
+                      marginBottom: '4px'
+                    }
+                  },
+                  'Phone Number *'
+                ),
+                React.createElement('input', {
+                  type: 'tel',
+                  value: customerPhone,
+                  onChange: (e) => setCustomerPhone(e.target.value),
+                  placeholder: '08012345678',
+                  required: true,
+                  style: {
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    fontSize: '15px',
+                    outline: 'none'
+                  },
+                  onFocus: (e) => { e.currentTarget.style.borderColor = '#4F46E5'; },
+                  onBlur: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; }
+                })
+              ),
+              React.createElement(
+                'div',
+                { style: { marginBottom: '16px' } },
+                React.createElement(
+                  'label',
+                  {
+                    style: {
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#475569',
+                      marginBottom: '4px'
+                    }
+                  },
+                  React.createElement(Calendar, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
+                  'Event Date *'
+                ),
+                React.createElement('input', {
+                  type: 'date',
+                  value: eventDate,
+                  onChange: (e) => setEventDate(e.target.value),
+                  required: true,
+                  min: new Date().toISOString().split('T')[0],
+                  style: {
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '10px',
+                    fontSize: '15px',
+                    outline: 'none'
+                  },
+                  onFocus: (e) => { e.currentTarget.style.borderColor = '#4F46E5'; },
+                  onBlur: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; }
+                }),
+                React.createElement(
+                  'p',
+                  {
+                    style: {
+                      fontSize: '12px',
+                      color: '#94a3b8',
+                      marginTop: '4px'
+                    }
+                  },
+                  'Select the date for your event'
+                )
+              ),
+              React.createElement(
+                'div',
+                { style: { marginBottom: '16px' } },
+                React.createElement(
+                  'label',
+                  {
+                    style: {
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#475569',
+                      marginBottom: '4px'
+                    }
+                  },
+                  'Payment Method'
+                ),
+                React.createElement(
+                  'div',
+                  {
+                    style: {
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px'
+                    }
+                  },
+                  React.createElement(
+                    'button',
+                    {
+                      type: 'button',
+                      onClick: () => setPaymentMethod('pay_at_venue'),
+                      style: {
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: paymentMethod === 'pay_at_venue' ? '2px solid #4F46E5' : '1px solid #e2e8f0',
+                        backgroundColor: paymentMethod === 'pay_at_venue' ? '#EEF2FF' : 'white',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: paymentMethod === 'pay_at_venue' ? '600' : '400',
+                        color: paymentMethod === 'pay_at_venue' ? '#4F46E5' : '#475569'
+                      }
+                    },
+                    'Pay at Venue'
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      type: 'button',
+                      onClick: () => setPaymentMethod('paystack'),
+                      style: {
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: paymentMethod === 'paystack' ? '2px solid #4F46E5' : '1px solid #e2e8f0',
+                        backgroundColor: paymentMethod === 'paystack' ? '#EEF2FF' : 'white',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: paymentMethod === 'paystack' ? '600' : '400',
+                        color: paymentMethod === 'paystack' ? '#4F46E5' : '#475569'
+                      }
+                    },
+                    React.createElement(CreditCard, { size: 16, style: { display: 'inline', marginRight: '6px' } }),
+                    'Pay Online'
+                  )
+                )
+              ),
+              React.createElement(
+                'div',
+                { style: { marginBottom: '16px' } },
+                React.createElement(
+                  'label',
+                  {
+                    style: {
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#475569',
+                      marginBottom: '4px'
+                    }
+                  },
+                  'Special Requests'
+                ),
+                React.createElement('textarea', {
+                  value: specialRequests,
+                  onChange: (e) => setSpecialRequests(e.target.value),
+                  placeholder: 'Any special requests or notes...',
+                  rows: 2,
+                  style: {
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    fontSize: '15px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    outline: 'none'
+                  },
+                  onFocus: (e) => { e.currentTarget.style.borderColor = '#4F46E5'; },
+                  onBlur: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; }
+                })
+              ),
+              selectedRoom && eventDate &&
+                React.createElement(
+                  'div',
+                  {
+                    style: {
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      marginBottom: '16px'
+                    }
+                  },
+                  React.createElement(
+                    'div',
+                    {
+                      style: {
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '14px',
+                        color: '#64748B'
+                      }
+                    },
+                    React.createElement('span', null, 'Event Date'),
+                    React.createElement('span', null, formatDate(eventDate))
+                  ),
+                  React.createElement(
+                    'div',
+                    {
+                      style: {
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginTop: '8px',
+                        paddingTop: '8px',
+                        borderTop: '1px solid #e2e8f0',
+                        fontSize: '18px',
+                        fontWeight: '700',
+                        color: '#1A1F36'
+                      }
+                    },
+                    React.createElement('span', null, 'Total'),
+                    React.createElement('span', null, formatCurrency(selectedRoom.price_per_night))
+                  ),
+                  selectedRoom.capacity > 0 &&
+                    React.createElement(
+                      'div',
+                      {
+                        style: {
+                          fontSize: '12px',
+                          color: '#94a3b8',
+                          textAlign: 'center',
+                          marginTop: '8px'
+                        }
+                      },
+                      'Capacity: ' + selectedRoom.capacity + ' guests'
+                    )
+                ),
+              React.createElement(
+                'button',
+                {
+                  type: 'submit',
+                  disabled: bookingSubmitting,
+                  style: {
+                    width: '100%',
+                    padding: '14px 0',
+                    backgroundColor: bookingSubmitting ? '#94a3b8' : '#4F46E5',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: bookingSubmitting ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }
+                },
+                bookingSubmitting
+                  ? React.createElement(React.Fragment, null,
+                      React.createElement(Loader, { size: 20, className: 'animate-spin' }),
+                      'Processing...'
+                    )
+                  : 'Confirm Booking'
+              )
+            )
+          )
+        ),
+      // RECEIPT MODAL
+      showReceipt && receiptData &&
+        React.createElement(
+          'div',
+          {
+            style: {
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 300,
+              backdropFilter: 'blur(8px)',
+              padding: isMobile ? '12px' : '20px',
+              overflowY: 'auto'
+            },
+            onClick: (e) => {
+              if (e.target === e.currentTarget) {
+                // Don't close on backdrop click - require user to click Done
+              }
+            }
+          },
+          React.createElement(BookingReceipt, {
+            booking: {
+              booking_reference: receiptData.bookingReference,
+              customer_name: receiptData.customerName,
+              customer_email: receiptData.customerEmail,
+              customer_phone: receiptData.customerPhone,
+              check_in_date: receiptData.eventDate,
+              total_amount: receiptData.totalAmount,
+              payment_method: receiptData.paymentMethod
+            },
+            business: receiptData.business,
+            venue: receiptData.venue,
+            onClose: closeReceipt,
+            onPrint: printReceipt
+          })
+        ),
+      // LIGHTBOX
+      lightboxOpen &&
+        React.createElement(
+          'div',
+          {
+            style: {
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.92)',
+              zIndex: 300,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              padding: '20px'
+            },
+            onClick: (e) => {
+              if (e.target === e.currentTarget) closeLightbox();
+            }
+          },
+          React.createElement(
+            'button',
+            {
+              onClick: closeLightbox,
+              style: {
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'white',
+                padding: '8px',
+                zIndex: 10
+              }
+            },
+            React.createElement(X, { size: 32 })
+          ),
+          React.createElement(
+            'div',
+            {
+              style: {
+                position: 'relative',
+                maxWidth: '900px',
+                width: '100%',
+                maxHeight: '70vh',
+                overflow: 'hidden',
+                borderRadius: '12px'
+              }
+            },
+            React.createElement('img', {
+              src: displayImages[lightboxIndex] || displayImages[0],
+              alt: 'Gallery image',
+              style: {
+                width: '100%',
+                height: '100%',
+                maxHeight: '70vh',
+                objectFit: 'contain'
+              }
+            }),
+            displayImages.length > 1 &&
+              React.createElement(React.Fragment, null,
+                React.createElement(
+                  'button',
+                  {
+                    onClick: goToPrevLightbox,
+                    style: {
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: 'rgba(255,255,255,0.15)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '48px',
+                      height: '48px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }
+                  },
+                  React.createElement(ChevronLeft, { size: 28 })
+                ),
+                React.createElement(
+                  'button',
+                  {
+                    onClick: goToNextLightbox,
+                    style: {
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: 'rgba(255,255,255,0.15)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '48px',
+                      height: '48px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }
+                  },
+                  React.createElement(ChevronRight, { size: 28 })
+                )
+              )
+          ),
+          displayImages.length > 1 &&
+            React.createElement(
+              'div',
+              {
+                style: {
+                  display: 'flex',
+                  gap: '8px',
+                  marginTop: '16px',
+                  overflowX: 'auto',
+                  maxWidth: '100%',
+                  padding: '4px'
+                }
+              },
+              displayImages.map((img, idx) =>
+                React.createElement(
+                  'div',
+                  {
+                    key: idx,
+                    onClick: () => setLightboxIndex(idx),
+                    style: {
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      border: lightboxIndex === idx ? '2px solid #4F46E5' : '2px solid transparent',
+                      opacity: lightboxIndex === idx ? 1 : 0.5,
+                      flexShrink: 0
+                    }
+                  },
+                  React.createElement('img', {
+                    src: img,
+                    alt: `Thumbnail ${idx + 1}`,
+                    style: {
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }
+                  })
+                )
+              )
+            )
+        )
     )
   );
 }

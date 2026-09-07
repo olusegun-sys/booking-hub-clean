@@ -1,4 +1,7 @@
-﻿import React from 'react';
+﻿// FILE: client/src/AddRoomForm.jsx
+// SIMPLE FORM FOR ADDING ROOMS - WORKS WITH ENHANCED BACKEND
+
+import React from 'react';
 import { useState } from 'react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { showError, showSuccess } from './toast';
@@ -22,7 +25,7 @@ function AddRoomForm({ businessId, businessType, onBack, onRoomAdded }) {
   const labels = {
     hotel: { item: 'Room', priceLabel: 'Price Per Night (₦)', placeholder: 'e.g., 25000' },
     sports: { item: 'Court', priceLabel: 'Price Per Hour (₦)', placeholder: 'e.g., 5000' },
-    event: { item: 'Space', priceLabel: 'Price Per Event (₦)', placeholder: 'e.g., 150000' }
+    event: { item: 'Venue', priceLabel: 'Price Per Event (₦)', placeholder: 'e.g., 150000' }
   }[businessType] || { item: 'Room', priceLabel: 'Price Per Night (₦)', placeholder: 'e.g., 25000' };
 
   const roomTypes = businessType === 'sports' 
@@ -46,20 +49,35 @@ function AddRoomForm({ businessId, businessType, onBack, onRoomAdded }) {
     setLoading(true);
     
     try {
+      const payload = {
+        name: formData.name.trim(),
+        type: formData.type,
+        capacity: parseInt(formData.capacity) || 2,
+        price_per_night: parseFloat(formData.price),
+        description: formData.description || '',
+        amenities: formData.amenities ? formData.amenities.split(',').map(a => a.trim()).filter(a => a) : [],
+        address: '',
+        images: [],
+        venue_description: formData.description || ''
+      };
+
+      // For events, set base_price and other event fields
+      if (businessType === 'event') {
+        payload.base_price = parseFloat(formData.price);
+        payload.included_guests = parseInt(formData.capacity) || 50;
+        payload.max_capacity = parseInt(formData.capacity) * 2 || 300;
+        payload.extra_guest_price = 2000;
+      }
+
+      console.log('[AddRoomForm] Submitting payload:', payload);
+
       const response = await fetch(`${API_BASE}/api/businesses/${businessId}/rooms/create`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + token
         },
-        body: JSON.stringify({ 
-          name: formData.name.trim(), 
-          type: formData.type, 
-          capacity: parseInt(formData.capacity), 
-          price_per_night: parseFloat(formData.price), 
-          description: formData.description, 
-          amenities: formData.amenities ? formData.amenities.split(',').map(a => a.trim()).filter(a => a) : [] 
-        })
+        body: JSON.stringify(payload)
       });
       
       const data = await response.json();

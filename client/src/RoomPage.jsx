@@ -1,23 +1,172 @@
 ﻿// FILE: client/src/RoomPage.jsx
-// COMPLETE FIX - Edit modal allows clearing input fields
-// Fixed: onChange handlers properly handle empty values
+// COMPLETE VENUE MANAGEMENT WITH FULL SETTINGS
+// Features, Amenities, Area Guide, Property Details per venue
 
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, Plus, Trash2, Edit3, Save, X, 
   Hotel, Trophy, Sparkles, Users, Bed, DollarSign,
-  AlertCircle, CheckCircle, Loader2, Info
+  AlertCircle, CheckCircle, Loader2, Info, MapPin, Image, FileText,
+  Upload, Camera, Star, Car, Bath, Calendar, Sofa, Tag,
+  Building, ChevronDown, ChevronRight, Home, Wifi, Zap,
+  Shield, Droplets, Thermometer, Lock, Award, Heart,
+  ShoppingBag, GraduationCap, Landmark, Plane, Umbrella,
+  Music, Utensils, Tent, Eye, Maximize, Layers, Grid3x3,
+  Phone, Mail, Clock, Globe, Copy, Check
 } from 'lucide-react';
 import API_BASE from './config';
 import { showError, showSuccess } from './toast';
 
+// ============================================================
+// ICON MAP - For Area Guide
+// ============================================================
+const iconMap = {
+  Home: Home,
+  Building: Building,
+  ShoppingBag: ShoppingBag,
+  GraduationCap: GraduationCap,
+  Landmark: Landmark,
+  Plane: Plane,
+  Umbrella: Umbrella,
+  Music: Music,
+  Utensils: Utensils,
+  Tent: Tent,
+  Wifi: Wifi,
+  Zap: Zap,
+  Droplets: Droplets,
+  Thermometer: Thermometer,
+  Shield: Shield,
+  Lock: Lock,
+  Award: Award,
+  Star: Star,
+  Heart: Heart
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function getLabels(businessType) {
+  const type = businessType || 'venue';
+  if (type === 'hotel') {
+    return { 
+      singular: 'Room', 
+      plural: 'Rooms', 
+      icon: Hotel,
+      typeLabel: 'Room Type',
+      capacityLabel: 'Sleeps',
+      priceLabel: 'Price per night',
+      priceUnit: '/ night',
+      typeOptions: ['Standard', 'Deluxe', 'Suite', 'Executive', 'Presidential', 'Family']
+    };
+  } else if (type === 'sports') {
+    return { 
+      singular: 'Court', 
+      plural: 'Courts', 
+      icon: Trophy,
+      typeLabel: 'Court Type',
+      capacityLabel: 'Players',
+      priceLabel: 'Price per hour',
+      priceUnit: '/ hour',
+      typeOptions: ['Hard Court', 'Clay Court', 'Grass Court', 'Basketball', 'Football', 'Tennis']
+    };
+  } else if (type === 'event') {
+    return { 
+      singular: 'Venue', 
+      plural: 'Venues', 
+      icon: Sparkles,
+      typeLabel: 'Venue Type',
+      capacityLabel: 'Included Guests',
+      priceLabel: 'Base Price',
+      priceUnit: '/ event',
+      typeOptions: ['Banquet Hall', 'Conference Room', 'Outdoor Space', 'Ballroom', 'Theater', 'Boardroom']
+    };
+  }
+  return { 
+    singular: 'Item', 
+    plural: 'Items', 
+    icon: Hotel,
+    typeLabel: 'Type',
+    capacityLabel: 'Capacity',
+    priceLabel: 'Price',
+    priceUnit: '',
+    typeOptions: ['Standard']
+  };
+}
+
+// ============================================================
+// FEATURE CATEGORIES
+// ============================================================
+const featureCategories = [
+  { id: 'interior', label: '🏠 Interior Features' },
+  { id: 'exterior', label: '🏡 Exterior Features' },
+  { id: 'safety', label: '🛡️ Safety & Security' },
+  { id: 'utilities', label: '⚡ Power & Utilities' },
+  { id: 'outdoor', label: '🌳 Outdoor & Communal' }
+];
+
+const amenityCategories = [
+  { id: 'interior', label: '🏠 Interior & Finishing' },
+  { id: 'safety', label: '🛡️ Security & Safety' },
+  { id: 'outdoor', label: '🌳 Outdoor & Communal' },
+  { id: 'utilities', label: '⚡ Power & Utilities' }
+];
+
+const propertyTypeOptions = [
+  'Event Hall', 'Conference Room', 'Boardroom', 'Training Hall',
+  'Warehouse', 'Office Space', 'Studio', 'Apartment', 'Hotel Room',
+  'Condo', 'Other'
+];
+
+const furnishingOptions = [
+  { value: 'unfurnished', label: 'Unfurnished' },
+  { value: 'furnished', label: 'Furnished' },
+  { value: 'semi_furnished', label: 'Semi-Furnished' }
+];
+
+const listingStatusOptions = [
+  { value: 'for_rent', label: 'For Rent' },
+  { value: 'for_sale', label: 'For Sale' },
+  { value: 'short_let', label: 'Short Let' }
+];
+
+const iconOptions = [
+  { value: 'Home', label: '🏠 Home' },
+  { value: 'Building', label: '🏢 Building' },
+  { value: 'ShoppingBag', label: '🛍️ Shopping' },
+  { value: 'GraduationCap', label: '🎓 School' },
+  { value: 'Landmark', label: '🏛️ Landmark' },
+  { value: 'Plane', label: '✈️ Airport' },
+  { value: 'Umbrella', label: '🏖️ Beach' },
+  { value: 'Music', label: '🎵 Music' },
+  { value: 'Utensils', label: '🍽️ Dining' },
+  { value: 'Tent', label: '🎪 Events' },
+  { value: 'Heart', label: '❤️ Heart' },
+  { value: 'Star', label: '⭐ Star' }
+];
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 function RoomPage({ business, onBack }) {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [activeTab, setActiveTab] = useState('basic');
+
+  const labels = getLabels(business?.business_type);
+  const IconComponent = labels.icon;
+  const isEvent = business?.business_type === 'event';
+  const token = localStorage.getItem('auth_token');
+
+  // ============================================================
+  // FORM STATE
+  // ============================================================
   const [formData, setFormData] = useState({
+    // Basic
     name: '',
     type: '',
     capacity: '',
@@ -27,65 +176,39 @@ function RoomPage({ business, onBack }) {
     max_capacity: '',
     extra_guest_price: '',
     description: '',
-    amenities: []
+    venue_description: '',
+    address: '',
+    images: [],
+    
+    // Property Details
+    property_type: '',
+    bathrooms: 0,
+    parking_spaces: 0,
+    year_built: '',
+    furnishing_status: 'unfurnished',
+    listing_status: 'for_rent',
+    
+    // Features
+    features: [],
+    newFeature: '',
+    newFeatureCategory: 'interior',
+    
+    // Amenities - FIXED: Using 'amenities' not 'venueAmenities'
+    amenities: [],
+    newAmenity: '',
+    newAmenityCategory: 'interior',
+    
+    // Area Guide
+    areaGuide: [],
+    newAreaTitle: '',
+    newAreaContent: '',
+    newAreaIcon: 'Home'
   });
 
-  const token = localStorage.getItem('auth_token');
-
-  // DYNAMIC LABELS based on business type
-  function getLabels() {
-    const type = business?.business_type;
-    if (type === 'hotel') {
-      return { 
-        singular: 'Room', 
-        plural: 'Rooms', 
-        icon: Hotel,
-        typeLabel: 'Room Type',
-        capacityLabel: 'Sleeps',
-        priceLabel: 'Price per night',
-        priceUnit: '/ night',
-        typeOptions: ['Standard', 'Deluxe', 'Suite', 'Executive', 'Presidential', 'Family']
-      };
-    } else if (type === 'sports') {
-      return { 
-        singular: 'Court', 
-        plural: 'Courts', 
-        icon: Trophy,
-        typeLabel: 'Court Type',
-        capacityLabel: 'Players',
-        priceLabel: 'Price per hour',
-        priceUnit: '/ hour',
-        typeOptions: ['Hard Court', 'Clay Court', 'Grass Court', 'Basketball', 'Football', 'Tennis']
-      };
-    } else if (type === 'event') {
-      return { 
-        singular: 'Venue', 
-        plural: 'Venues', 
-        icon: Sparkles,
-        typeLabel: 'Venue Type',
-        capacityLabel: 'Included Guests',
-        priceLabel: 'Base Price',
-        priceUnit: '/ event',
-        typeOptions: ['Banquet Hall', 'Conference Room', 'Outdoor Space', 'Ballroom', 'Theater', 'Boardroom']
-      };
-    }
-    return { 
-      singular: 'Item', 
-      plural: 'Items', 
-      icon: Hotel,
-      typeLabel: 'Type',
-      capacityLabel: 'Capacity',
-      priceLabel: 'Price',
-      priceUnit: '',
-      typeOptions: ['Standard']
-    };
-  }
-
-  const labels = getLabels();
-  const IconComponent = labels.icon;
-  const isEvent = business?.business_type === 'event';
-
-  useEffect(() => {
+  // ============================================================
+  // FETCH ROOMS
+  // ============================================================
+  useEffect(function() {
     fetchRooms();
   }, []);
 
@@ -94,18 +217,22 @@ function RoomPage({ business, onBack }) {
     fetch(API_BASE + '/api/businesses/' + business.id + '/rooms', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
-      .then(res => res.json())
-      .then(data => {
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
         if (data.success) {
           setRooms(data.rooms || []);
         }
         setLoading(false);
       })
-      .catch(() => { setLoading(false); });
+      .catch(function() { setLoading(false); });
   }
 
+  // ============================================================
+  // MODAL CONTROLS
+  // ============================================================
   function openAddModal() {
     setEditingRoom(null);
+    setActiveTab('basic');
     setFormData({
       name: '',
       type: labels.typeOptions[0] || '',
@@ -116,13 +243,32 @@ function RoomPage({ business, onBack }) {
       max_capacity: '',
       extra_guest_price: '',
       description: '',
-      amenities: []
+      venue_description: '',
+      address: '',
+      images: [],
+      property_type: propertyTypeOptions[0] || '',
+      bathrooms: 0,
+      parking_spaces: 0,
+      year_built: '',
+      furnishing_status: 'unfurnished',
+      listing_status: 'for_rent',
+      features: [],
+      newFeature: '',
+      newFeatureCategory: 'interior',
+      amenities: [],
+      newAmenity: '',
+      newAmenityCategory: 'interior',
+      areaGuide: [],
+      newAreaTitle: '',
+      newAreaContent: '',
+      newAreaIcon: 'Home'
     });
     setShowModal(true);
   }
 
   function openEditModal(room) {
     setEditingRoom(room);
+    setActiveTab('basic');
     setFormData({
       name: room.name || '',
       type: room.type || labels.typeOptions[0] || '',
@@ -133,24 +279,233 @@ function RoomPage({ business, onBack }) {
       max_capacity: room.max_capacity !== undefined ? String(room.max_capacity) : '',
       extra_guest_price: room.extra_guest_price !== undefined ? String(room.extra_guest_price) : '',
       description: room.description || '',
-      amenities: room.amenities || []
+      venue_description: room.venue_description || room.description || '',
+      address: room.address || '',
+      images: room.images || [],
+      property_type: room.property_type || propertyTypeOptions[0] || '',
+      bathrooms: room.bathrooms || 0,
+      parking_spaces: room.parking_spaces || 0,
+      year_built: room.year_built || '',
+      furnishing_status: room.furnishing_status || 'unfurnished',
+      listing_status: room.listing_status || 'for_rent',
+      features: room.features || [],
+      newFeature: '',
+      newFeatureCategory: 'interior',
+      amenities: room.amenities || [],  // FIXED: Use 'amenities'
+      newAmenity: '',
+      newAmenityCategory: 'interior',
+      areaGuide: room.area_guide || [],
+      newAreaTitle: '',
+      newAreaContent: '',
+      newAreaIcon: 'Home'
     });
     setShowModal(true);
   }
 
-  function handleChange(field, value) {
-    // Allow empty strings - don't convert to numbers yet
-    setFormData(prev => ({ ...prev, [field]: value }));
+  function closeModal() {
+    setShowModal(false);
+    setEditingRoom(null);
+    setActiveTab('basic');
   }
 
+  // ============================================================
+  // FORM HANDLERS
+  // ============================================================
+  function handleChange(field, value) {
+    setFormData(function(prev) {
+      return { ...prev, [field]: value };
+    });
+  }
+
+  // ============================================================
+  // IMAGE UPLOAD
+  // ============================================================
+  function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showError('Image must be under 5MB');
+      return;
+    }
+
+    const roomId = editingRoom ? editingRoom.id : null;
+
+    if (!roomId) {
+      showError('Please save the venue first before uploading images');
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64Data = e.target.result;
+      
+      fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId + '/upload-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type,
+          fileData: base64Data
+        })
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          setUploadProgress(100);
+          if (data.success) {
+            showSuccess('Image uploaded successfully');
+            setFormData(function(prev) {
+              return { ...prev, images: [...prev.images, data.imageUrl] };
+            });
+            fetchRooms();
+          } else {
+            showError(data.error || 'Failed to upload image');
+          }
+          setUploading(false);
+        })
+        .catch(function() {
+          showError('Something went wrong');
+          setUploading(false);
+        });
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage(index) {
+    const imageUrl = formData.images[index];
+    const roomId = editingRoom ? editingRoom.id : null;
+    
+    if (!roomId) {
+      const updated = formData.images.filter(function(_, i) { return i !== index; });
+      setFormData(function(prev) {
+        return { ...prev, images: updated };
+      });
+      return;
+    }
+
+    if (!confirm('Remove this image?')) return;
+
+    fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId + '/images', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ imageUrl: imageUrl })
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.success) {
+          showSuccess('Image removed');
+          const updated = formData.images.filter(function(_, i) { return i !== index; });
+          setFormData(function(prev) {
+            return { ...prev, images: updated };
+          });
+          fetchRooms();
+        } else {
+          showError(data.error || 'Failed to remove image');
+        }
+      })
+      .catch(function() { showError('Something went wrong'); });
+  }
+
+  // ============================================================
+  // FEATURES
+  // ============================================================
+  function addFeature() {
+    if (!formData.newFeature.trim()) {
+      showError('Please enter a feature name');
+      return;
+    }
+    const updated = (formData.features || []).concat([{
+      id: Date.now(),
+      name: formData.newFeature.trim(),
+      category: formData.newFeatureCategory
+    }]);
+    setFormData(function(prev) {
+      return { ...prev, features: updated, newFeature: '' };
+    });
+  }
+
+  function removeFeature(id) {
+    const updated = (formData.features || []).filter(function(f) { return f.id !== id; });
+    setFormData(function(prev) {
+      return { ...prev, features: updated };
+    });
+  }
+
+  // ============================================================
+  // AMENITIES - FIXED: Using 'amenities' not 'venueAmenities'
+  // ============================================================
+  function addAmenity() {
+    if (!formData.newAmenity.trim()) {
+      showError('Please enter an amenity name');
+      return;
+    }
+    const updated = (formData.amenities || []).concat([{
+      id: Date.now(),
+      name: formData.newAmenity.trim(),
+      category: formData.newAmenityCategory
+    }]);
+    setFormData(function(prev) {
+      return { ...prev, amenities: updated, newAmenity: '' };
+    });
+  }
+
+  function removeAmenity(id) {
+    const updated = (formData.amenities || []).filter(function(a) { return a.id !== id; });
+    setFormData(function(prev) {
+      return { ...prev, amenities: updated };
+    });
+  }
+
+  // ============================================================
+  // AREA GUIDE
+  // ============================================================
+  function addAreaSection() {
+    if (!formData.newAreaTitle.trim() || !formData.newAreaContent.trim()) {
+      showError('Please enter both title and content');
+      return;
+    }
+    const updated = (formData.areaGuide || []).concat([{
+      id: Date.now(),
+      icon: formData.newAreaIcon,
+      title: formData.newAreaTitle.trim(),
+      content: formData.newAreaContent.trim()
+    }]);
+    setFormData(function(prev) {
+      return { ...prev, areaGuide: updated, newAreaTitle: '', newAreaContent: '', newAreaIcon: 'Home' };
+    });
+  }
+
+  function removeAreaSection(id) {
+    const updated = (formData.areaGuide || []).filter(function(s) { return s.id !== id; });
+    setFormData(function(prev) {
+      return { ...prev, areaGuide: updated };
+    });
+  }
+
+  // ============================================================
+  // SAVE VENUE
+  // ============================================================
   function handleSave() {
-    // Validate
     if (!formData.name.trim()) {
       showError(labels.singular + ' name is required');
       return;
     }
     
-    // For events, use base_price; for others, use price_per_night
     let priceValue;
     if (isEvent) {
       priceValue = parseFloat(formData.base_price);
@@ -163,7 +518,6 @@ function RoomPage({ business, onBack }) {
       return;
     }
 
-    // Validate numeric fields
     let capacity = parseInt(formData.capacity);
     if (isNaN(capacity) || capacity <= 0) {
       capacity = isEvent ? 50 : 2;
@@ -176,15 +530,30 @@ function RoomPage({ business, onBack }) {
     const method = editingRoom ? 'PUT' : 'POST';
 
     const payload = {
+      // Basic
       name: formData.name.trim(),
       type: formData.type,
       capacity: capacity,
       price_per_night: isEvent ? 0 : parseFloat(formData.price_per_night) || 0,
-      description: formData.description,
-      amenities: formData.amenities || []
+      description: formData.description || '',
+      venue_description: formData.venue_description || formData.description || '',
+      address: formData.address || '',
+      images: formData.images || [],
+      
+      // Property Details
+      property_type: formData.property_type || propertyTypeOptions[0],
+      bathrooms: parseInt(formData.bathrooms) || 0,
+      parking_spaces: parseInt(formData.parking_spaces) || 0,
+      year_built: formData.year_built ? parseInt(formData.year_built) : null,
+      furnishing_status: formData.furnishing_status || 'unfurnished',
+      listing_status: formData.listing_status || 'for_rent',
+      
+      // Features, Amenities (FIXED: using 'amenities'), Area Guide
+      features: formData.features || [],
+      amenities: formData.amenities || [],  // FIXED: Use 'amenities' not 'venueAmenities'
+      area_guide: formData.areaGuide || []
     };
 
-    // Add event-specific fields
     if (isEvent) {
       payload.base_price = parseFloat(formData.base_price) || 0;
       payload.included_guests = parseInt(formData.included_guests) || 50;
@@ -192,8 +561,6 @@ function RoomPage({ business, onBack }) {
       payload.extra_guest_price = parseFloat(formData.extra_guest_price) || 2000;
       payload.price_per_night = parseFloat(formData.base_price) || 0;
     }
-
-    console.log('[RoomPage] Saving payload:', payload);
 
     fetch(url, {
       method: method,
@@ -203,31 +570,38 @@ function RoomPage({ business, onBack }) {
       },
       body: JSON.stringify(payload)
     })
-      .then(res => res.json())
-      .then(data => {
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
         if (data.success) {
           showSuccess(editingRoom ? labels.singular + ' updated!' : labels.singular + ' added!');
-          setShowModal(false);
+          closeModal();
           fetchRooms();
+          if (!editingRoom && data.room) {
+            setEditingRoom(data.room);
+          }
         } else {
           showError(data.error || 'Failed to save');
         }
         setSaving(false);
       })
-      .catch(() => {
-        showError('Something went wrong');
+      .catch(function(err) {
+        console.error('Save error:', err);
+        showError('Something went wrong: ' + err.message);
         setSaving(false);
       });
   }
 
+  // ============================================================
+  // DELETE VENUE
+  // ============================================================
   function handleDelete(roomId) {
     if (!confirm('Delete this ' + labels.singular.toLowerCase() + '?')) return;
     fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
     })
-      .then(res => res.json())
-      .then(data => {
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
         if (data.success) {
           showSuccess(labels.singular + ' deleted');
           fetchRooms();
@@ -235,14 +609,19 @@ function RoomPage({ business, onBack }) {
           showError('Failed to delete');
         }
       })
-      .catch(() => showError('Something went wrong'));
+      .catch(function() { showError('Something went wrong'); });
   }
 
+  // ============================================================
+  // RENDER
+  // ============================================================
   if (loading) {
     return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' } },
       React.createElement(Loader2, { size: 32, style: { animation: 'spin 1s linear infinite', color: '#4f46e5' } })
     );
   }
+
+  const isMobile = window.innerWidth < 640;
 
   return React.createElement('div', { style: { maxWidth: '1200px', margin: '0 auto', padding: '16px' } },
     // Header
@@ -255,7 +634,7 @@ function RoomPage({ business, onBack }) {
         React.createElement('div', null,
           React.createElement('h2', { style: { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 } }, labels.plural),
           React.createElement('p', { style: { fontSize: '14px', color: '#64748b', margin: '2px 0 0' } }, 
-            'Manage your ' + labels.plural.toLowerCase()
+            'Manage your ' + labels.plural.toLowerCase() + ' with full settings'
           )
         )
       ),
@@ -277,8 +656,10 @@ function RoomPage({ business, onBack }) {
         }, 'Add ' + labels.singular)
       ) :
       React.createElement('div', { style: { display: 'grid', gap: '12px' } },
-        rooms.map(room => {
+        rooms.map(function(room) {
           const displayPrice = isEvent ? (room.base_price || room.price_per_night || 0) : (room.price_per_night || 0);
+          const imageCount = (room.images || []).length;
+          const featureCount = (room.features || []).length;
           
           return React.createElement('div', { key: room.id, style: { background: 'white', borderRadius: '12px', padding: '16px 20px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' } },
             React.createElement('div', null,
@@ -292,21 +673,23 @@ function RoomPage({ business, onBack }) {
                 React.createElement('span', { style: { fontSize: '12px', fontWeight: '600', color: '#4f46e5' } },
                   '₦' + (displayPrice).toLocaleString() + labels.priceUnit
                 ),
-                isEvent && room.max_capacity && React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } },
-                  'Max: ' + room.max_capacity + ' guests'
+                imageCount > 0 && React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } },
+                  React.createElement(Image, { size: 10, style: { display: 'inline', marginRight: '2px' } }),
+                  imageCount + ' images'
                 ),
-                isEvent && room.extra_guest_price && React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } },
-                  'Extra: ₦' + (room.extra_guest_price || 2000).toLocaleString() + '/guest'
+                featureCount > 0 && React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } },
+                  React.createElement(Star, { size: 10, style: { display: 'inline', marginRight: '2px' } }),
+                  featureCount + ' features'
                 )
               )
             ),
             React.createElement('div', { style: { display: 'flex', gap: '8px' } },
               React.createElement('button', { 
-                onClick: () => openEditModal(room), 
+                onClick: function() { openEditModal(room); }, 
                 style: { padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#475569' }
               }, React.createElement(Edit3, { size: 16 })),
               React.createElement('button', { 
-                onClick: () => handleDelete(room.id), 
+                onClick: function() { handleDelete(room.id); }, 
                 style: { padding: '6px 12px', background: '#fef2f2', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#ef4444' }
               }, React.createElement(Trash2, { size: 16 }))
             )
@@ -314,28 +697,61 @@ function RoomPage({ business, onBack }) {
         })
       ),
 
-    // Modal
+    // ============================================================
+    // MODAL
+    // ============================================================
     showModal && React.createElement('div', { style: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' } },
-      React.createElement('div', { style: { background: 'white', borderRadius: '20px', maxWidth: isEvent ? '560px' : '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' } },
+      React.createElement('div', { style: { background: 'white', borderRadius: '20px', maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' } },
         // Modal Header
-        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' } },
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' } },
           React.createElement('h3', { style: { fontSize: '20px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 
             editingRoom ? 'Edit ' + labels.singular : 'Add ' + labels.singular
           ),
           React.createElement('button', { 
-            onClick: () => setShowModal(false), 
+            onClick: closeModal, 
             style: { background: 'none', border: 'none', cursor: 'pointer' }
           }, React.createElement(X, { size: 20, color: '#64748b' }))
         ),
-        // Form
-        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
+
+        // TABS
+        React.createElement('div', { style: { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' } },
+          ['basic', 'details', 'features', 'amenities', 'areaGuide'].map(function(tab) {
+            const tabLabels = {
+              basic: '📋 Basic',
+              details: '🏷️ Details',
+              features: '⭐ Features',
+              amenities: '🛋️ Amenities',
+              areaGuide: '🗺️ Area Guide'
+            };
+            return React.createElement('button', {
+              key: tab,
+              onClick: function() { setActiveTab(tab); },
+              style: {
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: activeTab === tab ? '2px solid #4f46e5' : '1px solid #e2e8f0',
+                backgroundColor: activeTab === tab ? '#EEF2FF' : 'white',
+                color: activeTab === tab ? '#4f46e5' : '#64748B',
+                fontSize: '13px',
+                fontWeight: activeTab === tab ? '600' : '400',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }
+            }, tabLabels[tab]);
+          })
+        ),
+
+        // ============================================================
+        // TAB: BASIC
+        // ============================================================
+        activeTab === 'basic' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
           // Name
           React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.singular + ' Name *'),
             React.createElement('input', {
               type: 'text',
               value: formData.name,
-              onChange: (e) => handleChange('name', e.target.value),
+              onChange: function(e) { handleChange('name', e.target.value); },
               placeholder: 'e.g., ' + labels.singular + ' 1',
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
@@ -345,19 +761,43 @@ function RoomPage({ business, onBack }) {
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.typeLabel),
             React.createElement('select', {
               value: formData.type,
-              onChange: (e) => handleChange('type', e.target.value),
+              onChange: function(e) { handleChange('type', e.target.value); },
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
-            }, labels.typeOptions.map(opt => 
-              React.createElement('option', { key: opt, value: opt }, opt)
-            ))
+            }, labels.typeOptions.map(function(opt) { 
+              return React.createElement('option', { key: opt, value: opt }, opt);
+            }))
           ),
-          
-          // ============================================================
-          // EVENT-SPECIFIC FIELDS (Help text removed, allows clearing)
-          // ============================================================
+          // Address
+          React.createElement('div', null,
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+              React.createElement(MapPin, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
+              'Venue Address'
+            ),
+            React.createElement('input', {
+              type: 'text',
+              value: formData.address,
+              onChange: function(e) { handleChange('address', e.target.value); },
+              placeholder: 'e.g., 7 Obasa Road, Ikeja, Lagos',
+              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+            })
+          ),
+          // Description
+          React.createElement('div', null,
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+              React.createElement(FileText, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
+              'Venue Description'
+            ),
+            React.createElement('textarea', {
+              value: formData.venue_description || formData.description,
+              onChange: function(e) { handleChange('venue_description', e.target.value); },
+              placeholder: 'Describe this venue for customers',
+              rows: 3,
+              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }
+            })
+          ),
+          // Price & Capacity
           isEvent ? (
             React.createElement(React.Fragment, null,
-              // Base Price
               React.createElement('div', null,
                 React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
                   labels.priceLabel + ' (₦) *'
@@ -367,75 +807,47 @@ function RoomPage({ business, onBack }) {
                   React.createElement('input', {
                     type: 'number',
                     value: formData.base_price,
-                    onChange: (e) => handleChange('base_price', e.target.value),
+                    onChange: function(e) { handleChange('base_price', e.target.value); },
                     placeholder: 'e.g., 800000',
                     style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
                   })
                 )
               ),
-              
-              // Included Guests
-              React.createElement('div', null,
-                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
-                  'Included Guests *'
-                ),
-                React.createElement('input', {
-                  type: 'number',
-                  value: formData.included_guests,
-                  onChange: (e) => handleChange('included_guests', e.target.value),
-                  placeholder: 'e.g., 100',
-                  style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
-                })
-              ),
-              
-              // Max Capacity
-              React.createElement('div', null,
-                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
-                  'Maximum Capacity *'
-                ),
-                React.createElement('input', {
-                  type: 'number',
-                  value: formData.max_capacity,
-                  onChange: (e) => handleChange('max_capacity', e.target.value),
-                  placeholder: 'e.g., 300',
-                  style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
-                })
-              ),
-              
-              // Extra Guest Price
-              React.createElement('div', null,
-                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
-                  'Extra Guest Price (₦)'
-                ),
-                React.createElement('div', { style: { position: 'relative' } },
-                  React.createElement('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' } }, '₦'),
+              React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
+                React.createElement('div', null,
+                  React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 'Included Guests *'),
                   React.createElement('input', {
                     type: 'number',
-                    value: formData.extra_guest_price,
-                    onChange: (e) => handleChange('extra_guest_price', e.target.value),
-                    placeholder: 'e.g., 2000',
-                    style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                    value: formData.included_guests,
+                    onChange: function(e) { handleChange('included_guests', e.target.value); },
+                    placeholder: 'e.g., 100',
+                    style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                  })
+                ),
+                React.createElement('div', null,
+                  React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 'Max Capacity *'),
+                  React.createElement('input', {
+                    type: 'number',
+                    value: formData.max_capacity,
+                    onChange: function(e) { handleChange('max_capacity', e.target.value); },
+                    placeholder: 'e.g., 300',
+                    style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
                   })
                 )
               )
             )
           ) : (
-            // ============================================================
-            // NON-EVENT FIELDS (Hotel / Sports)
-            // ============================================================
-            React.createElement(React.Fragment, null,
-              // Capacity
+            React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
               React.createElement('div', null,
                 React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.capacityLabel),
                 React.createElement('input', {
                   type: 'number',
                   value: formData.capacity,
-                  onChange: (e) => handleChange('capacity', e.target.value),
+                  onChange: function(e) { handleChange('capacity', e.target.value); },
                   placeholder: 'e.g., 2',
                   style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
                 })
               ),
-              // Price
               React.createElement('div', null,
                 React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
                   labels.priceLabel + ' (₦) *'
@@ -445,7 +857,7 @@ function RoomPage({ business, onBack }) {
                   React.createElement('input', {
                     type: 'number',
                     value: formData.price_per_night,
-                    onChange: (e) => handleChange('price_per_night', e.target.value),
+                    onChange: function(e) { handleChange('price_per_night', e.target.value); },
                     placeholder: 'e.g., 5000',
                     style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
                   })
@@ -453,25 +865,453 @@ function RoomPage({ business, onBack }) {
               )
             )
           ),
-          
-          // Description (always visible)
+          // Images
           React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 'Description'),
-            React.createElement('textarea', {
-              value: formData.description,
-              onChange: (e) => handleChange('description', e.target.value),
-              placeholder: 'Describe this ' + labels.singular.toLowerCase(),
-              rows: 3,
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+              React.createElement(Camera, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
+              'Venue Images'
+            ),
+            editingRoom && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' } },
+              React.createElement('label', { style: { 
+                padding: '8px 16px', 
+                background: uploading ? '#94a3b8' : '#4f46e5', 
+                color: 'white', 
+                borderRadius: '8px', 
+                cursor: uploading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '13px'
+              } },
+                React.createElement(Upload, { size: 14 }),
+                uploading ? 'Uploading...' : 'Upload Image',
+                React.createElement('input', {
+                  type: 'file',
+                  accept: 'image/*',
+                  onChange: handleImageUpload,
+                  disabled: uploading,
+                  style: { display: 'none' }
+                })
+              ),
+              uploading && React.createElement('div', { style: { flex: 1, height: '4px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' } },
+                React.createElement('div', { style: { width: uploadProgress + '%', height: '100%', background: '#4f46e5', transition: 'width 0.3s ease' } })
+              )
+            ),
+            !editingRoom && React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginBottom: '8px' } },
+              'Save the venue first, then upload images'
+            ),
+            formData.images.length > 0 && React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
+              formData.images.map(function(url, idx) {
+                return React.createElement('div', { key: idx, style: { position: 'relative', width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' } },
+                  React.createElement('img', { src: url, alt: 'Venue image', style: { width: '100%', height: '100%', objectFit: 'cover' } }),
+                  React.createElement('button', {
+                    onClick: function() { removeImage(idx); },
+                    style: { position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px' }
+                  }, '×')
+                );
+              })
+            )
+          )
+        ),
+
+        // ============================================================
+        // TAB: PROPERTY DETAILS
+        // ============================================================
+        activeTab === 'details' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
+          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '8px' } },
+            'Property details specific to this venue'
+          ),
+          // Property Type
+          React.createElement('div', null,
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+              React.createElement(Building, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
+              'Property Type'
+            ),
+            React.createElement('select', {
+              value: formData.property_type,
+              onChange: function(e) { handleChange('property_type', e.target.value); },
+              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
+            }, propertyTypeOptions.map(function(opt) {
+              return React.createElement('option', { key: opt, value: opt }, opt);
+            }))
+          ),
+          // Listing Status
+          React.createElement('div', null,
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+              React.createElement(Tag, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
+              'Listing Status'
+            ),
+            React.createElement('select', {
+              value: formData.listing_status,
+              onChange: function(e) { handleChange('listing_status', e.target.value); },
+              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
+            }, listingStatusOptions.map(function(opt) {
+              return React.createElement('option', { key: opt.value, value: opt.value }, opt.label);
+            }))
+          ),
+          // Furnishing Status
+          React.createElement('div', null,
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+              React.createElement(Sofa, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
+              'Furnishing Status'
+            ),
+            React.createElement('select', {
+              value: formData.furnishing_status,
+              onChange: function(e) { handleChange('furnishing_status', e.target.value); },
+              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
+            }, furnishingOptions.map(function(opt) {
+              return React.createElement('option', { key: opt.value, value: opt.value }, opt.label);
+            }))
+          ),
+          // Year Built
+          React.createElement('div', null,
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+              React.createElement(Calendar, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
+              'Year Built'
+            ),
+            React.createElement('input', {
+              type: 'number',
+              value: formData.year_built,
+              onChange: function(e) { handleChange('year_built', e.target.value); },
+              placeholder: 'e.g., 2020',
+              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
           ),
-          
-          // Submit
+          // Bathrooms & Parking
+          React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
+            React.createElement('div', null,
+              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+                React.createElement(Bath, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
+                'Bathrooms'
+              ),
+              React.createElement('input', {
+                type: 'number',
+                value: formData.bathrooms,
+                onChange: function(e) { handleChange('bathrooms', parseInt(e.target.value) || 0); },
+                placeholder: '0',
+                style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+              })
+            ),
+            React.createElement('div', null,
+              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+                React.createElement(Car, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
+                'Parking Spaces'
+              ),
+              React.createElement('input', {
+                type: 'number',
+                value: formData.parking_spaces,
+                onChange: function(e) { handleChange('parking_spaces', parseInt(e.target.value) || 0); },
+                placeholder: '0',
+                style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+              })
+            )
+          )
+        ),
+
+        // ============================================================
+        // TAB: FEATURES
+        // ============================================================
+        activeTab === 'features' && React.createElement('div', null,
+          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
+            'Features specific to this venue'
+          ),
+          React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' } },
+            React.createElement('input', {
+              type: 'text',
+              value: formData.newFeature,
+              onChange: function(e) { handleChange('newFeature', e.target.value); },
+              placeholder: 'Enter a feature (e.g., Air Conditioning)',
+              style: {
+                flex: 2,
+                padding: '10px 14px',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '10px',
+                fontSize: '14px',
+                minWidth: '150px'
+              }
+            }),
+            React.createElement('select', {
+              value: formData.newFeatureCategory,
+              onChange: function(e) { handleChange('newFeatureCategory', e.target.value); },
+              style: {
+                flex: 1,
+                padding: '10px 14px',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '10px',
+                fontSize: '13px',
+                backgroundColor: 'white',
+                minWidth: '120px'
+              }
+            }, featureCategories.map(function(cat) {
+              return React.createElement('option', { key: cat.id, value: cat.id }, cat.label);
+            })),
+            React.createElement('button', {
+              onClick: addFeature,
+              style: {
+                padding: '10px 20px',
+                backgroundColor: '#4f46e5',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }
+            }, 'Add')
+          ),
+          featureCategories.map(function(category) {
+            var categoryFeatures = (formData.features || []).filter(function(f) { return f.category === category.id; });
+            if (categoryFeatures.length === 0) return null;
+            return React.createElement('div', { key: category.id, style: { marginBottom: '12px' } },
+              React.createElement('h4', { style: { fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '8px' } }, category.label),
+              React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
+                categoryFeatures.map(function(feature) {
+                  return React.createElement('div', { key: feature.id, style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: '#f1f5f9',
+                    borderRadius: '20px',
+                    fontSize: '13px'
+                  } },
+                    React.createElement('span', null, feature.name),
+                    React.createElement('button', {
+                      onClick: function() { removeFeature(feature.id); },
+                      style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 4px', fontSize: '16px' }
+                    }, '×')
+                  );
+                })
+              )
+            );
+          }),
+          (formData.features || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', padding: '20px' } },
+            'No features added yet. Add your first feature above.'
+          )
+        ),
+
+        // ============================================================
+        // TAB: AMENITIES - FIXED: Using 'amenities' not 'venueAmenities'
+        // ============================================================
+        activeTab === 'amenities' && React.createElement('div', null,
+          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
+            'Amenities specific to this venue'
+          ),
+          React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' } },
+            React.createElement('input', {
+              type: 'text',
+              value: formData.newAmenity,
+              onChange: function(e) { handleChange('newAmenity', e.target.value); },
+              placeholder: 'Enter an amenity (e.g., WiFi)',
+              style: {
+                flex: 2,
+                padding: '10px 14px',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '10px',
+                fontSize: '14px',
+                minWidth: '150px'
+              }
+            }),
+            React.createElement('select', {
+              value: formData.newAmenityCategory,
+              onChange: function(e) { handleChange('newAmenityCategory', e.target.value); },
+              style: {
+                flex: 1,
+                padding: '10px 14px',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '10px',
+                fontSize: '13px',
+                backgroundColor: 'white',
+                minWidth: '120px'
+              }
+            }, amenityCategories.map(function(cat) {
+              return React.createElement('option', { key: cat.id, value: cat.id }, cat.label);
+            })),
+            React.createElement('button', {
+              onClick: addAmenity,  // FIXED: Using addAmenity
+              style: {
+                padding: '10px 20px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }
+            }, 'Add')
+          ),
+          amenityCategories.map(function(category) {
+            var categoryAmenities = (formData.amenities || []).filter(function(a) { return a.category === category.id; });
+            if (categoryAmenities.length === 0) return null;
+            return React.createElement('div', { key: category.id, style: { marginBottom: '12px' } },
+              React.createElement('h4', { style: { fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '8px' } }, category.label),
+              React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
+                categoryAmenities.map(function(amenity) {
+                  return React.createElement('div', { key: amenity.id, style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: '#d1fae5',
+                    borderRadius: '20px',
+                    fontSize: '13px'
+                  } },
+                    React.createElement('span', null, amenity.name),
+                    React.createElement('button', {
+                      onClick: function() { removeAmenity(amenity.id); },  // FIXED: Using removeAmenity
+                      style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 4px', fontSize: '16px' }
+                    }, '×')
+                  );
+                })
+              )
+            );
+          }),
+          (formData.amenities || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', padding: '20px' } },
+            'No amenities added yet. Add your first amenity above.'
+          )
+        ),
+
+        // ============================================================
+        // TAB: AREA GUIDE
+        // ============================================================
+        activeTab === 'areaGuide' && React.createElement('div', null,
+          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
+            'Area guide specific to this venue'
+          ),
+          React.createElement('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' } },
+            iconOptions.map(function(icon) {
+              var IconComponent2 = iconMap[icon.value];
+              return React.createElement('button', {
+                key: icon.value,
+                onClick: function() { handleChange('newAreaIcon', icon.value); },
+                style: {
+                  padding: '6px 10px',
+                  borderRadius: '8px',
+                  border: formData.newAreaIcon === icon.value ? '2px solid #4f46e5' : '1px solid #e2e8f0',
+                  background: formData.newAreaIcon === icon.value ? '#eef2ff' : 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '12px'
+                }
+              },
+                IconComponent2 ? React.createElement(IconComponent2, { size: 16, color: formData.newAreaIcon === icon.value ? '#4f46e5' : '#64748b' }) : null,
+                icon.label
+              );
+            })
+          ),
+          React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' } },
+            React.createElement('input', {
+              type: 'text',
+              value: formData.newAreaTitle,
+              onChange: function(e) { handleChange('newAreaTitle', e.target.value); },
+              placeholder: 'Section Title (e.g., Interesting Facts)',
+              style: {
+                flex: 2,
+                padding: '10px 14px',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '10px',
+                fontSize: '14px',
+                minWidth: '150px'
+              }
+            }),
+            React.createElement('textarea', {
+              value: formData.newAreaContent,
+              onChange: function(e) { handleChange('newAreaContent', e.target.value); },
+              placeholder: 'Section Content (e.g., Known for technology...)',
+              style: {
+                flex: 3,
+                padding: '10px 14px',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '10px',
+                fontSize: '14px',
+                minWidth: '200px',
+                resize: 'vertical'
+              },
+              rows: '2'
+            }),
+            React.createElement('button', {
+              onClick: addAreaSection,
+              style: {
+                padding: '10px 20px',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }
+            }, 'Add')
+          ),
+          (formData.areaGuide || []).map(function(section) {
+            var IconComponent2 = iconMap[section.icon] || Home;
+            return React.createElement('div', { key: section.id, style: {
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              backgroundColor: '#fef3c7',
+              borderRadius: '10px',
+              marginBottom: '8px'
+            } },
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', flex: 1 } },
+                IconComponent2 ? React.createElement(IconComponent2, { size: 20, color: '#d97706' }) : null,
+                React.createElement('div', null,
+                  React.createElement('div', { style: { fontWeight: '600', fontSize: '14px' } }, section.title),
+                  React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, section.content)
+                )
+              ),
+              React.createElement('button', {
+                onClick: function() { removeAreaSection(section.id); },
+                style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', padding: '0 8px' }
+              }, '×')
+            );
+          }),
+          (formData.areaGuide || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', padding: '20px' } },
+            'No area guide sections added yet.'
+          )
+        ),
+
+        // ============================================================
+        // SAVE BUTTON
+        // ============================================================
+        React.createElement('div', { style: { marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' } },
+          React.createElement('button', {
+            onClick: closeModal,
+            style: {
+              padding: '10px 24px',
+              backgroundColor: '#f1f5f9',
+              color: '#475569',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }
+          }, 'Cancel'),
           React.createElement('button', {
             onClick: handleSave,
             disabled: saving,
-            style: { padding: '12px', background: saving ? '#94a3b8' : '#4f46e5', color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }
-          }, saving ? React.createElement(Loader2, { size: 18, style: { animation: 'spin 1s linear infinite' } }) : React.createElement(Save, { size: 18 }), saving ? 'Saving...' : 'Save ' + labels.singular)
+            style: {
+              padding: '10px 24px',
+              backgroundColor: saving ? '#94a3b8' : '#4f46e5',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }
+          }, saving ? React.createElement(Loader2, { size: 18, style: { animation: 'spin 1s linear infinite' } }) : React.createElement(Save, { size: 18 }), saving ? 'Saving...' : 'Save Venue')
         )
       )
     )

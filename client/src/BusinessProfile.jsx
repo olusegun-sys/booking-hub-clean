@@ -1,5 +1,5 @@
 ﻿// FILE: client/src/BusinessProfile.jsx
-// COMPLETE FIX - REMOVE auto-save to prevent race condition
+// COMPLETE FIX - ALL FIELDS EDITABLE
 
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Phone, Mail, Globe, Save, Camera, X, CheckCircle, AlertCircle, Edit3, ExternalLink, ArrowLeft, Layers, Image, Sparkles } from 'lucide-react';
@@ -38,10 +38,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
 
   // Sync formData when business prop changes
   useEffect(function() {
-    console.log('[BusinessProfile] Business prop changed:', business?.id, business?.name);
-    console.log('[BusinessProfile] Logo URL from prop:', business?.logo_url);
-    console.log('[BusinessProfile] Cover URL from prop:', business?.cover_image);
-    
     if (business) {
       setFormData({
         name: business.name || '',
@@ -89,12 +85,17 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     }
     
     var updateData = {
-      cover_image: formData.cover_image,
-      logo_url: formData.logo_url,
-      about_text: formData.about_text,
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
       description: formData.description,
+      about_text: formData.about_text,
       website: formData.website,
-      name: formData.name
+      cover_image: formData.cover_image,
+      logo_url: formData.logo_url
     };
     
     console.log('[BusinessProfile] Saving:', updateData);
@@ -116,7 +117,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
         return r.json(); 
       })
       .then(function(data) {
-        console.log('[BusinessProfile] Save response:', data);
         if (data.success) {
           showMessage('success', 'Profile updated successfully');
           setIsEditing(false);
@@ -126,9 +126,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
           if (currentBusiness) {
             try {
               var parsed = JSON.parse(currentBusiness);
-              parsed.logo_url = formData.logo_url;
-              parsed.cover_image = formData.cover_image;
-              parsed.name = formData.name;
+              parsed = { ...parsed, ...updateData };
               localStorage.setItem('currentBusiness', JSON.stringify(parsed));
             } catch(e) {
               console.error('Failed to update localStorage:', e);
@@ -136,7 +134,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
           }
           
           if (onUpdate) {
-            console.log('[BusinessProfile] Calling onUpdate with fresh data');
             onUpdate(data.business);
           }
         } else {
@@ -150,109 +147,42 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       .finally(function() { setSaving(false); });
   }
 
-  // FIXED: Remove auto-save - the image is already saved by ImageUpload
   function handleLogoUpload(url) {
-    console.log('[BusinessProfile] Logo upload callback:', url);
     if (url) {
-      // CRITICAL FIX: Update formData but DO NOT auto-save
-      // The image is already saved by ImageUpload's PUT request
       handleChange('logo_url', url);
-      // Refresh data to update UI
       refreshBusinessData();
-    } else {
-      showMessage('error', 'Logo upload failed. Please try again.');
     }
   }
 
-  // FIXED: Remove auto-save - the image is already saved by ImageUpload
   function handleCoverUpload(url) {
-    console.log('[BusinessProfile] Cover upload callback:', url);
     if (url) {
-      // CRITICAL FIX: Update formData but DO NOT auto-save
-      // The image is already saved by ImageUpload's PUT request
       handleChange('cover_image', url);
-      // Refresh data to update UI
       refreshBusinessData();
-    } else {
-      showMessage('error', 'Cover image upload failed. Please try again.');
     }
   }
 
-  // CRITICAL FIX: Use /api/businesses/profile (uses token) instead of /api/businesses/${id} (doesn't exist)
   function refreshBusinessData() {
-    console.log('[BusinessProfile] Refreshing business data from API');
-    console.log('[BusinessProfile] Current business ID:', business?.id);
-    
     var token = localStorage.getItem('auth_token');
-    
-    if (!token) {
-      console.error('[BusinessProfile] No auth token found');
-      showMessage('error', 'Authentication required. Please log in again.');
-      return;
-    }
-    
-    if (!business || !business.id) {
-      console.error('[BusinessProfile] No business data available');
-      showMessage('error', 'Business data not available');
-      return;
-    }
+    if (!token || !business || !business.id) return;
     
     fetch(API_BASE + '/api/businesses/profile', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
-      .then(function(r) { 
-        if (!r.ok) {
-          if (r.status === 401) {
-            throw new Error('Session expired. Please log in again.');
-          }
-          throw new Error('Failed to fetch business data (status ' + r.status + ')');
-        }
-        return r.json(); 
-      })
+      .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success && data.business) {
-          console.log('[BusinessProfile] Refreshed business data:', data.business);
-          console.log('[BusinessProfile] Logo URL from API:', data.business.logo_url);
-          console.log('[BusinessProfile] Cover URL from API:', data.business.cover_image);
-          
-          // Update formData with fresh data
           setFormData(function(prev) {
-            var updated = {};
-            for (var key in prev) updated[key] = prev[key];
-            updated.logo_url = data.business.logo_url || '';
-            updated.cover_image = data.business.cover_image || '';
-            updated.name = data.business.name || '';
-            updated.description = data.business.description || '';
-            updated.about_text = data.business.about_text || '';
-            updated.website = data.business.website || '';
-            console.log('[BusinessProfile] Updated formData:', updated);
-            return updated;
-          });
-          
-          // Update localStorage
-          localStorage.setItem('currentBusiness', JSON.stringify(data.business));
-          
-          // Notify parent with fresh data
-          if (onUpdate) {
-            console.log('[BusinessProfile] Calling onUpdate with fresh API data');
-            var freshBusiness = {
-              ...data.business,
+            return {
+              ...prev,
               logo_url: data.business.logo_url || '',
               cover_image: data.business.cover_image || ''
             };
-            onUpdate(freshBusiness);
-          }
-          
-          showMessage('success', 'Images updated successfully!');
-        } else {
-          console.error('[BusinessProfile] Refresh failed - no business data:', data);
-          showMessage('error', 'Failed to refresh business data');
+          });
+          localStorage.setItem('currentBusiness', JSON.stringify(data.business));
+          if (onUpdate) onUpdate(data.business);
         }
       })
-      .catch(function(err) { 
-        console.error('[BusinessProfile] Refresh error:', err); 
-        showMessage('error', err.message || 'Failed to refresh data. Please refresh the page.');
-      });
+      .catch(function(err) { console.error('Refresh error:', err); });
   }
 
   // Loading state
@@ -330,10 +260,11 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     borderRadius: '40px',
     fontSize: isMobile ? '12px' : '14px',
     fontWeight: '500',
-    cursor: 'pointer',
+    cursor: saving ? 'not-allowed' : 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '6px'
+    gap: '6px',
+    opacity: saving ? 0.6 : 1
   };
 
   var cancelButtonStyle = {
@@ -504,88 +435,143 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       message.text
     ),
 
-    // Two column layout for Basic Info + About
-    React.createElement('div', { style: gridStyle },
-      // Basic Information Card
-      React.createElement('div', { style: cardStyle },
-        React.createElement('div', { style: cardHeaderStyle },
-          React.createElement('div', { style: cardHeaderIconStyle },
-            React.createElement(Building2, { size: isMobile ? 16 : 20, color: '#4f46e5' })
-          ),
-          React.createElement('h3', { style: cardTitleStyle }, 'Basic Information')
+    // Basic Information Card - ALL FIELDS EDITABLE
+    React.createElement('div', { style: cardStyle },
+      React.createElement('div', { style: cardHeaderStyle },
+        React.createElement('div', { style: cardHeaderIconStyle },
+          React.createElement(Building2, { size: isMobile ? 16 : 20, color: '#4f46e5' })
         ),
-        React.createElement('div', { style: cardBodyStyle },
-          React.createElement('div', { style: infoRowStyle },
-            React.createElement('span', { style: labelStyle }, 'Business Name'),
-            isEditing ?
-              React.createElement('input', {
-                type: 'text',
-                value: formData.name,
-                onChange: function(e) { handleChange('name', e.target.value); },
-                style: inputStyle
-              }) :
-              React.createElement('span', { style: valueStyle }, formData.name)
-          ),
-          React.createElement('div', { style: infoRowStyle },
-            React.createElement('span', { style: labelStyle }, 'Email'),
+        React.createElement('h3', { style: cardTitleStyle }, 'Basic Information')
+      ),
+      React.createElement('div', { style: cardBodyStyle },
+        // Business Name
+        React.createElement('div', { style: infoRowStyle },
+          React.createElement('span', { style: labelStyle }, 'Business Name'),
+          isEditing ?
+            React.createElement('input', {
+              type: 'text',
+              value: formData.name,
+              onChange: function(e) { handleChange('name', e.target.value); },
+              style: inputStyle
+            }) :
+            React.createElement('span', { style: valueStyle }, formData.name)
+        ),
+        // Email
+        React.createElement('div', { style: infoRowStyle },
+          React.createElement('span', { style: labelStyle }, 'Email'),
+          isEditing ?
+            React.createElement('input', {
+              type: 'email',
+              value: formData.email,
+              onChange: function(e) { handleChange('email', e.target.value); },
+              style: inputStyle
+            }) :
             React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '4px' } },
               React.createElement(Mail, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.email
             )
-          ),
-          React.createElement('div', { style: infoRowStyle },
-            React.createElement('span', { style: labelStyle }, 'Phone'),
+        ),
+        // Phone
+        React.createElement('div', { style: infoRowStyle },
+          React.createElement('span', { style: labelStyle }, 'Phone'),
+          isEditing ?
+            React.createElement('input', {
+              type: 'tel',
+              value: formData.phone,
+              onChange: function(e) { handleChange('phone', e.target.value); },
+              style: inputStyle
+            }) :
             React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '4px' } },
               React.createElement(Phone, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.phone || 'Not set'
             )
-          ),
-          React.createElement('div', { style: infoRowStyle },
-            React.createElement('span', { style: labelStyle }, 'Location'),
+        ),
+        // Address
+        React.createElement('div', { style: infoRowStyle },
+          React.createElement('span', { style: labelStyle }, 'Address'),
+          isEditing ?
+            React.createElement('input', {
+              type: 'text',
+              value: formData.address,
+              onChange: function(e) { handleChange('address', e.target.value); },
+              style: inputStyle
+            }) :
             React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '4px' } },
-              React.createElement(MapPin, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.city + ', ' + formData.state
+              React.createElement(MapPin, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.address || 'Not set'
             )
-          ),
-          React.createElement('div', { style: { ...infoRowStyle, borderBottom: 'none' } },
-            React.createElement('span', { style: labelStyle }, 'Website'),
+        ),
+        // City
+        React.createElement('div', { style: infoRowStyle },
+          React.createElement('span', { style: labelStyle }, 'City'),
+          isEditing ?
+            React.createElement('input', {
+              type: 'text',
+              value: formData.city,
+              onChange: function(e) { handleChange('city', e.target.value); },
+              style: inputStyle
+            }) :
+            React.createElement('span', { style: valueStyle }, formData.city || 'Not set')
+        ),
+        // State
+        React.createElement('div', { style: infoRowStyle },
+          React.createElement('span', { style: labelStyle }, 'State'),
+          isEditing ?
+            React.createElement('input', {
+              type: 'text',
+              value: formData.state,
+              onChange: function(e) { handleChange('state', e.target.value); },
+              style: inputStyle
+            }) :
+            React.createElement('span', { style: valueStyle }, formData.state || 'Not set')
+        ),
+        // Website
+        React.createElement('div', { style: { ...infoRowStyle, borderBottom: 'none' } },
+          React.createElement('span', { style: labelStyle }, 'Website'),
+          isEditing ?
+            React.createElement('input', {
+              type: 'url',
+              value: formData.website,
+              onChange: function(e) { handleChange('website', e.target.value); },
+              placeholder: 'https://yourwebsite.com',
+              style: inputStyle
+            }) :
             formData.website ?
               React.createElement('a', { href: formData.website, target: '_blank', style: { ...valueStyle, color: '#4f46e5', textDecoration: 'none' } }, formData.website) :
               React.createElement('span', { style: valueStyle }, 'Not provided')
-          )
         )
-      ),
+      )
+    ),
 
-      // About Section Card
-      React.createElement('div', { style: cardStyle },
-        React.createElement('div', { style: cardHeaderStyle },
-          React.createElement('div', { style: cardHeaderIconStyle },
-            React.createElement(Globe, { size: isMobile ? 16 : 20, color: '#4f46e5' })
-          ),
-          React.createElement('h3', { style: cardTitleStyle }, 'About Your Business')
+    // About Section Card
+    React.createElement('div', { style: { ...cardStyle, marginTop: '16px' } },
+      React.createElement('div', { style: cardHeaderStyle },
+        React.createElement('div', { style: cardHeaderIconStyle },
+          React.createElement(Globe, { size: isMobile ? 16 : 20, color: '#4f46e5' })
         ),
-        React.createElement('div', { style: cardBodyStyle },
-          React.createElement('div', { style: { marginBottom: '16px' } },
-            React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: '#475569', marginBottom: '4px', display: 'block' } }, 'Short Description'),
-            isEditing ?
-              React.createElement('textarea', {
-                value: formData.description,
-                onChange: function(e) { handleChange('description', e.target.value); },
-                rows: 3,
-                placeholder: 'Brief description of your business...',
-                style: textareaStyle
-              }) :
-              React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.description || 'No description provided')
-          ),
-          React.createElement('div', null,
-            React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: '#475569', marginBottom: '4px', display: 'block' } }, 'Full Story'),
-            isEditing ?
-              React.createElement('textarea', {
-                value: formData.about_text,
-                onChange: function(e) { handleChange('about_text', e.target.value); },
-                rows: 5,
-                placeholder: 'Share your story, amenities, what makes you special...',
-                style: { ...textareaStyle, minHeight: isMobile ? '120px' : '150px' }
-              }) :
-              React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.about_text || 'No story provided')
-          )
+        React.createElement('h3', { style: cardTitleStyle }, 'About Your Business')
+      ),
+      React.createElement('div', { style: cardBodyStyle },
+        React.createElement('div', { style: { marginBottom: '16px' } },
+          React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: '#475569', marginBottom: '4px', display: 'block' } }, 'Short Description'),
+          isEditing ?
+            React.createElement('textarea', {
+              value: formData.description,
+              onChange: function(e) { handleChange('description', e.target.value); },
+              rows: 3,
+              placeholder: 'Brief description of your business...',
+              style: textareaStyle
+            }) :
+            React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.description || 'No description provided')
+        ),
+        React.createElement('div', null,
+          React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: '#475569', marginBottom: '4px', display: 'block' } }, 'Full Story'),
+          isEditing ?
+            React.createElement('textarea', {
+              value: formData.about_text,
+              onChange: function(e) { handleChange('about_text', e.target.value); },
+              rows: 5,
+              placeholder: 'Share your story, amenities, what makes you special...',
+              style: { ...textareaStyle, minHeight: isMobile ? '120px' : '150px' }
+            }) :
+            React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.about_text || 'No story provided')
         )
       )
     ),
@@ -600,7 +586,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       ),
       React.createElement('div', { style: cardBodyStyle },
         React.createElement('div', { style: imageRowStyle },
-          // Business Logo - WITH onRefresh
+          // Business Logo
           React.createElement('div', { style: imageCardStyle },
             React.createElement('h4', { style: imageTitleStyle }, 'Business Logo'),
             React.createElement('p', { style: imageHintStyle }, 'Square format recommended'),
@@ -612,7 +598,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               onRefresh: refreshBusinessData
             })
           ),
-          // Cover Photo - WITH onRefresh
+          // Cover Photo
           React.createElement('div', { style: imageCardStyle },
             React.createElement('h4', { style: imageTitleStyle }, 'Cover Photo'),
             React.createElement('p', { style: imageHintStyle }, '1200x400px recommended'),

@@ -1,8 +1,4 @@
-﻿I'll update the complete project overview with everything we've built, the current state, and where we're heading. This will serve as the master reference for any new chat.
-
----
-
-# Booking Hub - Complete Project Overview (MASTER UPDATE - SEPTEMBER 2025)
+﻿# Booking Hub - Complete Project Overview (MASTER UPDATE - SEPTEMBER 2026)
 
 ## 📋 Plain English Summary
 This document captures EVERYTHING we've built for Booking Hub - from the first line of code to our current state. It includes our vision, technical decisions, every roadblock we smashed, every breakthrough we celebrated, and a clear map of where we're heading next. If this chat hits the limit, the next chat can pick up right here and know exactly what we've done, why we did it, and what's left.
@@ -15,6 +11,15 @@ This document captures EVERYTHING we've built for Booking Hub - from the first l
 **Booking Hub** is a multi-tenant booking management platform for Nigerian hospitality businesses. Think of it as **"Shopify for hospitality"** - not a marketplace like Booking.com, but a platform where each business gets their own branded booking page, accepts payments (Paystack or pay-at-venue), receives automated email notifications, and tracks all bookings in a real-time dashboard.
 
 **Now part of Plazzaa:** The platform is being integrated into the larger Plazzaa ecosystem as the "Plazzaa for Business" solution - a comprehensive business management tool for hospitality businesses.
+
+### Key Meeting Decisions (September 2026)
+- **Iterate, don't rebuild**: Team decided to iterate on existing codebase rather than rebuilding from scratch
+- **Independent B2B product**: Platform functions as standalone B2B booking tool, not tied to Plaza marketplace
+- **V1 feature freeze**: Only customer booking page and business dashboard for V1
+- **Pilot with 5-10 businesses**: Test with small cohort before wider launch
+- **Feedback-driven development**: Only build features requested by businesses during sales outreach
+- **Manual data migration**: Initial business data will be entered manually via Supabase
+- **Launch deadline**: September 21, 2026
 
 ### The Problem We're Solving
 Nigerian hospitality businesses (hotels, sports facilities, event venues) struggle with:
@@ -32,6 +37,12 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 - ✅ Analytics and insights dashboard
 - ✅ Mobile-first design (Nigeria is mobile-first!)
 - ✅ Shareable booking links for WhatsApp and social media
+- ✅ Database-driven content management (features, amenities, area guide)
+- ✅ Multi-venue support - businesses can list multiple venues with individual details
+- ✅ Owner properties page - View all properties from a single business owner
+- ✅ Full property details - Ref ID, property type, bedrooms, bathrooms, parking, furnishing, listing status
+- ✅ **Per-venue features, amenities, area guide, and property details** - Each venue has its own unique settings
+- ✅ **Professional booking receipt** - Full receipt modal after booking confirmation
 
 ---
 
@@ -45,6 +56,10 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 │  │ Homepage │  │   Admin  │  │ Business │  │ Booking  │  │
 │  │          │  │ Dashboard│  │Dashboard │  │   Page   │  │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                 │
+│  │  Owner   │  │ Business │  │  Room    │                 │
+│  │Properties│  │ Settings │  │  Page    │                 │
+│  └──────────┘  └──────────┘  └──────────┘                 │
 └────────────────────────┬────────────────────────────────────┘
                          │ HTTPS/REST API
                          ▼
@@ -54,6 +69,10 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 │  │   Auth   │  │ Business │  │ Bookings │  │  Email   │  │
 │  │          │  │   Mgmt   │  │          │  │  Service │  │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                 │
+│  │ Enhanced │  │  Venue   │  │  Domain  │                 │
+│  │ Business │  │  Images  │  │   DNS    │                 │
+│  └──────────┘  └──────────┘  └──────────┘                 │
 └────────────────────────┬────────────────────────────────────┘
                          │
                          ▼
@@ -61,8 +80,12 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 │              SUPABASE (PostgreSQL + Storage)                │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
 │  │  Users   │  │Businesses│  │ Bookings │  │  Images  │  │
-│  │          │  │          │  │          │  │ (Storage)│  │
+│  │          │  │ (enhanced│  │          │  │ (Storage)│  │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
+│  ┌──────────┐                                               │
+│  │  Rooms   │  ← Now has features, amenities, area_guide   │
+│  │ (venue)  │  ← property_type, bathrooms, parking_spaces  │
+│  └──────────┘  ← furnishing_status, listing_status         │
 └─────────────────────────────────────────────────────────────┘
                          │
                          ▼
@@ -95,6 +118,7 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 | React.createElement | - | No JSX - all components created programmatically |
 | Lucide React | Latest | Icon library (replaced FontAwesome) |
 | React Hot Toast | Latest | Toast notifications |
+| React Router DOM | Latest | Routing |
 | Fetch API | Native | HTTP requests to backend |
 
 ### Backend
@@ -107,12 +131,13 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 | CORS | Latest | Cross-origin resource sharing |
 | express-rate-limit | Latest | Rate limiting (100 req/15min) |
 | Node DNS | Native | Custom domain verification |
+| dotenv | Latest | Environment variables |
 
 ### Database & Storage
 | Technology | Purpose |
 |------------|---------|
-| Supabase (PostgreSQL) | Main database - users, businesses, bookings, rooms, staff |
-| Supabase Storage | Image storage - logos, covers, gallery images |
+| Supabase (PostgreSQL) | Main database - users, businesses, bookings, rooms, staff, gallery |
+| Supabase Storage | Image storage - logos, covers, gallery images, venue images |
 
 ### External Services
 | Service | Purpose |
@@ -123,7 +148,7 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 
 ---
 
-## 📁 Database Schema (Complete)
+## 📁 Database Schema (Complete - UPDATED September 2026)
 
 ### Tables Structure
 
@@ -140,7 +165,7 @@ CREATE TABLE users (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Businesses Table
+-- Businesses Table (COMPLETE - All fields added)
 CREATE TABLE businesses (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users(id),
@@ -154,29 +179,67 @@ CREATE TABLE businesses (
   state VARCHAR(100),
   city VARCHAR(100),
   logo_url TEXT,
-  cover_url TEXT,
-  about TEXT,
+  cover_image TEXT,
+  about_text TEXT,
   story_image TEXT,
   status VARCHAR(50) DEFAULT 'pending',
   is_active BOOLEAN DEFAULT TRUE,
   booking_limit INTEGER DEFAULT 50,
   current_booking_count INTEGER DEFAULT 0,
   subscription_status VARCHAR(50) DEFAULT 'free',
+  -- ENHANCED FIELDS (All database-driven)
+  ref_id VARCHAR(50) UNIQUE,
+  property_type VARCHAR(100),
+  property_size VARCHAR(50),
+  bedrooms INTEGER DEFAULT 0,
+  bathrooms INTEGER DEFAULT 0,
+  parking_spaces INTEGER DEFAULT 0,
+  year_built INTEGER,
+  furnishing_status VARCHAR(50) DEFAULT 'unfurnished',
+  listing_status VARCHAR(50) DEFAULT 'for_rent',
+  features JSONB DEFAULT '[]'::jsonb,
+  amenities JSONB DEFAULT '[]'::jsonb,
+  area_guide JSONB DEFAULT '[]'::jsonb,
+  view_count INTEGER DEFAULT 0,
+  phone_numbers JSONB DEFAULT '[]'::jsonb,
+  custom_domain VARCHAR(255),
+  is_domain_verified BOOLEAN DEFAULT FALSE,
+  domain_verification_code VARCHAR(255),
+  domain_verification_expires TIMESTAMP,
+  domain_verified_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Rooms Table
+-- Rooms Table (Enhanced with NEW per-venue fields)
 CREATE TABLE rooms (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  price DECIMAL(10,2) NOT NULL,
+  price_per_night DECIMAL(10,2) NOT NULL,
+  base_price DECIMAL(10,2),
   capacity INTEGER,
   amenities TEXT[],
-  images TEXT[],
-  is_active BOOLEAN DEFAULT TRUE,
+  images JSONB DEFAULT '[]'::jsonb,
+  status VARCHAR(50) DEFAULT 'available',
+  type VARCHAR(50),
+  -- ENHANCED FIELDS
+  address TEXT,
+  venue_description TEXT,
+  included_guests INTEGER DEFAULT 0,
+  max_capacity INTEGER DEFAULT 0,
+  extra_guest_price DECIMAL(10,2) DEFAULT 0,
+  sort_order INTEGER DEFAULT 0,
+  -- 🆕 NEW PER-VENUE FIELDS (Added September 2026)
+  property_type VARCHAR(100),
+  bathrooms INTEGER DEFAULT 0,
+  parking_spaces INTEGER DEFAULT 0,
+  year_built INTEGER,
+  furnishing_status VARCHAR(50) DEFAULT 'unfurnished',
+  listing_status VARCHAR(50) DEFAULT 'for_rent',
+  features JSONB DEFAULT '[]'::jsonb,
+  area_guide JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -190,15 +253,16 @@ CREATE TABLE bookings (
   customer_name VARCHAR(255) NOT NULL,
   customer_email VARCHAR(255) NOT NULL,
   customer_phone VARCHAR(50),
-  check_in DATE NOT NULL,
-  check_out DATE NOT NULL,
-  guests INTEGER DEFAULT 1,
-  total_price DECIMAL(10,2) NOT NULL,
+  check_in_date DATE NOT NULL,
+  check_out_date DATE NOT NULL,
+  number_of_guests INTEGER DEFAULT 1,
+  total_amount DECIMAL(10,2) NOT NULL,
   payment_method VARCHAR(50),
   payment_status VARCHAR(50) DEFAULT 'pending',
-  paystack_reference VARCHAR(255),
+  payment_reference VARCHAR(255),
+  amount_paid DECIMAL(10,2),
   status VARCHAR(50) DEFAULT 'pending',
-  notes TEXT,
+  special_requests TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -208,9 +272,10 @@ CREATE TABLE staff (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL,
-  name VARCHAR(255) NOT NULL,
+  full_name VARCHAR(255) NOT NULL,
   role VARCHAR(100),
   password_hash VARCHAR(255) NOT NULL,
+  password VARCHAR(255),
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -244,6 +309,17 @@ CREATE TABLE business_sessions (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Business Gallery Table
+CREATE TABLE business_gallery (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL,
+  file_name TEXT,
+  sort_order INTEGER DEFAULT 0,
+  is_cover BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Subscription Upgrades Table
 CREATE TABLE subscription_upgrades (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -258,6 +334,37 @@ CREATE TABLE subscription_upgrades (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Availability/Blocked Dates Table
+CREATE TABLE availability (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  is_available BOOLEAN DEFAULT TRUE,
+  reason TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Operating Hours Table
+CREATE TABLE operating_hours (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+  day_of_week INTEGER NOT NULL,
+  day_name VARCHAR(20),
+  is_open BOOLEAN DEFAULT TRUE,
+  open_time TIME,
+  close_time TIME,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX idx_businesses_ref_id ON businesses(ref_id);
+CREATE INDEX idx_businesses_status ON businesses(status);
+CREATE INDEX idx_businesses_created_at ON businesses(created_at);
+CREATE INDEX idx_gallery_business ON business_gallery(business_id);
+CREATE INDEX idx_bookings_business ON bookings(business_id);
+CREATE INDEX idx_bookings_reference ON bookings(booking_reference);
+CREATE INDEX idx_rooms_business ON rooms(business_id);
 ```
 
 ---
@@ -272,11 +379,18 @@ CREATE TABLE subscription_upgrades (
 | Indigo Dark | `#4338CA` | Button active/pressed states |
 | Indigo Background | `#EEF2FF` | Section backgrounds, highlights |
 | White | `#FFFFFF` | Main background, cards |
-| Text Primary | `#1A1A1A` | Headings, body text |
-| Text Secondary | `#666666` | Subtle text, labels |
+| Text Primary | `#1A1F36` | Headings, body text |
+| Text Secondary | `#475569` | Subtle text, labels |
+| Text Muted | `#64748B` | Muted text, hints |
 | Success Green | `#10B981` | Approved status, success messages |
 | Warning Yellow | `#F59E0B` | Pending status, warnings |
 | Danger Red | `#EF4444` | Rejected status, errors |
+
+### Typography
+| Font | Usage |
+|------|-------|
+| Plus Jakarta Sans | Primary font (headings, body) |
+| System UI | Fallback fonts |
 
 ---
 
@@ -309,6 +423,7 @@ CREATE TABLE subscription_upgrades (
    - Home button in header
    - Mobile responsive (bottom nav on mobile)
    - Scrollable tabs on mobile
+   - Subscription management (pending upgrades)
 
 4. **Business Login** (`BusinessLogin.jsx`)
    - Modal overlay
@@ -323,27 +438,76 @@ CREATE TABLE subscription_upgrades (
    - Mobile responsive with scrollable tabs
    - Bottom navigation on mobile
    - Booking limit banner with upgrade prompt
+   - Enhanced profile management
 
-6. **Public Booking Page** (`UnifiedBookingPage.jsx`) - **COMPLETELY REDESIGNED**
+6. **Business Settings** (`BusinessSettings.jsx`) - **ENHANCED**
+   - Operating Hours management
+   - Blocked Dates management
+   - Custom Domain verification with DNS
+   - **Phone Numbers management** (database-driven)
+   - All data is database-driven (not hard-coded)
+
+7. **Public Booking Page** (`UnifiedBookingPage.jsx`) - **COMPLETELY REDESIGNED**
    - Premium UI with glass-morphism effects
-   - Location map integration with Google Maps
-   - Reviews breakdown section
-   - Highlights section (Loved by couples, Top rated breakfast, etc.)
-   - Mobile-first responsive design
-   - Compact back button (circular on mobile, arrow only)
-   - Naira currency symbol throughout
-   - Fixed date picker visibility on mobile
-   - Hero section with premium badges
-   - Gallery with lightbox
-   - Room cards with premium styling
-   - Booking modal with Paystack/Pay at Venue
+   - **Gallery Grid** - Large main image with 4 stacked thumbnails, +N indicator for more images
+   - **Venue Info Header** - Bold venue name, price, premium badge, location, ref ID, posted date, view count
+   - **Type Icon Card** - Property type, parking status, furnishing status with icons
+   - **About Property** - Expandable description with Show More/Less
+   - **Features & Amenities** - Displayed by category with check icons (database-driven per venue)
+     - Interior & Finishing
+     - Power & Utilities
+     - Security & Safety
+     - Outdoor & Communal
+   - **Property Details** - Ref ID, Property Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status
+   - **Area Guide** - Professional icons with title and content (database-driven per venue)
+   - **"Marketed by" Card** - Business logo, name, address, member since, "View all properties from this owner" link
+   - **Lightbox Gallery** - Full-screen image viewer with thumbnails
+   - **Floating Action Buttons** - Call and Book Now
+   - **Call Modal** - Phone numbers with Copy and Call actions (FIXED - shows business phone)
+   - **Book Now Modal** - Simplified: Single Event Date picker, no guest count, shows venue capacity
+   - **Booking Receipt** - Professional receipt modal after confirmation with booking reference, details, and print option
+   - **Mobile-first**: Fully responsive across all devices
 
-7. **UpgradePage** (`pages/UpgradePage.jsx`)
-   - Full page upgrade flow
-   - Plan selection (Starter/Pro)
-   - Bank transfer payment instructions
-   - Copyable reference
-   - Success confirmation
+8. **Owner Properties Page** (`OwnerPropertiesPage.jsx`) - **NEW**
+   - **Business Info Card** - Logo, name, address, member since
+   - **Stats Row** - Active properties, For rent, For sale, Areas covered
+   - **Areas Covered** - Unique locations with property counts
+   - **Filter Tabs** - All, For rent, For sale, Short let
+   - **Property Listing Cards** - Image, name, address, capacity, views, price, listing status badge
+   - **Pagination ready** - Infrastructure for pagination
+   - **Mobile-first** - Fully responsive across all devices
+
+9. **Room Management** (`RoomPage.jsx`) - **COMPLETELY REDESIGNED**
+   - Add/Edit/Delete rooms with **FULL SETTINGS**
+   - **Tabbed Interface**: Basic, Details, Features, Amenities, Area Guide
+   - **Per-venue Features** - Add/remove features by category (Interior, Exterior, Safety, Utilities, Outdoor)
+   - **Per-venue Amenities** - Add/remove amenities by category (Interior, Safety, Outdoor, Utilities)
+   - **Per-venue Area Guide** - Add sections with professional icons
+   - **Per-venue Property Details** - Property Type, Bathrooms, Parking Spaces, Year Built, Furnishing Status, Listing Status
+   - **Image upload from desktop** - Upload images directly (not just URLs)
+   - Address and description per venue
+   - Dynamic labels based on business type (hotel/sports/event)
+
+10. **Bookings Manager** (`BookingsManager.jsx`)
+    - View all bookings
+    - Update booking status
+    - Filter bookings
+
+11. **Staff Management** (`StaffManagement.jsx`)
+    - Add/Edit/Delete staff
+    - Role management
+
+12. **Business Profile** (`BusinessProfile.jsx`) - **UPDATED**
+    - Update all business details: Name, Email, Phone, Address, City, State, Website, Description, About Text
+    - Logo and cover image upload
+    - Gallery management
+
+13. **UpgradePage** (`pages/UpgradePage.jsx`)
+    - Full page upgrade flow
+    - Plan selection (Starter/Pro)
+    - Bank transfer payment instructions
+    - Copyable reference
+    - Success confirmation
 
 ---
 
@@ -371,11 +535,34 @@ POST   /api/admin/subscription/verify - Verify subscription upgrade
 ```
 GET    /api/businesses/profile     - Get business profile
 PUT    /api/businesses/:id         - Update business
-GET    /api/businesses/:id/rooms   - Get business rooms
+GET    /api/businesses/:id/rooms   - Get business rooms (with sort_order)
 GET    /api/businesses/:id/bookings - Get business bookings
 GET    /api/businesses/:id/staff   - Get business staff
 GET    /api/businesses/:id/subscription - Get subscription status
 POST   /api/businesses/:id/upgrade-request - Create upgrade request
+```
+
+#### Enhanced Business Routes
+```
+GET    /api/businesses/:identifier/enhanced - Get all enhanced business data
+GET    /api/businesses/:businessId/gallery/public - Get public gallery
+GET    /api/businesses/:businessId/phone-numbers/public - Get public phone numbers
+PUT    /api/businesses/:businessId/features - Update features (with categories)
+PUT    /api/businesses/:businessId/amenities - Update amenities (with categories)
+PUT    /api/businesses/:businessId/area-guide - Update area guide
+PUT    /api/businesses/:businessId/phone-numbers - Update phone numbers
+PUT    /api/businesses/:businessId/property-details - Update property details (Ref ID, Type, Bedrooms, etc.)
+POST   /api/businesses/:businessId/gallery - Add gallery image (authenticated)
+DELETE /api/businesses/:businessId/gallery/:imageId - Delete gallery image
+```
+
+#### Venue/Room Routes (Enhanced)
+```
+POST   /api/businesses/:businessId/rooms/create - Create room with all fields
+PUT    /api/businesses/:businessId/rooms/:roomId - Update room with all fields (features, amenities, area_guide, property_type, etc.)
+DELETE /api/businesses/:businessId/rooms/:roomId - Delete room
+POST   /api/businesses/:businessId/rooms/:roomId/upload-image - Upload venue image
+DELETE /api/businesses/:businessId/rooms/:roomId/images - Delete venue image
 ```
 
 #### Booking Routes
@@ -393,6 +580,13 @@ POST   /api/create-payment         - Initialize Paystack payment
 POST   /api/verify-payment         - Verify Paystack payment
 ```
 
+#### Custom Domain Routes
+```
+POST   /api/businesses/generate-verification - Generate DNS verification code
+POST   /api/businesses/check-verification - Verify custom domain
+GET    /api/domain-info            - Get business by domain
+```
+
 ---
 
 ## 🚀 Complete Feature Implementation
@@ -401,12 +595,15 @@ POST   /api/verify-payment         - Verify Paystack payment
 - **Step 1**: Account creation (email, password, full name)
 - **Step 2**: Business details (name, type, state, city, address, phone)
 - **Step 3**: Confirmation & approval pending
+- **Ref ID generation** (BH-XXXXXXXX format)
 
 ### 2. Authentication System
 - JWT tokens stored in localStorage
 - Password hashing with bcryptjs (10 rounds)
 - Role-based access (admin, owner, staff)
 - Session management with token expiry
+- Admin sessions (1 day expiry)
+- Business sessions (7 day expiry)
 
 ### 3. Admin Dashboard
 - **Stats Overview**: Total businesses, pending, approved, rejected
@@ -426,19 +623,57 @@ POST   /api/verify-payment         - Verify Paystack payment
 - **Staff Management**: Add/edit/delete staff with roles
 - **Settings**: Operating hours, blocked dates, custom domain
 - **Subscription**: View plans, upgrade with bank transfer
+- **Phone Numbers Management**: Add multiple contact numbers
+- **Venue Management**: Full CRUD with image upload from desktop, address, description
 
 ### 5. Public Booking Page (UnifiedBookingPage.jsx) - COMPLETE REDESIGN
-- **Hero Section**: Premium cover image with business name, location, badges
-- **Highlights Section**: Key selling points
-- **Story Section**: Business description with read more/less toggle
-- **Location Map**: Google Maps integration
-- **Reviews Breakdown**: Category-based ratings with progress bars
-- **Gallery**: Photo gallery with lightbox
-- **Room Selection**: Premium room cards with pricing, capacity, amenities
-- **Date Picker**: Check-in/check-out with guest selector
-- **Booking Modal**: Customer details, payment method selection, receipt
+- **Gallery Grid**: Large main image with 4 stacked thumbnails on desktop, +N indicator
+- **Venue Info Header**: Bold venue name, price, premium badge, location, ref ID, posted date, view count
+- **Type Icon Card**: Property type, parking status, furnishing status with icons
+- **About Property**: Expandable description with Show More/Less toggle
+- **Features & Amenities**: Displayed by category with check icons (database-driven PER VENUE)
+  - Interior & Finishing: Kitchen, Condition, Floors, Guest Toilet
+  - Power & Utilities: Standby Generator, Pool
+  - Security & Safety: Perimeter Fencing, CCTV, Security Equipment, Fire Safety
+  - Outdoor & Communal: Car Park
+- **Property Details**: Ref ID, Property Type, Bedrooms, Bathrooms, Parking Spaces, Property Size, Year Built, Furnishing Status, Listing Status (PER VENUE)
+- **Area Guide**: Professional icons with title and content (database-driven PER VENUE)
+- **"Marketed by" Card**: Business logo, name, address, member since, "View all properties from this owner" link
+- **Lightbox Gallery**: Full-screen image viewer with navigation and thumbnails
+- **Floating Action Buttons**: Call and Book Now
+- **Call Modal**: Phone numbers with Copy and Call actions
+- **Book Now Modal**: Simplified - single Event Date picker, no guest count, venue capacity displayed
+- **Booking Receipt**: Professional receipt modal after booking confirmation with booking reference, venue details, customer info, payment summary, and print option
+- **Price Display**: Shows "per day" or "per night" based on business type
+- **Mobile-first**: Fully responsive across all devices
 
-### 6. Email Notifications (Currently Blocked)
+### 6. Owner Properties Page (OwnerPropertiesPage.jsx) - NEW
+- **Business Info Card**: Logo, name, address, member since
+- **Stats Row**: Active properties, For rent, For sale, Areas covered
+- **Areas Covered**: Unique locations with property counts
+- **Filter Tabs**: All, For rent, For sale, Short let
+- **Property Listing Cards**: Image, name, address, capacity, views, price, listing status badge
+- **Mobile-first**: Fully responsive across all devices
+- **Route**: `/owner/:businessId/properties`
+
+### 7. Room Management Page (RoomPage.jsx) - COMPLETELY REDESIGNED
+- **Tabbed Interface**: Basic, Details, Features, Amenities, Area Guide
+- **Per-venue Features**: Add/remove features with categories
+- **Per-venue Amenities**: Add/remove amenities with categories
+- **Per-venue Area Guide**: Add sections with professional icons
+- **Per-venue Property Details**: Property Type, Bathrooms, Parking Spaces, Year Built, Furnishing Status, Listing Status
+- **Image Upload**: Desktop image upload with Supabase storage
+- **Dynamic Labels**: Adapts to business type (hotel/sports/event)
+- **Mobile-first**: Fully responsive
+
+### 8. Business Profile (BusinessProfile.jsx) - UPDATED
+- **All fields editable**: Business Name, Email, Phone, Address, City, State, Website, Description, About Text
+- **Logo upload**: Square format with preview
+- **Cover image upload**: 1200x400px recommended
+- **Photo Gallery**: Upload and manage up to 16 images
+- **Mobile-first**: Fully responsive
+
+### 9. Email Notifications (Currently Blocked)
 - **Welcome Email**: Sent to business owners after registration
 - **Approval Email**: Sent when admin approves business
 - **Booking Confirmation**: Sent to customer after booking
@@ -446,24 +681,34 @@ POST   /api/verify-payment         - Verify Paystack payment
 
 **BLOCKER**: Resend requires domain verification to send to all users. Test emails only work for verified addresses (`olusegun@luminara.io`, `segzyblink170@gmail.com`).
 
-### 7. Subscription System
+### 10. Subscription System
 - **Subscription Plans**: Free (50 bookings), Starter (100 bookings, ₦30k/mo), Pro (Unlimited, ₦50k/mo)
 - **Booking Limits**: Free tier limited to 50 bookings/month
 - **Upgrade Flow**: Bank transfer with admin verification
 - **Usage Tracking**: Real-time booking usage tracking
 - **Upgrade Modal**: In-app upgrade prompt when limit reached
 
-### 8. Admin Login & Session Management
+### 11. Admin Login & Session Management
 - Admin login at `/admin` route
 - Secure session with `admin_sessions` table
 - Admin-only routes with `authenticateAdmin` middleware
 - Session expiry: 1 day
 - Protected admin endpoints for business management
 
-### 9. Domain & Deployment (In Progress)
+### 12. Domain & Deployment (In Progress)
 - **Current Domain**: Render free domain (`booking-frontend-clean.onrender.com`)
 - **Planned Domain**: `myplazzaa.com` (being handled by Yannick)
 - **Email Blocked**: Resend needs domain verification to send production emails
+
+### 13. Database-Driven Content Management
+- **Features**: Business owners can add/remove features with categories (PER VENUE)
+- **Amenities**: Business owners can add/remove amenities with categories (PER VENUE)
+- **Area Guide**: Business owners can add sections with professional icons (PER VENUE)
+- **Phone Numbers**: Business owners can add multiple contact numbers
+- **Property Details**: Business owners can set Ref ID, Property Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status (PER VENUE)
+- **Gallery**: Business owners can upload up to 16 images
+- **Venues**: Business owners can create multiple venues with images, address, description, pricing
+- **All data reflects instantly on the public booking page**
 
 ---
 
@@ -471,101 +716,40 @@ POST   /api/verify-payment         - Verify Paystack payment
 
 ### Critical Issues Fixed
 
-#### 1. Git Repository Corruption
-- **Problem**: Repository became corrupted, couldn't push/pull
-- **Root Cause**: Large files, interrupted operations
-- **Solution**: Fresh clone from GitHub, re-applied changes
-- **Status**: ✅ FIXED
-
-#### 2. Admin Login Demo Credentials Showing
-- **Problem**: Demo credentials displayed on login form
-- **Root Cause**: Found in `App.jsx` SimpleAdminLogin component
-- **Solution**: Removed demo credentials, added "Contact admin" message
-- **Status**: ✅ FIXED
-
-#### 3. Password Toggle Not Working
-- **Problem**: Eye icon didn't toggle password visibility
-- **Root Cause**: Missing `showPassword` state in both login components
-- **Solution**: Added `showPassword` state and Eye/EyeOff icons with click handlers
-- **Status**: ✅ FIXED
-
-#### 4. AdminLogin ReferenceError
-- **Problem**: `React is not defined` error
-- **Root Cause**: Missing React import in AdminLogin component
-- **Solution**: Added `import React from 'react'`
-- **Status**: ✅ FIXED
-
-#### 5. AdminDashboard Build Failures
-- **Problem**: Syntax errors during build
-- **Root Cause**: Extra closing parenthesis, missing brackets
-- **Solution**: Fixed syntax errors, proper formatting
-- **Status**: ✅ FIXED
-
-#### 6. Render Deployment Failing
-- **Problem**: Build failures on Render
-- **Root Cause**: Syntax errors, incorrect file paths
-- **Solution**: Fixed all syntax errors, proper Git push
-- **Status**: ✅ FIXED
-
-#### 7. Home Button Missing
-- **Problem**: No navigation back to homepage from admin dashboard
-- **Root Cause**: Oversight in UI design
-- **Solution**: Added Home button to AdminDashboard header
-- **Status**: ✅ FIXED
-
-#### 8. Mobile Responsiveness Issues
-- **Problem**: Many components not responsive on mobile
-- **Root Cause**: Desktop-first design without proper breakpoints
-- **Solution**: Added mobile-specific styles, bottom nav on mobile
-- **Status**: ✅ FIXED
-
-#### 9. Email Notifications Blocked (CURRENT ISSUE)
-- **Problem**: Only test emails work (`olusegun@luminara.io`, `segzyblink170@gmail.com`)
-- **Root Cause**: Resend test mode requires domain verification
-- **Solution**: Need to purchase domain (`myplazzaa.com`) and verify in Resend
-- **Status**: 🔴 **BLOCKED** - Awaiting domain from Yannick
-
-#### 10. Image Upload Not Displaying
-- **Problem**: Users could select images but they wouldn't display
-- **Root Cause**: Parent component didn't refresh after upload
-- **Solution**: Added `onRefresh` callback to ImageUpload component
-- **Status**: ✅ FIXED
-
-#### 11. Custom Domain Verification
-- **Problem**: Domain verification was simplified without actual DNS checking
-- **Root Cause**: No DNS TXT record verification implemented
-- **Solution**: Created `dnsService.js` with actual DNS TXT record verification
-- **Status**: ✅ FIXED
-
-#### 12. isMobile ReferenceError (CRITICAL - FIXED)
-- **Problem**: `isMobile is not defined` causing blank page
-- **Root Cause**: `isMobile` variable used but never declared in `UnifiedBookingPage.jsx`
-- **Solution**: Added `useIsMobile()` custom hook with SSR support
-- **Status**: ✅ FIXED
-
-#### 13. Booking Modal - paymentMethod Not Defined (FIXED)
-- **Problem**: `paymentMethod is not defined` error when submitting booking
-- **Root Cause**: paymentMethod state missing from BookingFormModal
-- **Solution**: Added proper state declaration
-- **Status**: ✅ FIXED
-
-#### 14. Booking Modal - Icon Import Errors (FIXED)
-- **Problem**: `User is not defined`, `Wallet is not defined`, `Loader2 is not defined`
-- **Root Cause**: Icons used but not imported
-- **Solution**: Replaced with `Users`, `CreditCard`, and `Loader` (already imported)
-- **Status**: ✅ FIXED
-
-#### 15. Admin Token Key Mismatch (FIXED)
-- **Problem**: AdminDashboard 401 Unauthorized
-- **Root Cause**: AdminLogin stores token as `auth_token` but AdminDashboard looked for `admin_token`
-- **Solution**: Added `getToken()` helper that tries all possible token keys
-- **Status**: ✅ FIXED
-
-#### 16. CSS Syntax Error on Render (FIXED)
-- **Problem**: `[postcss] Unknown word ""` build failure
-- **Root Cause**: Malformed CSS from PowerShell echo commands
-- **Solution**: Cleaned up CSS file, removed duplicates
-- **Status**: ✅ FIXED
+| # | Issue | Root Cause | Solution | Status |
+|---|-------|------------|----------|--------|
+| 1 | Git Repository Corruption | Large files, interrupted operations | Fresh clone from GitHub | ✅ FIXED |
+| 2 | Admin Login Demo Credentials | Hardcoded in App.jsx | Removed demo credentials | ✅ FIXED |
+| 3 | Password Toggle Not Working | Missing `showPassword` state | Added state and toggle handlers | ✅ FIXED |
+| 4 | AdminLogin ReferenceError | Missing React import | Added `import React from 'react'` | ✅ FIXED |
+| 5 | AdminDashboard Build Failures | Syntax errors | Fixed syntax, proper formatting | ✅ FIXED |
+| 6 | Render Deployment Failing | Syntax errors | Fixed all syntax errors | ✅ FIXED |
+| 7 | Home Button Missing | UI oversight | Added Home button to header | ✅ FIXED |
+| 8 | Mobile Responsiveness Issues | Desktop-first design | Added mobile-specific styles | ✅ FIXED |
+| 9 | Email Notifications Blocked | Resend test mode | Need domain verification | 🔴 BLOCKED |
+| 10 | Image Upload Not Displaying | Parent didn't refresh | Added `onRefresh` callback | ✅ FIXED |
+| 11 | Custom Domain Verification | No DNS checking | Added `dnsService.js` | ✅ FIXED |
+| 12 | isMobile ReferenceError | Variable used but not declared | Added `useIsMobile()` hook | ✅ FIXED |
+| 13 | Booking Modal - paymentMethod Not Defined | Missing state declaration | Added proper state | ✅ FIXED |
+| 14 | Booking Modal - Icon Import Errors | Icons not imported | Replaced with existing icons | ✅ FIXED |
+| 15 | Admin Token Key Mismatch | Token key mismatch | Added `getToken()` helper | ✅ FIXED |
+| 16 | CSS Syntax Error on Render | Malformed CSS | Cleaned up CSS file | ✅ FIXED |
+| 17 | Features/Amenities Not Saving | Data not loaded on mount | Added `loadEnhancedDataFromAPI()` | ✅ FIXED |
+| 18 | Non-existent Icons in Lucide React | Used icons that don't exist | Replaced with existing icons | ✅ FIXED |
+| 19 | `require` is not defined in Browser | Used require() in browser | Created static `iconMap` | ✅ FIXED |
+| 20 | `/enhanced` API 500 Error | `supabase.raw()` not supported | Safe increment with current value | ✅ FIXED |
+| 21 | Business Not Found on Booking Page | `useParams()` looking for wrong param | Changed to `params.businessSlug` | ✅ FIXED |
+| 22 | Gallery Images Not Fitting | maxHeight/minHeight constraints | Using aspect-ratio, object-fit: cover | 🔧 IN PROGRESS |
+| 23 | Google Maps Integration | No valid API key | Removed for now | ⏳ PENDING |
+| 24 | Venue Image Upload | No desktop upload | Added `venueImageService.js` | ✅ FIXED |
+| 25 | Multi-Venue Display | Only showed one venue | Redesigned with cards | ✅ FIXED |
+| 26 | UnifiedBookingPage Syntax Errors | Complex React.createElement nesting | Fixed parentheses and ES module syntax | ✅ FIXED |
+| 27 | Owner Properties Page | Missing feature | Added OwnerPropertiesPage component | ✅ FIXED |
+| 28 | Property Details Management | Missing in Settings | Added Property Details section | ✅ FIXED |
+| 29 | **Features/Amenities at Business Level** | Wrong architecture | Moved to per-venue in RoomPage | ✅ FIXED |
+| 30 | **Room PUT Route Missing Columns** | Database schema incomplete | Added columns and updated routes | ✅ FIXED |
+| 31 | **Call Modal Not Showing Phone** | Wrong data source | Fixed to use `business.phone` | ✅ FIXED |
+| 32 | **BusinessProfile Missing Fields** | Limited edit fields | Added all fields (email, phone, address, city, state) | ✅ FIXED |
 
 ---
 
@@ -585,13 +769,45 @@ POST   /api/verify-payment         - Verify Paystack payment
 
 6. **Unified Booking Page**: Single booking page for all business types - consistent UX, less code duplication
 
-7. **Plazzaa Integration**: Booking Hub is now the "Plazzaa for Business" solution - core booking platform for the larger ecosystem
+7. **Plazzaa Integration**: Booking Hub is now the "Plazzaa for Business" solution
 
 8. **Subscription System**: Free/Starter/Pro tiers with booking limits and upgrade flow
 
+9. **Database-Driven Content**: Features, amenities, area guide all stored in database - no hard-coding
+
+10. **Nigerian Property Center Inspiration**: Premium UI design with glass-morphism, collage gallery, professional icons
+
+11. **Lazy Supabase Initialization**: Fixed environment variable loading issues
+
+12. **Static Icon Mapping**: Replaced `require()` with static `iconMap` for browser compatibility
+
+13. **Multi-Venue Architecture**: Support for multiple venues per business with individual images, address, description, and pricing
+
+14. **Venue Image Upload**: Desktop image upload for venues with Supabase storage integration
+
+15. **Owner Properties Page**: Dedicated page showing all properties from a single business owner with stats, filters, and listing cards
+
+16. **Property Details Management**: Full CRUD for property details including Ref ID, Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status
+
+17. **Category-Based Features & Amenities**: Organized by categories (Interior, Exterior, Safety, Utilities, Outdoor) for better user experience
+
+18. **ES Module Conversion**: Converted all components from CommonJS to ES modules for Vite compatibility
+
+19. **🎯 Per-Venue Settings**: Moved features, amenities, area guide, and property details from business level to venue level - each venue now has its own unique settings
+
+20. **Tabbed Room Management**: Redesigned RoomPage with 5 tabs (Basic, Details, Features, Amenities, Area Guide) for cleaner UX
+
+21. **Full Business Profile Editing**: All business fields are now editable in the Profile tab
+
+22. **Call Modal Fix**: Simplified phone number display to always show business phone
+
+23. **Booking Receipt**: Professional receipt modal after booking confirmation
+
+24. **Simplified Booking Modal**: Single event date picker, removed guest count (capacity is fixed per venue)
+
 ---
 
-## 📊 Current Project Status (LIVE - SEPTEMBER 2025)
+## 📊 Current Project Status (LIVE - SEPTEMBER 2026)
 
 ### Deployment Status
 | Platform | Service | URL | Status |
@@ -614,12 +830,17 @@ POST   /api/verify-payment         - Verify Paystack payment
 | Business Registration | ✅ | 100% |
 | Admin Dashboard | ✅ | 100% |
 | Business Dashboard | ✅ | 100% |
-| Room Management | ✅ | 100% |
+| Room/Venue Management | ✅ | 100% |
+| **Per-Venue Features** | ✅ | 100% |
+| **Per-Venue Amenities** | ✅ | 100% |
+| **Per-Venue Area Guide** | ✅ | 100% |
+| **Per-Venue Property Details** | ✅ | 100% |
 | Staff Management | ✅ | 100% |
 | Profile Management | ✅ | 100% |
 | Settings (Hours, Blocked Dates) | ✅ | 100% |
 | Custom Domain | ✅ | 100% |
-| Public Booking Page | ✅ | 100% |
+| Public Booking Page | ✅ | 98% |
+| Owner Properties Page | ✅ | 100% |
 | Image Upload | ✅ | 100% |
 | Paystack Integration | ✅ | 90% (test mode) |
 | **Email Notifications** | 🔴 | **BLOCKED - Needs domain** |
@@ -627,9 +848,25 @@ POST   /api/verify-payment         - Verify Paystack payment
 | DNS Verification | ✅ | 100% |
 | Pay at Venue | ✅ | 100% |
 | Subscription System | ✅ | 100% |
-| Unified Booking Page | ✅ | 100% |
-| Premium UI Redesign | ✅ | 100% |
+| Unified Booking Page | ✅ | 98% |
+| Premium UI Redesign | ✅ | 98% |
 | Admin Login/Sessions | ✅ | 100% |
+| **Features Management** | ✅ | 100% |
+| **Amenities Management** | ✅ | 100% |
+| **Area Guide Management** | ✅ | 100% |
+| **Phone Numbers Management** | ✅ | 100% |
+| **Property Details** | ✅ | 100% |
+| **Multi-Venue Support** | ✅ | 100% |
+| **Venue Image Upload** | ✅ | 100% |
+| **"Marketed by" Card** | ✅ | 100% |
+| **"Areas covered" Card** | ✅ | 100% |
+| **Gallery Collage Layout** | 🔧 | 98% (IN PROGRESS) |
+| **ES Module Conversion** | ✅ | 100% |
+| **Per-Venue Settings** | ✅ | 100% |
+| **Call Modal** | ✅ | 100% |
+| **BusinessProfile Full Edit** | ✅ | 100% |
+| **Booking Receipt** | ✅ | 100% |
+| **Simplified Booking Modal** | ✅ | 100% |
 
 ---
 
@@ -644,6 +881,9 @@ POST   /api/verify-payment         - Verify Paystack payment
 | Fix email notifications to all users | 🔴 HIGH | ⏳ Blocked by domain |
 | Full demo for Mr. Terrence (21 September) | 🔴 HIGH | ⏳ In Progress |
 | Onboard pilot businesses | 🟡 MEDIUM | ⏳ PENDING |
+| Fix gallery image fitting | 🟡 MEDIUM | 🔧 IN PROGRESS |
+| WhatsApp integration | 🟡 MEDIUM | ⏳ PENDING |
+| Mixpanel analytics integration | 🟡 MEDIUM | ⏳ PENDING |
 
 ### Phase 2 Features (After Demo)
 | Task | Priority |
@@ -652,6 +892,8 @@ POST   /api/verify-payment         - Verify Paystack payment
 | WhatsApp integration | 🟡 MEDIUM |
 | Automated booking reminders | 🟢 LOW |
 | Analytics dashboard with charts | 🟢 LOW |
+| Reviews and ratings | 🟢 LOW |
+| Google Maps re-integration | 🟢 LOW |
 
 ### Known Issues
 | Issue | Priority | Status |
@@ -659,6 +901,7 @@ POST   /api/verify-payment         - Verify Paystack payment
 | Email notifications blocked | 🔴 High | Needs domain |
 | No real businesses onboarded | 🔴 High | After email fix |
 | Paystack not fully tested | 🟡 Medium | Test mode only |
+| Gallery image fitting | 🟡 Medium | In progress |
 
 ---
 
@@ -677,6 +920,19 @@ POST   /api/verify-payment         - Verify Paystack payment
 - Custom domains, image upload, mobile responsive
 - Admin login and session management
 - Subscription system with upgrade flow
+- **Features, Amenities, Area Guide management** (PER VENUE - database-driven)
+- **Property Details with Ref ID, Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status** (PER VENUE)
+- **Multi-venue support** - Multiple venues per business
+- **Venue image upload** from desktop
+- **"Marketed by" and "Areas covered" cards**
+- **Owner Properties Page** - View all properties from a single business owner
+- **Category-based Features & Amenities** - Organized for better UX
+- **ES Module conversion** - All components use import/export syntax
+- **Tabbed Room Management** - Clean 5-tab interface for venue settings
+- **Full Business Profile editing** - All fields editable
+- **Call Modal fixed** - Shows business phone correctly
+- **Booking Receipt** - Professional receipt after booking confirmation
+- **Simplified Booking Modal** - Single event date, no guest count
 
 🔴 **MAIN BLOCKER: Email notifications**
 - Resend requires domain verification to send to all users
@@ -685,30 +941,48 @@ POST   /api/verify-payment         - Verify Paystack payment
 - Once domain is set up, email service will work immediately
 
 ### What We Were Just Working On
-1. ✅ Fixed AdminDashboard token key mismatch (401 error)
-2. ✅ Cleaned up AdminDashboard syntax errors
-3. ✅ Added debug logging to diagnose data display issues
-4. ✅ Fixed email service with test mode handling
-5. ✅ Prepared for Plazzaa integration
-6. 🔴 **Currently Blocked**: Awaiting domain from Yannick for email fix
+1. ✅ Fixed UnifiedBookingPage syntax errors (ES module conversion, parentheses)
+2. ✅ Added OwnerPropertiesPage component with stats, filters, and listing cards
+3. ✅ Added Property Details management in BusinessSettings
+4. ✅ Updated App.jsx with new route `/owner/:businessId/properties`
+5. ✅ Category-based Features & Amenities display on booking page
+6. ✅ Gallery grid layout with +N indicator
+7. ✅ "Marketed by" card with "View all properties from this owner" link
+8. ✅ **Moved Features, Amenities, Area Guide, Property Details from Business to Venue level**
+9. ✅ **Redesigned RoomPage with 5-tab interface**
+10. ✅ **Added missing columns to rooms table** (property_type, bathrooms, parking_spaces, year_built, furnishing_status, listing_status, features, area_guide)
+11. ✅ **Fixed room PUT route** to use `amenities` (not `venueAmenities`)
+12. ✅ **Fixed Call Modal** to show business phone
+13. ✅ **Updated BusinessProfile** to allow editing of all fields (email, phone, address, city, state)
+14. ✅ **Cleaned BusinessSettings** - removed Property Details, Features, Amenities, Area Guide (now per-venue)
+15. ✅ **Added Booking Receipt** - Professional receipt after booking confirmation
+16. ✅ **Simplified Booking Modal** - Single event date, removed guest count
+17. 🔧 **Working on gallery image fitting** (in progress)
+18. 🔴 **Still Blocked**: Awaiting domain from Yannick for email fix
 
 ### Immediate Next Steps (Don't Skip!)
 1. **Get domain from Yannick** (`myplazzaa.com`)
 2. **Configure DNS** for Resend verification
 3. **Test email notifications** to all users
-4. **Prepare full demo** for Mr. Terrence on 21 September
-5. **Onboard pilot businesses** after email fix
+4. **Fix gallery image fitting** (in progress)
+5. **Prepare full demo** for Mr. Terrence on 21 September
+6. **Onboard pilot businesses** after email fix
+7. **Implement Mixpanel analytics** (Felicity)
 
-### Key Files to Know
+### Key Files to Know (UPDATED)
 | File | Purpose |
 |------|---------|
-| `/client/src/App.jsx` | Main app, routing, toast provider |
+| `/client/src/App.jsx` | Main app, routing (includes /owner/:businessId/properties) |
 | `/client/src/AdminDashboard.jsx` | Admin dashboard |
 | `/client/src/BusinessDashboard.jsx` | Business dashboard |
-| `/client/src/UnifiedBookingPage.jsx` | Public booking page (redesigned) |
-| `/server/server.js` | Express server, routes |
-| `/server/src/services/emailService.js` | Resend email integration |
-| `/server/src/services/paystackService.js` | Paystack payment integration |
+| `/client/src/BusinessSettings.jsx` | Settings (Hours, Blocked Dates, Custom Domain, Phone Numbers only) |
+| `/client/src/UnifiedBookingPage.jsx` | Public booking page (shows PER-VENUE data, booking receipt) |
+| `/client/src/OwnerPropertiesPage.jsx` | Shows all properties from a business owner |
+| `/client/src/RoomPage.jsx` | **COMPLETE VENUE MANAGEMENT** - 5 tabs with all settings |
+| `/client/src/BusinessProfile.jsx` | **FULL BUSINESS PROFILE** - All fields editable |
+| `/server/server.js` | Express server with enhanced room routes |
+| `/server/src/routes/businessRoutes.js` | Enhanced business routes |
+| `/server/src/services/venueImageService.js` | Venue image upload service |
 
 ### The Golden Rule (Never Forget)
 > **"Design for the worst-case scenario first (375px mobile), then expand for desktop. Desktop is 'mobile + more space' not 'desktop - something broke.'"**
@@ -737,10 +1011,25 @@ POST   /api/verify-payment         - Verify Paystack payment
 - [x] Mobile responsive across all pages
 - [x] No hardcoded images on booking page
 - [x] Premium UI with glass-morphism design
-- [x] Location map with Google Maps
-- [x] Reviews breakdown section
 - [x] Subscription system implemented
 - [x] All critical bugs fixed
+- [x] Features management (database-driven with categories) - PER VENUE
+- [x] Amenities management (database-driven with categories) - PER VENUE
+- [x] Area Guide management (database-driven with icons) - PER VENUE
+- [x] Phone Numbers management (database-driven)
+- [x] Property Details with Ref ID, Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status - PER VENUE
+- [x] Multi-venue support (multiple venues per business)
+- [x] Venue image upload from desktop
+- [x] "Marketed by" card with business details
+- [x] "Areas covered" card with venue locations
+- [x] Owner Properties page with stats and filters
+- [x] Category-based Features & Amenities display
+- [x] ES Module conversion for all components
+- [x] Tabbed Room Management interface
+- [x] Full Business Profile editing (all fields)
+- [x] Call Modal showing business phone
+- [x] Booking Receipt after confirmation
+- [x] Simplified Booking Modal (single date, no guest count)
 
 ---
 
@@ -756,6 +1045,18 @@ We've built a complete, production-ready booking management platform for Nigeria
 4. **Professional**: Indigo branding, premium glass-morphism UI, smooth UX
 5. **Secure**: JWT, bcrypt, rate limiting, DNS verification
 6. **Subscription-ready**: Built-in booking limits and upgrade flow
+7. **Database-driven**: Features, amenities, area guide all configurable
+8. **Nigerian Property Center inspired**: Premium design with collage gallery
+9. **Multi-venue**: Businesses can list multiple venues with individual details
+10. **Image upload**: Desktop image upload for venues (not just URLs)
+11. **Owner properties**: Dedicated page showing all properties from a business owner
+12. **Category-based**: Features and amenities organized by categories for better UX
+13. **Full property details**: Ref ID, Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status
+14. **🎯 Per-Venue Settings**: Each venue has its own features, amenities, area guide, and property details
+15. **Clean UX**: Tabbed interface for venue management
+16. **Full profile editing**: All business fields editable
+17. **Working call modal**: Shows business phone with Copy and Call actions
+18. **Professional receipt**: Full receipt modal after booking confirmation
 
 ### The Road Ahead
 The code is ready. The deployment is ready. The only thing left is domain setup, email verification, and user onboarding. The Plazzaa integration is the next major milestone, with a demo scheduled for 21 September.
@@ -781,6 +1082,12 @@ cd server && node server.js
 # Build frontend
 cd client && npm run build
 
+# Run ESLint on client
+npx eslint client/src/**/*.jsx
+
+# Run ESLint on server
+npx eslint server/**/*.js
+
 # Deploy to Render
 git add .
 git commit -m "message"
@@ -792,10 +1099,12 @@ git push origin main
 |----------|-------|---------|
 | `SUPABASE_URL` | Backend | Database connection |
 | `SUPABASE_ANON_KEY` | Backend | Database auth |
+| `SUPABASE_SERVICE_ROLE_KEY` | Backend | Database admin |
 | `RESEND_API_KEY` | Backend | Email sending |
 | `PAYSTACK_SECRET_KEY` | Backend | Payment processing |
 | `VITE_API_BASE` | Frontend | Backend API URL |
 | `NODE_ENV` | Backend | Production mode |
+| `ALLOWED_ORIGINS` | Backend | CORS allowed origins |
 
 ### Key People
 - **Developer**: Olusegun (olusegun-sys)
@@ -803,7 +1112,8 @@ git push origin main
 - **Head of Engineering**: Yannick
 - **CEO**: Mr. Terrence
 - **UI/UX**: Emmanuel
+- **Sales/Outreach**: Adewale Adekunle
 
 ---
 
-*This document will be updated as we progress. Last update: September 2025.*
+*This document will be updated as we progress. Last update: September 2026.*
