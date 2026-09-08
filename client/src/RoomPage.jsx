@@ -2,6 +2,7 @@
 // COMPLETE VENUE MANAGEMENT WITH FULL SETTINGS + IMAGES TAB
 // Features, Amenities, Area Guide, Property Details per venue
 // Updated: September 2026 - Added Images tab with drag-drop upload
+// UPDATED: Professional delete confirmation modal replacing Chrome alert
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -14,7 +15,7 @@ import {
   ShoppingBag, GraduationCap, Landmark, Plane, Umbrella,
   Music, Utensils, Tent, Eye, Maximize, Layers, Grid3x3,
   Phone, Mail, Clock, Globe, Copy, Check,
-  GripVertical
+  GripVertical, AlertTriangle
 } from 'lucide-react';
 import API_BASE from './config';
 import { showError, showSuccess } from './toast';
@@ -147,6 +148,178 @@ const iconOptions = [
 ];
 
 // ============================================================
+// DELETE CONFIRMATION MODAL COMPONENT
+// ============================================================
+function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) {
+  const isMobile = window.innerWidth < 640;
+
+  if (!isOpen) return null;
+
+  // Prevent click outside from closing
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      // Don't close - require explicit Cancel
+    }
+  };
+
+  return React.createElement(
+    'div',
+    {
+      style: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        animation: 'fadeIn 0.25s ease'
+      },
+      onClick: handleBackdropClick
+    },
+    React.createElement(
+      'div',
+      {
+        style: {
+          backgroundColor: 'white',
+          borderRadius: isMobile ? '20px' : '24px',
+          maxWidth: '480px',
+          width: '100%',
+          padding: isMobile ? '28px 24px' : '40px 32px',
+          boxShadow: '0 40px 80px rgba(0,0,0,0.25)',
+          animation: 'slideUp 0.3s ease',
+          position: 'relative'
+        }
+      },
+      // Icon
+      React.createElement(
+        'div',
+        {
+          style: {
+            width: isMobile ? '64px' : '72px',
+            height: isMobile ? '64px' : '72px',
+            borderRadius: '50%',
+            backgroundColor: '#fef2f2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px'
+          }
+        },
+        React.createElement(AlertTriangle, { size: isMobile ? 28 : 32, color: '#dc2626' })
+      ),
+      // Title
+      React.createElement(
+        'h3',
+        {
+          style: {
+            fontSize: isMobile ? '20px' : '24px',
+            fontWeight: '700',
+            color: '#0f172a',
+            textAlign: 'center',
+            margin: '0 0 8px 0'
+          }
+        },
+        'Delete ' + itemType + '?'
+      ),
+      // Description
+      React.createElement(
+        'p',
+        {
+          style: {
+            fontSize: isMobile ? '14px' : '16px',
+            color: '#475569',
+            textAlign: 'center',
+            lineHeight: '1.6',
+            margin: '0 0 24px 0'
+          }
+        },
+        'You are about to delete ',
+        React.createElement('strong', { style: { color: '#0f172a' } }, '"' + itemName + '"'),
+        '. This action cannot be undone. Are you sure you want to continue?'
+      ),
+      // Buttons
+      React.createElement(
+        'div',
+        {
+          style: {
+            display: 'flex',
+            gap: '12px',
+            flexDirection: isMobile ? 'column-reverse' : 'row'
+          }
+        },
+        // Cancel Button
+        React.createElement(
+          'button',
+          {
+            onClick: onClose,
+            style: {
+              flex: 1,
+              padding: isMobile ? '14px' : '16px',
+              backgroundColor: 'white',
+              color: '#475569',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '12px',
+              fontSize: isMobile ? '14px' : '15px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            },
+            onMouseEnter: function(e) {
+              e.currentTarget.style.borderColor = '#94a3b8';
+              e.currentTarget.style.backgroundColor = '#f8fafc';
+            },
+            onMouseLeave: function(e) {
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.backgroundColor = 'white';
+            }
+          },
+          'Cancel'
+        ),
+        // Delete Button
+        React.createElement(
+          'button',
+          {
+            onClick: onConfirm,
+            style: {
+              flex: 1,
+              padding: isMobile ? '14px' : '16px',
+              backgroundColor: '#dc2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: isMobile ? '14px' : '15px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            },
+            onMouseEnter: function(e) {
+              e.currentTarget.style.backgroundColor = '#b91c1c';
+              e.currentTarget.style.transform = 'scale(1.02)';
+            },
+            onMouseLeave: function(e) {
+              e.currentTarget.style.backgroundColor = '#dc2626';
+              e.currentTarget.style.transform = 'scale(1)';
+            }
+          },
+          React.createElement(Trash2, { size: isMobile ? 16 : 18 }),
+          'Delete ' + itemType
+        )
+      )
+    )
+  );
+}
+
+// ============================================================
 // MAIN COMPONENT
 // ============================================================
 function RoomPage({ business, onBack }) {
@@ -158,6 +331,12 @@ function RoomPage({ business, onBack }) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState('basic');
+
+  // ============================================================
+  // DELETE CONFIRMATION STATE
+  // ============================================================
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState(null);
 
   const labels = getLabels(business?.business_type);
   const IconComponent = labels.icon;
@@ -308,6 +487,47 @@ function RoomPage({ business, onBack }) {
     setShowModal(false);
     setEditingRoom(null);
     setActiveTab('basic');
+  }
+
+  // ============================================================
+  // DELETE HANDLER - Opens Professional Modal
+  // ============================================================
+  function handleDeleteClick(room) {
+    setRoomToDelete(room);
+    setDeleteModalOpen(true);
+  }
+
+  function handleConfirmDelete() {
+    if (!roomToDelete) return;
+    
+    const roomId = roomToDelete.id;
+    const roomName = roomToDelete.name;
+    
+    fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.success) {
+          showSuccess(labels.singular + ' deleted successfully');
+          fetchRooms();
+        } else {
+          showError('Failed to delete ' + labels.singular.toLowerCase());
+        }
+        setDeleteModalOpen(false);
+        setRoomToDelete(null);
+      })
+      .catch(function() {
+        showError('Something went wrong. Please try again.');
+        setDeleteModalOpen(false);
+        setRoomToDelete(null);
+      });
+  }
+
+  function handleCancelDelete() {
+    setDeleteModalOpen(false);
+    setRoomToDelete(null);
   }
 
   // ============================================================
@@ -643,27 +863,6 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // DELETE VENUE
-  // ============================================================
-  function handleDelete(roomId) {
-    if (!confirm('Delete this ' + labels.singular.toLowerCase() + '?')) return;
-    fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId, {
-      method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + token }
-    })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        if (data.success) {
-          showSuccess(labels.singular + ' deleted');
-          fetchRooms();
-        } else {
-          showError('Failed to delete');
-        }
-      })
-      .catch(function() { showError('Something went wrong. Please try again.'); });
-  }
-
-  // ============================================================
   // RENDER
   // ============================================================
   if (loading) {
@@ -675,6 +874,15 @@ function RoomPage({ business, onBack }) {
   const isMobile = window.innerWidth < 640;
 
   return React.createElement('div', { style: { maxWidth: '1200px', margin: '0 auto', padding: '16px' } },
+    // Delete Confirmation Modal
+    React.createElement(DeleteConfirmModal, {
+      isOpen: deleteModalOpen,
+      onClose: handleCancelDelete,
+      onConfirm: handleConfirmDelete,
+      itemName: roomToDelete?.name || '',
+      itemType: labels.singular
+    }),
+
     // Header
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
@@ -740,7 +948,7 @@ function RoomPage({ business, onBack }) {
                 style: { padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#475569' }
               }, React.createElement(Edit3, { size: 16 })),
               React.createElement('button', { 
-                onClick: function() { handleDelete(room.id); }, 
+                onClick: function() { handleDeleteClick(room); }, 
                 style: { padding: '6px 12px', background: '#fef2f2', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#ef4444' }
               }, React.createElement(Trash2, { size: 16 }))
             )
@@ -1004,7 +1212,7 @@ function RoomPage({ business, onBack }) {
         ),
 
         // ============================================================
-        // TAB: IMAGES (NEW - Complete with drag-drop + button)
+        // TAB: IMAGES
         // ============================================================
         activeTab === 'images' && React.createElement('div', null,
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },

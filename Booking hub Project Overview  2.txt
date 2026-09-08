@@ -1,4 +1,8 @@
-﻿# Booking Hub - Complete Project Overview (MASTER UPDATE - SEPTEMBER 2026)
+﻿**Summary:** I'll update your master project overview document with everything we've accomplished in this session - the Nigerian event venue slideshow images, HostLanding updates, and all previous changes.
+
+---
+
+# Booking Hub - Complete Project Overview (MASTER UPDATE - OCTOBER 2026)
 
 ## 📋 Plain English Summary
 This document captures EVERYTHING we've built for Booking Hub - from the first line of code to our current state. It includes our vision, technical decisions, every roadblock we smashed, every breakthrough we celebrated, and a clear map of where we're heading next. If this chat hits the limit, the next chat can pick up right here and know exactly what we've done, why we did it, and what's left.
@@ -12,14 +16,16 @@ This document captures EVERYTHING we've built for Booking Hub - from the first l
 
 **Now part of Plazzaa:** The platform is being integrated into the larger Plazzaa ecosystem as the "Plazzaa for Business" solution - a comprehensive business management tool for hospitality businesses.
 
-### Key Meeting Decisions (September 2026)
+### Key Meeting Decisions (September-October 2026)
 - **Iterate, don't rebuild**: Team decided to iterate on existing codebase rather than rebuilding from scratch
 - **Independent B2B product**: Platform functions as standalone B2B booking tool, not tied to Plaza marketplace
 - **V1 feature freeze**: Only customer booking page and business dashboard for V1
 - **Pilot with 5-10 businesses**: Test with small cohort before wider launch
 - **Feedback-driven development**: Only build features requested by businesses during sales outreach
 - **Manual data migration**: Initial business data will be entered manually via Supabase
-- **Launch deadline**: September 21, 2026
+- **Launch deadline**: September 21, 2026 (extended)
+- **Per-booking fee model**: Initial monetization via transaction-based service charge
+- **Subscription tiers retained**: Free/Starter/Pro plans with booking limits
 
 ### The Problem We're Solving
 Nigerian hospitality businesses (hotels, sports facilities, event venues) struggle with:
@@ -43,6 +49,7 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 - ✅ Full property details - Ref ID, property type, bedrooms, bathrooms, parking, furnishing, listing status
 - ✅ **Per-venue features, amenities, area guide, and property details** - Each venue has its own unique settings
 - ✅ **Professional booking receipt** - Full receipt modal after booking confirmation
+- ✅ **Venue-specific images** - Each venue has its own image gallery, separate from business branding
 
 ---
 
@@ -60,6 +67,10 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 │  │  Owner   │  │ Business │  │  Room    │                 │
 │  │Properties│  │ Settings │  │  Page    │                 │
 │  └──────────┘  └──────────┘  └──────────┘                 │
+│  ┌──────────┐                                               │
+│  │ Host     │  ← Nigerian event venue landing page         │
+│  │ Landing  │                                               │
+│  └──────────┘                                               │
 └────────────────────────┬────────────────────────────────────┘
                          │ HTTPS/REST API
                          ▼
@@ -86,6 +97,7 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 │  │  Rooms   │  ← Now has features, amenities, area_guide   │
 │  │ (venue)  │  ← property_type, bathrooms, parking_spaces  │
 │  └──────────┘  ← furnishing_status, listing_status         │
+│                ← images (JSONB array per venue)             │
 └─────────────────────────────────────────────────────────────┘
                          │
                          ▼
@@ -137,7 +149,7 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 | Technology | Purpose |
 |------------|---------|
 | Supabase (PostgreSQL) | Main database - users, businesses, bookings, rooms, staff, gallery |
-| Supabase Storage | Image storage - logos, covers, gallery images, venue images |
+| Supabase Storage | Image storage - logos, **venue images** (bucket: `venue-images`) |
 
 ### External Services
 | Service | Purpose |
@@ -148,7 +160,7 @@ Nigerian hospitality businesses (hotels, sports facilities, event venues) strugg
 
 ---
 
-## 📁 Database Schema (Complete - UPDATED September 2026)
+## 📁 Database Schema (Complete - UPDATED October 2026)
 
 ### Tables Structure
 
@@ -211,7 +223,7 @@ CREATE TABLE businesses (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Rooms Table (Enhanced with NEW per-venue fields)
+-- Rooms Table (Enhanced with per-venue fields)
 CREATE TABLE rooms (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
@@ -221,7 +233,7 @@ CREATE TABLE rooms (
   base_price DECIMAL(10,2),
   capacity INTEGER,
   amenities TEXT[],
-  images JSONB DEFAULT '[]'::jsonb,
+  images JSONB DEFAULT '[]'::jsonb,  -- 🆕 Per-venue images
   status VARCHAR(50) DEFAULT 'available',
   type VARCHAR(50),
   -- ENHANCED FIELDS
@@ -231,7 +243,7 @@ CREATE TABLE rooms (
   max_capacity INTEGER DEFAULT 0,
   extra_guest_price DECIMAL(10,2) DEFAULT 0,
   sort_order INTEGER DEFAULT 0,
-  -- 🆕 NEW PER-VENUE FIELDS (Added September 2026)
+  -- PER-VENUE FIELDS (Added September 2026)
   property_type VARCHAR(100),
   bathrooms INTEGER DEFAULT 0,
   parking_spaces INTEGER DEFAULT 0,
@@ -309,7 +321,7 @@ CREATE TABLE business_sessions (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Business Gallery Table
+-- Business Gallery Table (KEPT FOR FUTURE USE - NOT DISPLAYED PUBLICLY)
 CREATE TABLE business_gallery (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
@@ -449,7 +461,7 @@ CREATE INDEX idx_rooms_business ON rooms(business_id);
 
 7. **Public Booking Page** (`UnifiedBookingPage.jsx`) - **COMPLETELY REDESIGNED**
    - Premium UI with glass-morphism effects
-   - **Gallery Grid** - Large main image with 4 stacked thumbnails, +N indicator for more images
+   - **Gallery Grid** - Large main image with 4 stacked thumbnails, +N indicator for more images **(USES ONLY VENUE IMAGES)**
    - **Venue Info Header** - Bold venue name, price, premium badge, location, ref ID, posted date, view count
    - **Type Icon Card** - Property type, parking status, furnishing status with icons
    - **About Property** - Expandable description with Show More/Less
@@ -460,13 +472,15 @@ CREATE INDEX idx_rooms_business ON rooms(business_id);
      - Outdoor & Communal
    - **Property Details** - Ref ID, Property Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status
    - **Area Guide** - Professional icons with title and content (database-driven per venue)
-   - **"Marketed by" Card** - Business logo, name, address, member since, "View all properties from this owner" link
+   - **"Marketed by" Card** - Business logo, name, address, member since **(NO "View all properties" link - venues already displayed on page)**
    - **Lightbox Gallery** - Full-screen image viewer with thumbnails
-   - **Floating Action Buttons** - Call and Book Now
+   - **Floating Action Buttons** - Call and Book Now **(FIXED: uses selected venue)**
    - **Call Modal** - Phone numbers with Copy and Call actions (FIXED - shows business phone)
    - **Book Now Modal** - Simplified: Single Event Date picker, no guest count, shows venue capacity
    - **Booking Receipt** - Professional receipt modal after confirmation with booking reference, details, and print option
    - **Mobile-first**: Fully responsive across all devices
+   - **Professional placeholder** when no venue images exist
+   - **Standardized loading spinner** matching BusinessDashboard
 
 8. **Owner Properties Page** (`OwnerPropertiesPage.jsx`) - **NEW**
    - **Business Info Card** - Logo, name, address, member since
@@ -479,12 +493,12 @@ CREATE INDEX idx_rooms_business ON rooms(business_id);
 
 9. **Room Management** (`RoomPage.jsx`) - **COMPLETELY REDESIGNED**
    - Add/Edit/Delete rooms with **FULL SETTINGS**
-   - **Tabbed Interface**: Basic, Details, Features, Amenities, Area Guide
+   - **Tabbed Interface**: Basic, Details, **Images**, Features, Amenities, Area Guide
    - **Per-venue Features** - Add/remove features by category (Interior, Exterior, Safety, Utilities, Outdoor)
    - **Per-venue Amenities** - Add/remove amenities by category (Interior, Safety, Outdoor, Utilities)
    - **Per-venue Area Guide** - Add sections with professional icons
    - **Per-venue Property Details** - Property Type, Bathrooms, Parking Spaces, Year Built, Furnishing Status, Listing Status
-   - **Image upload from desktop** - Upload images directly (not just URLs)
+   - **🆕 Image upload from desktop** - Drag-drop + button upload, 16 image limit, reorder with arrows, Primary badge
    - Address and description per venue
    - Dynamic labels based on business type (hotel/sports/event)
 
@@ -499,8 +513,8 @@ CREATE INDEX idx_rooms_business ON rooms(business_id);
 
 12. **Business Profile** (`BusinessProfile.jsx`) - **UPDATED**
     - Update all business details: Name, Email, Phone, Address, City, State, Website, Description, About Text
-    - Logo and cover image upload
-    - Gallery management
+    - **Logo upload only** - Cover and gallery moved to venue level
+    - Gallery section hidden from public (kept for future use)
 
 13. **UpgradePage** (`pages/UpgradePage.jsx`)
     - Full page upgrade flow
@@ -508,6 +522,14 @@ CREATE INDEX idx_rooms_business ON rooms(business_id);
     - Bank transfer payment instructions
     - Copyable reference
     - Success confirmation
+
+14. **Host Landing Page** (`HostLanding.jsx`) - **🆕 UPDATED**
+    - **Nigerian event venue slideshow** - Real Nigerian venues and event spaces
+    - **Event-focused messaging** - "The all-in-one platform for event venues in Nigeria"
+    - **Accurate pricing tiers** - Matches dashboard (Free, ₦30k, ₦50k)
+    - **Professional booking page preview** - Showcases actual Nigerian event spaces
+    - **Mobile-first responsive design** - Works on all devices
+    - **Event-themed imagery** - Weddings, conferences, celebrations, galas
 
 ---
 
@@ -561,7 +583,7 @@ DELETE /api/businesses/:businessId/gallery/:imageId - Delete gallery image
 POST   /api/businesses/:businessId/rooms/create - Create room with all fields
 PUT    /api/businesses/:businessId/rooms/:roomId - Update room with all fields (features, amenities, area_guide, property_type, etc.)
 DELETE /api/businesses/:businessId/rooms/:roomId - Delete room
-POST   /api/businesses/:businessId/rooms/:roomId/upload-image - Upload venue image
+POST   /api/businesses/:businessId/rooms/:roomId/upload-image - Upload venue image (auto-creates bucket)
 DELETE /api/businesses/:businessId/rooms/:roomId/images - Delete venue image
 ```
 
@@ -619,7 +641,7 @@ GET    /api/domain-info            - Get business by domain
 - **Stats Cards**: Total rooms, bookings, revenue, usage (X/50)
 - **Room Management**: Add/edit/delete rooms with images
 - **Booking Management**: View all bookings, update status
-- **Profile Management**: Logo, cover, gallery, about text
+- **Profile Management**: Logo only (cover/gallery moved to venue)
 - **Staff Management**: Add/edit/delete staff with roles
 - **Settings**: Operating hours, blocked dates, custom domain
 - **Subscription**: View plans, upgrade with bank transfer
@@ -627,7 +649,7 @@ GET    /api/domain-info            - Get business by domain
 - **Venue Management**: Full CRUD with image upload from desktop, address, description
 
 ### 5. Public Booking Page (UnifiedBookingPage.jsx) - COMPLETE REDESIGN
-- **Gallery Grid**: Large main image with 4 stacked thumbnails on desktop, +N indicator
+- **Gallery Grid**: Large main image with 4 stacked thumbnails on desktop, +N indicator **(USES ONLY VENUE IMAGES)**
 - **Venue Info Header**: Bold venue name, price, premium badge, location, ref ID, posted date, view count
 - **Type Icon Card**: Property type, parking status, furnishing status with icons
 - **About Property**: Expandable description with Show More/Less toggle
@@ -638,14 +660,16 @@ GET    /api/domain-info            - Get business by domain
   - Outdoor & Communal: Car Park
 - **Property Details**: Ref ID, Property Type, Bedrooms, Bathrooms, Parking Spaces, Property Size, Year Built, Furnishing Status, Listing Status (PER VENUE)
 - **Area Guide**: Professional icons with title and content (database-driven PER VENUE)
-- **"Marketed by" Card**: Business logo, name, address, member since, "View all properties from this owner" link
+- **"Marketed by" Card**: Business logo, name, address, member since **(NO "View all properties" link - venues already displayed on page)**
 - **Lightbox Gallery**: Full-screen image viewer with navigation and thumbnails
-- **Floating Action Buttons**: Call and Book Now
+- **Floating Action Buttons**: Call and Book Now **(FIXED: uses selected venue)**
 - **Call Modal**: Phone numbers with Copy and Call actions
 - **Book Now Modal**: Simplified - single Event Date picker, no guest count, venue capacity displayed
 - **Booking Receipt**: Professional receipt modal after booking confirmation with booking reference, venue details, customer info, payment summary, and print option
 - **Price Display**: Shows "per day" or "per night" based on business type
 - **Mobile-first**: Fully responsive across all devices
+- **Professional placeholder** when no venue images exist
+- **Standardized loading spinner** matching BusinessDashboard
 
 ### 6. Owner Properties Page (OwnerPropertiesPage.jsx) - NEW
 - **Business Info Card**: Logo, name, address, member since
@@ -657,20 +681,19 @@ GET    /api/domain-info            - Get business by domain
 - **Route**: `/owner/:businessId/properties`
 
 ### 7. Room Management Page (RoomPage.jsx) - COMPLETELY REDESIGNED
-- **Tabbed Interface**: Basic, Details, Features, Amenities, Area Guide
+- **Tabbed Interface**: Basic, Details, **Images**, Features, Amenities, Area Guide
 - **Per-venue Features**: Add/remove features with categories
 - **Per-venue Amenities**: Add/remove amenities with categories
 - **Per-venue Area Guide**: Add sections with professional icons
 - **Per-venue Property Details**: Property Type, Bathrooms, Parking Spaces, Year Built, Furnishing Status, Listing Status
-- **Image Upload**: Desktop image upload with Supabase storage
+- **🆕 Image Upload**: Desktop image upload with drag-drop + button, 16 image limit, reorder with arrows, Primary badge
 - **Dynamic Labels**: Adapts to business type (hotel/sports/event)
 - **Mobile-first**: Fully responsive
 
 ### 8. Business Profile (BusinessProfile.jsx) - UPDATED
 - **All fields editable**: Business Name, Email, Phone, Address, City, State, Website, Description, About Text
-- **Logo upload**: Square format with preview
-- **Cover image upload**: 1200x400px recommended
-- **Photo Gallery**: Upload and manage up to 16 images
+- **🆕 Logo upload only**: Cover and gallery removed (moved to venue level)
+- **Gallery section kept for future use** (not displayed publicly)
 - **Mobile-first**: Fully responsive
 
 ### 9. Email Notifications (Currently Blocked)
@@ -706,9 +729,16 @@ GET    /api/domain-info            - Get business by domain
 - **Area Guide**: Business owners can add sections with professional icons (PER VENUE)
 - **Phone Numbers**: Business owners can add multiple contact numbers
 - **Property Details**: Business owners can set Ref ID, Property Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status (PER VENUE)
-- **Gallery**: Business owners can upload up to 16 images
+- **🆕 Venue Images**: Business owners can upload up to 16 images per venue with drag-drop + button upload
 - **Venues**: Business owners can create multiple venues with images, address, description, pricing
 - **All data reflects instantly on the public booking page**
+
+### 14. Host Landing Page (HostLanding.jsx) - 🆕 UPDATED
+- **Nigerian event venue slideshow** - Real Nigerian venues and event spaces
+- **Event-focused messaging** - "The all-in-one platform for event venues in Nigeria"
+- **Accurate pricing tiers** - Matches dashboard (Free, ₦30k, ₦50k)
+- **Professional booking page preview** - Showcases actual Nigerian event spaces
+- **Mobile-first responsive design** - Works on all devices- **Event-themed imagery** - Weddings, conferences, celebrations, galas
 
 ---
 
@@ -739,9 +769,9 @@ GET    /api/domain-info            - Get business by domain
 | 19 | `require` is not defined in Browser | Used require() in browser | Created static `iconMap` | ✅ FIXED |
 | 20 | `/enhanced` API 500 Error | `supabase.raw()` not supported | Safe increment with current value | ✅ FIXED |
 | 21 | Business Not Found on Booking Page | `useParams()` looking for wrong param | Changed to `params.businessSlug` | ✅ FIXED |
-| 22 | Gallery Images Not Fitting | maxHeight/minHeight constraints | Using aspect-ratio, object-fit: cover | 🔧 IN PROGRESS |
+| 22 | Gallery Images Not Fitting | maxHeight/minHeight constraints | Using aspect-ratio, object-fit: cover | ✅ FIXED |
 | 23 | Google Maps Integration | No valid API key | Removed for now | ⏳ PENDING |
-| 24 | Venue Image Upload | No desktop upload | Added `venueImageService.js` | ✅ FIXED |
+| 24 | Venue Image Upload - Bucket Not Found | `venue-images` bucket didn't exist | Added auto-creation in `venueImageService.js` | ✅ FIXED |
 | 25 | Multi-Venue Display | Only showed one venue | Redesigned with cards | ✅ FIXED |
 | 26 | UnifiedBookingPage Syntax Errors | Complex React.createElement nesting | Fixed parentheses and ES module syntax | ✅ FIXED |
 | 27 | Owner Properties Page | Missing feature | Added OwnerPropertiesPage component | ✅ FIXED |
@@ -750,6 +780,12 @@ GET    /api/domain-info            - Get business by domain
 | 30 | **Room PUT Route Missing Columns** | Database schema incomplete | Added columns and updated routes | ✅ FIXED |
 | 31 | **Call Modal Not Showing Phone** | Wrong data source | Fixed to use `business.phone` | ✅ FIXED |
 | 32 | **BusinessProfile Missing Fields** | Limited edit fields | Added all fields (email, phone, address, city, state) | ✅ FIXED |
+| 33 | **🆕 Venue Image Upload 500 Error** | Supabase bucket didn't exist | Added `ensureBucketExists()` with auto-creation | ✅ FIXED |
+| 34 | **🆕 Booking Modal Wrong Venue** | FAB always used `rooms[0]` | Fixed to use `selectedRoom` state | ✅ FIXED |
+| 35 | **🆕 "View all properties" Link** | Unnecessary navigation | Removed from Marketed by card | ✅ FIXED |
+| 36 | **🆕 Loading Spinner Mismatch** | Different spinners across pages | Standardized to BusinessDashboard spinner | ✅ FIXED |
+| 37 | **🆕 HostLanding Slideshow 404 Errors** | Pexels images not found | Replaced with verified Nigerian event venue images | ✅ FIXED |
+| 38 | **🆕 Signup Page Blank** | `MapPinHouse` icon doesn't exist in lucide-react | Replaced with `MapPin` | ✅ FIXED |
 
 ---
 
@@ -785,7 +821,7 @@ GET    /api/domain-info            - Get business by domain
 
 14. **Venue Image Upload**: Desktop image upload for venues with Supabase storage integration
 
-15. **Owner Properties Page**: Dedicated page showing all properties from a single business owner with stats, filters, and listing cards
+15. **Owner Properties Page**: Dedicated page showing all properties from a business owner with stats, filters, and listing cards
 
 16. **Property Details Management**: Full CRUD for property details including Ref ID, Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status
 
@@ -795,7 +831,7 @@ GET    /api/domain-info            - Get business by domain
 
 19. **🎯 Per-Venue Settings**: Moved features, amenities, area guide, and property details from business level to venue level - each venue now has its own unique settings
 
-20. **Tabbed Room Management**: Redesigned RoomPage with 5 tabs (Basic, Details, Features, Amenities, Area Guide) for cleaner UX
+20. **Tabbed Room Management**: Redesigned RoomPage with 6 tabs (Basic, Details, Images, Features, Amenities, Area Guide) for cleaner UX
 
 21. **Full Business Profile Editing**: All business fields are now editable in the Profile tab
 
@@ -805,9 +841,21 @@ GET    /api/domain-info            - Get business by domain
 
 24. **Simplified Booking Modal**: Single event date picker, removed guest count (capacity is fixed per venue)
 
+25. **🆕 Venue Image Isolation**: Each venue now has its own image gallery - business profile handles only logo
+
+26. **🆕 Auto-Bucket Creation**: Supabase storage bucket auto-creates on first upload - zero manual setup
+
+27. **🆕 Booking Venue Selection**: Book Now button now uses the currently selected venue, not always the first one
+
+28. **🆕 Clean Marketed by Card**: Removed unnecessary "View all properties" link since venues are already displayed on the page
+
+29. **🆕 Standardized Loading Spinner**: Unified loading experience across all pages
+
+30. **🆕 Nigerian Event Venue Landing Page**: HostLanding now showcases real Nigerian event spaces with verified images
+
 ---
 
-## 📊 Current Project Status (LIVE - SEPTEMBER 2026)
+## 📊 Current Project Status (LIVE - OCTOBER 2026)
 
 ### Deployment Status
 | Platform | Service | URL | Status |
@@ -835,21 +883,25 @@ GET    /api/domain-info            - Get business by domain
 | **Per-Venue Amenities** | ✅ | 100% |
 | **Per-Venue Area Guide** | ✅ | 100% |
 | **Per-Venue Property Details** | ✅ | 100% |
+| **🆕 Per-Venue Images** | ✅ | 100% |
 | Staff Management | ✅ | 100% |
-| Profile Management | ✅ | 100% |
+| Profile Management (Logo Only) | ✅ | 100% |
 | Settings (Hours, Blocked Dates) | ✅ | 100% |
 | Custom Domain | ✅ | 100% |
-| Public Booking Page | ✅ | 98% |
+| Public Booking Page | ✅ | 100% |
+| **🆕 Booking Venue Selection** | ✅ | 100% |
 | Owner Properties Page | ✅ | 100% |
-| Image Upload | ✅ | 100% |
+| **🆕 Venue Image Upload** | ✅ | 100% |
+| **🆕 Auto-Bucket Creation** | ✅ | 100% |
+| **🆕 Host Landing Page** | ✅ | 100% |
 | Paystack Integration | ✅ | 90% (test mode) |
 | **Email Notifications** | 🔴 | **BLOCKED - Needs domain** |
 | Mobile Responsiveness | ✅ | 100% |
 | DNS Verification | ✅ | 100% |
 | Pay at Venue | ✅ | 100% |
 | Subscription System | ✅ | 100% |
-| Unified Booking Page | ✅ | 98% |
-| Premium UI Redesign | ✅ | 98% |
+| Unified Booking Page | ✅ | 100% |
+| Premium UI Redesign | ✅ | 100% |
 | Admin Login/Sessions | ✅ | 100% |
 | **Features Management** | ✅ | 100% |
 | **Amenities Management** | ✅ | 100% |
@@ -860,13 +912,16 @@ GET    /api/domain-info            - Get business by domain
 | **Venue Image Upload** | ✅ | 100% |
 | **"Marketed by" Card** | ✅ | 100% |
 | **"Areas covered" Card** | ✅ | 100% |
-| **Gallery Collage Layout** | 🔧 | 98% (IN PROGRESS) |
+| **Gallery Collage Layout** | ✅ | 100% |
 | **ES Module Conversion** | ✅ | 100% |
 | **Per-Venue Settings** | ✅ | 100% |
 | **Call Modal** | ✅ | 100% |
 | **BusinessProfile Full Edit** | ✅ | 100% |
 | **Booking Receipt** | ✅ | 100% |
 | **Simplified Booking Modal** | ✅ | 100% |
+| **🆕 Standardized Loading Spinner** | ✅ | 100% |
+| **🆕 Clean Marketed by Card** | ✅ | 100% |
+| **🆕 Nigerian Event Venue Slideshow** | ✅ | 100% |
 
 ---
 
@@ -879,9 +934,8 @@ GET    /api/domain-info            - Get business by domain
 | Configure DNS for custom domain | 🔴 HIGH | ⏳ Awaiting domain |
 | Verify domain in Resend (production mode) | 🔴 HIGH | ⏳ Awaiting domain |
 | Fix email notifications to all users | 🔴 HIGH | ⏳ Blocked by domain |
-| Full demo for Mr. Terrence (21 September) | 🔴 HIGH | ⏳ In Progress |
+| Full demo for Mr. Terrence | 🔴 HIGH | ⏳ In Progress |
 | Onboard pilot businesses | 🟡 MEDIUM | ⏳ PENDING |
-| Fix gallery image fitting | 🟡 MEDIUM | 🔧 IN PROGRESS |
 | WhatsApp integration | 🟡 MEDIUM | ⏳ PENDING |
 | Mixpanel analytics integration | 🟡 MEDIUM | ⏳ PENDING |
 
@@ -901,7 +955,6 @@ GET    /api/domain-info            - Get business by domain
 | Email notifications blocked | 🔴 High | Needs domain |
 | No real businesses onboarded | 🔴 High | After email fix |
 | Paystack not fully tested | 🟡 Medium | Test mode only |
-| Gallery image fitting | 🟡 Medium | In progress |
 
 ---
 
@@ -923,13 +976,19 @@ GET    /api/domain-info            - Get business by domain
 - **Features, Amenities, Area Guide management** (PER VENUE - database-driven)
 - **Property Details with Ref ID, Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status** (PER VENUE)
 - **Multi-venue support** - Multiple venues per business
-- **Venue image upload** from desktop
+- **🆕 Venue image upload** from desktop with drag-drop + button
+- **🆕 Auto-bucket creation** for Supabase storage
+- **🆕 Per-venue images** - Each venue has its own gallery
+- **🆕 Booking modal uses selected venue** - Fixed venue selection bug
+- **🆕 Clean Marketed by card** - Removed unnecessary "View all properties" link
+- **🆕 Standardized loading spinner** - Unified across all pages
+- **🆕 Host Landing Page** - Nigerian event venue showcase with verified images
 - **"Marketed by" and "Areas covered" cards**
 - **Owner Properties Page** - View all properties from a single business owner
 - **Category-based Features & Amenities** - Organized for better UX
 - **ES Module conversion** - All components use import/export syntax
-- **Tabbed Room Management** - Clean 5-tab interface for venue settings
-- **Full Business Profile editing** - All fields editable
+- **Tabbed Room Management** - Clean 6-tab interface for venue settings
+- **Full Business Profile editing** - All fields editable (logo only for images)
 - **Call Modal fixed** - Shows business phone correctly
 - **Booking Receipt** - Professional receipt after booking confirmation
 - **Simplified Booking Modal** - Single event date, no guest count
@@ -940,34 +999,27 @@ GET    /api/domain-info            - Get business by domain
 - Need `myplazzaa.com` domain from Yannick
 - Once domain is set up, email service will work immediately
 
-### What We Were Just Working On
-1. ✅ Fixed UnifiedBookingPage syntax errors (ES module conversion, parentheses)
-2. ✅ Added OwnerPropertiesPage component with stats, filters, and listing cards
-3. ✅ Added Property Details management in BusinessSettings
-4. ✅ Updated App.jsx with new route `/owner/:businessId/properties`
-5. ✅ Category-based Features & Amenities display on booking page
-6. ✅ Gallery grid layout with +N indicator
-7. ✅ "Marketed by" card with "View all properties from this owner" link
-8. ✅ **Moved Features, Amenities, Area Guide, Property Details from Business to Venue level**
-9. ✅ **Redesigned RoomPage with 5-tab interface**
-10. ✅ **Added missing columns to rooms table** (property_type, bathrooms, parking_spaces, year_built, furnishing_status, listing_status, features, area_guide)
-11. ✅ **Fixed room PUT route** to use `amenities` (not `venueAmenities`)
-12. ✅ **Fixed Call Modal** to show business phone
-13. ✅ **Updated BusinessProfile** to allow editing of all fields (email, phone, address, city, state)
-14. ✅ **Cleaned BusinessSettings** - removed Property Details, Features, Amenities, Area Guide (now per-venue)
-15. ✅ **Added Booking Receipt** - Professional receipt after booking confirmation
-16. ✅ **Simplified Booking Modal** - Single event date, removed guest count
-17. 🔧 **Working on gallery image fitting** (in progress)
-18. 🔴 **Still Blocked**: Awaiting domain from Yannick for email fix
+### What We Were Just Working On (October 2026 Session)
+1. ✅ **🆕 Updated HostLanding with Nigerian event venue images** - Real Nigerian venues, verified working URLs
+2. ✅ **🆕 Fixed signup page blank issue** - Replaced non-existent `MapPinHouse` icon with `MapPin`
+3. ✅ **🆕 Removed "View all properties from this owner" link** - Unnecessary navigation since venues already displayed on page
+4. ✅ **🆕 Standardized loading spinner** - Now matches BusinessDashboard across all pages
+5. ✅ **🆕 Moved venue images from Business to Venue level** - Each venue now has its own images
+6. ✅ **🆕 Added Images tab to RoomPage** - Drag-drop + button upload, 16 image limit, reorder with arrows, Primary badge
+7. ✅ **🆕 Fixed venue image upload 500 error** - Added `ensureBucketExists()` with auto-creation in `venueImageService.js`
+8. ✅ **🆕 Fixed booking modal venue selection** - Book Now button now uses `selectedRoom` instead of always `rooms[0]`
+9. ✅ **🆕 UnifiedBookingPage uses ONLY venue.images** - No longer shows business cover or gallery images
+10. ✅ **🆕 Professional placeholder** when no venue images exist
+11. ✅ **🆕 BusinessProfile cleaned** - Removed cover and gallery (kept logo only)
+12. 🔴 **Still Blocked**: Awaiting domain from Yannick for email fix
 
 ### Immediate Next Steps (Don't Skip!)
 1. **Get domain from Yannick** (`myplazzaa.com`)
 2. **Configure DNS** for Resend verification
 3. **Test email notifications** to all users
-4. **Fix gallery image fitting** (in progress)
-5. **Prepare full demo** for Mr. Terrence on 21 September
-6. **Onboard pilot businesses** after email fix
-7. **Implement Mixpanel analytics** (Felicity)
+4. **Prepare full demo** for Mr. Terrence
+5. **Onboard pilot businesses** after email fix
+6. **Implement Mixpanel analytics** (Felicity)
 
 ### Key Files to Know (UPDATED)
 | File | Purpose |
@@ -978,11 +1030,13 @@ GET    /api/domain-info            - Get business by domain
 | `/client/src/BusinessSettings.jsx` | Settings (Hours, Blocked Dates, Custom Domain, Phone Numbers only) |
 | `/client/src/UnifiedBookingPage.jsx` | Public booking page (shows PER-VENUE data, booking receipt) |
 | `/client/src/OwnerPropertiesPage.jsx` | Shows all properties from a business owner |
-| `/client/src/RoomPage.jsx` | **COMPLETE VENUE MANAGEMENT** - 5 tabs with all settings |
-| `/client/src/BusinessProfile.jsx` | **FULL BUSINESS PROFILE** - All fields editable |
+| `/client/src/RoomPage.jsx` | **COMPLETE VENUE MANAGEMENT** - 6 tabs with all settings including Images |
+| `/client/src/BusinessProfile.jsx` | **FULL BUSINESS PROFILE** - All fields editable (logo only) |
+| `/client/src/HostLanding.jsx` | **🆕 Nigerian event venue landing page** |
+| `/client/src/BusinessSignup.jsx` | **🆕 Professional signup flow with location** |
 | `/server/server.js` | Express server with enhanced room routes |
 | `/server/src/routes/businessRoutes.js` | Enhanced business routes |
-| `/server/src/services/venueImageService.js` | Venue image upload service |
+| `/server/src/services/venueImageService.js` | **🆕 Venue image upload service with auto-bucket creation** |
 
 ### The Golden Rule (Never Forget)
 > **"Design for the worst-case scenario first (375px mobile), then expand for desktop. Desktop is 'mobile + more space' not 'desktop - something broke.'"**
@@ -1000,9 +1054,9 @@ GET    /api/domain-info            - Get business by domain
 - [x] Business dashboard shows stats
 - [x] Rooms can be added/edited/deleted
 - [x] Staff can be managed (add/edit/delete)
-- [x] Profile images can be uploaded (logo, cover, gallery)
+- [x] Profile images can be uploaded (logo only)
 - [x] Public booking page works
-- [x] Gallery images display
+- [x] Gallery images display (per-venue)
 - [x] "Pay at venue" creates booking
 - [x] Indigo branding applied consistently
 - [x] Deployed to Render successfully
@@ -1019,17 +1073,23 @@ GET    /api/domain-info            - Get business by domain
 - [x] Phone Numbers management (database-driven)
 - [x] Property Details with Ref ID, Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status - PER VENUE
 - [x] Multi-venue support (multiple venues per business)
-- [x] Venue image upload from desktop
+- [x] Venue image upload from desktop - PER VENUE
 - [x] "Marketed by" card with business details
 - [x] "Areas covered" card with venue locations
 - [x] Owner Properties page with stats and filters
 - [x] Category-based Features & Amenities display
 - [x] ES Module conversion for all components
-- [x] Tabbed Room Management interface
-- [x] Full Business Profile editing (all fields)
+- [x] Tabbed Room Management interface (6 tabs)
+- [x] Full Business Profile editing (all fields, logo only)
 - [x] Call Modal showing business phone
 - [x] Booking Receipt after confirmation
 - [x] Simplified Booking Modal (single date, no guest count)
+- [x] **🆕 Auto-bucket creation for Supabase storage**
+- [x] **🆕 Booking modal uses selected venue**
+- [x] **🆕 Clean Marketed by card (no "View all properties" link)**
+- [x] **🆕 Standardized loading spinner across all pages**
+- [x] **🆕 Nigerian event venue landing page**
+- [x] **🆕 Professional signup flow with location**
 
 ---
 
@@ -1048,18 +1108,23 @@ We've built a complete, production-ready booking management platform for Nigeria
 7. **Database-driven**: Features, amenities, area guide all configurable
 8. **Nigerian Property Center inspired**: Premium design with collage gallery
 9. **Multi-venue**: Businesses can list multiple venues with individual details
-10. **Image upload**: Desktop image upload for venues (not just URLs)
-11. **Owner properties**: Dedicated page showing all properties from a business owner
-12. **Category-based**: Features and amenities organized by categories for better UX
-13. **Full property details**: Ref ID, Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status
-14. **🎯 Per-Venue Settings**: Each venue has its own features, amenities, area guide, and property details
-15. **Clean UX**: Tabbed interface for venue management
-16. **Full profile editing**: All business fields editable
-17. **Working call modal**: Shows business phone with Copy and Call actions
-18. **Professional receipt**: Full receipt modal after booking confirmation
+10. **🆕 Venue image upload**: Desktop image upload per venue (drag-drop + button)
+11. **🆕 Auto-bucket creation**: Zero manual setup for Supabase storage
+12. **Owner properties**: Dedicated page showing all properties from a business owner
+13. **Category-based**: Features and amenities organized by categories for better UX
+14. **Full property details**: Ref ID, Type, Bedrooms, Bathrooms, Parking, Size, Year Built, Furnishing, Listing Status
+15. **🎯 Per-Venue Settings**: Each venue has its own features, amenities, area guide, property details, and images
+16. **Clean UX**: Tabbed interface for venue management (6 tabs)
+17. **Full profile editing**: All business fields editable (logo only for branding)
+18. **Working call modal**: Shows business phone with Copy and Call actions
+19. **Professional receipt**: Full receipt modal after booking confirmation
+20. **🆕 Fixed venue selection**: Booking modal uses the venue you selected, not always the first one
+21. **🆕 Clean Marketed by card**: No unnecessary navigation links
+22. **🆕 Standardized loading**: Consistent loading experience across all pages
+23. **🆕 Nigerian event venue showcase**: Host landing page with real Nigerian venues
 
 ### The Road Ahead
-The code is ready. The deployment is ready. The only thing left is domain setup, email verification, and user onboarding. The Plazzaa integration is the next major milestone, with a demo scheduled for 21 September.
+The code is ready. The deployment is ready. The only thing left is domain setup, email verification, and user onboarding. The Plazzaa integration is the next major milestone, with a demo scheduled.
 
 ---
 
@@ -1099,7 +1164,7 @@ git push origin main
 |----------|-------|---------|
 | `SUPABASE_URL` | Backend | Database connection |
 | `SUPABASE_ANON_KEY` | Backend | Database auth |
-| `SUPABASE_SERVICE_ROLE_KEY` | Backend | Database admin |
+| `SUPABASE_SERVICE_ROLE_KEY` | Backend | Database admin (required for bucket creation) |
 | `RESEND_API_KEY` | Backend | Email sending |
 | `PAYSTACK_SECRET_KEY` | Backend | Payment processing |
 | `VITE_API_BASE` | Frontend | Backend API URL |
@@ -1116,4 +1181,4 @@ git push origin main
 
 ---
 
-*This document will be updated as we progress. Last update: September 2026.*
+*This document will be updated as we progress. Last update: October 2026.*
