@@ -4,6 +4,7 @@
 // Glass-morphism, gradients, animations, premium UX
 // UPDATED: Event business type support with "Venue" labels
 // UPDATED: Removed Staff tab from navigation
+// UPDATED: Fixed sidebar alignment - left-aligned items with proper icon spacing
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -441,10 +442,10 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
 
   function getBusinessTypeIcon() {
     const type = business?.business_type;
-    if (type === 'hotel') return React.createElement(Hotel, { size: 20 });
-    if (type === 'sports') return React.createElement(Trophy, { size: 20 });
-    if (type === 'event') return React.createElement(PartyPopper, { size: 20 });
-    return React.createElement(Building2, { size: 20 });
+    if (type === 'hotel') return React.createElement(Hotel, { size: 14 });
+    if (type === 'sports') return React.createElement(Trophy, { size: 14 });
+    if (type === 'event') return React.createElement(PartyPopper, { size: 14 });
+    return React.createElement(Building2, { size: 14 });
   }
 
   function getBusinessTypeLabel() {
@@ -1632,7 +1633,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   };
 
   // ============================================================
-  // RENDER CONTENT - STAFF CASE REMOVED
+  // RENDER CONTENT
   // ============================================================
   const renderContent = () => {
     switch(activeTab) {
@@ -1674,6 +1675,37 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   ];
 
   // ============================================================
+  // SIDEBAR STYLES - FIXED ALIGNMENT
+  // ============================================================
+  const sidebarNavItemStyle = (isActive) => ({
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: '12px',
+    padding: '12px 16px',
+    background: isActive ? '#eef2ff' : 'transparent',
+    border: 'none',
+    borderRadius: '12px',
+    color: isActive ? '#4f46e5' : '#475569',
+    fontWeight: isActive ? '600' : '500',
+    fontSize: '14px',
+    cursor: 'pointer',
+    marginBottom: '4px',
+    textAlign: 'left',
+    transition: 'all 0.2s ease'
+  });
+
+  const sidebarIconWrapStyle = {
+    width: '20px',
+    height: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  };
+
+  // ============================================================
   // MAIN RENDER
   // ============================================================
   return React.createElement('div', { style: { display: 'flex', minHeight: '100vh', background: '#f8fafc', position: 'relative' } },
@@ -1708,7 +1740,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         overflowY: 'auto'
       }
     },
-      React.createElement('div', { style: { padding: '24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+      React.createElement('div', { style: { padding: '24px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
           business?.logo_url ? 
             React.createElement('img', { src: business.logo_url, alt: business.name, style: { width: '40px', height: '40px', borderRadius: '12px', objectFit: 'cover' } }) :
@@ -1724,28 +1756,17 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           React.createElement(X, { size: 20, color: '#64748b' })
         )
       ),
-      React.createElement('nav', { style: { padding: '16px' } },
+      React.createElement('nav', { style: { padding: '16px 12px' } },
         navItemsWithSubscription.map(item => 
           React.createElement('button', {
             key: item.id,
             onClick: () => { setActiveTab(item.id); setMobileMenuOpen(false); },
-            style: {
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              background: activeTab === item.id ? '#eef2ff' : 'transparent',
-              border: 'none',
-              borderRadius: '12px',
-              color: activeTab === item.id ? '#4f46e5' : '#475569',
-              fontWeight: activeTab === item.id ? '600' : '500',
-              cursor: 'pointer',
-              marginBottom: '4px'
-            }
+            style: sidebarNavItemStyle(activeTab === item.id)
           },
-            React.createElement(item.icon, { size: 18 }),
-            item.label
+            React.createElement('div', { style: sidebarIconWrapStyle },
+              React.createElement(item.icon, { size: 18 })
+            ),
+            React.createElement('span', null, item.label)
           )
         ),
         React.createElement('button', {
@@ -1754,6 +1775,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             width: '100%',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'flex-start',
             gap: '12px',
             padding: '12px 16px',
             background: 'transparent',
@@ -1761,12 +1783,16 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             borderRadius: '12px',
             color: '#ef4444',
             fontWeight: '500',
+            fontSize: '14px',
             cursor: 'pointer',
-            marginTop: '16px'
+            marginTop: '16px',
+            textAlign: 'left'
           }
         },
-          React.createElement(LogOut, { size: 18 }),
-          'Logout'
+          React.createElement('div', { style: sidebarIconWrapStyle },
+            React.createElement(LogOut, { size: 18 })
+          ),
+          React.createElement('span', null, 'Logout')
         )
       )
     ),
@@ -1787,20 +1813,31 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         transition: 'width 0.3s ease'
       }
     },
-      React.createElement('div', { style: { padding: '28px 20px', borderBottom: '1px solid #e2e8f0' } },
+      // Logo & Business Info
+      React.createElement('div', { style: { padding: '24px 20px', borderBottom: '1px solid #e2e8f0' } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
           business?.logo_url ? 
             React.createElement('img', { 
               key: business.logo_url + Date.now(),
               src: business.logo_url, 
               alt: business.name, 
-              style: { width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover' } 
+              style: { width: '44px', height: '44px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 } 
             }) :
-            React.createElement('div', { style: { width: '48px', height: '48px', background: '#4f46e5', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(Building2, { size: 24, color: 'white' })
+            React.createElement('div', { style: { width: '44px', height: '44px', background: '#4f46e5', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
+              React.createElement(Building2, { size: 22, color: 'white' })
             ),
-          React.createElement('div', null,
-            React.createElement('h2', { style: { fontSize: '16px', fontWeight: '700', margin: 0, color: '#0f172a' } }, business?.name || 'Business'),
+          React.createElement('div', { style: { minWidth: 0, flex: 1 } },
+            React.createElement('h2', { 
+              style: { 
+                fontSize: '15px', 
+                fontWeight: '700', 
+                margin: 0, 
+                color: '#0f172a',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              } 
+            }, business?.name || 'Business'),
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' } },
               getBusinessTypeIcon(),
               React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } }, getBusinessTypeLabel())
@@ -1808,28 +1845,18 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           )
         )
       ),
-      React.createElement('nav', { style: { padding: '16px' } },
+      // Navigation
+      React.createElement('nav', { style: { padding: '16px 12px' } },
         navItemsWithSubscription.map(item => 
           React.createElement('button', {
             key: item.id,
             onClick: () => setActiveTab(item.id),
-            style: {
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              background: activeTab === item.id ? '#eef2ff' : 'transparent',
-              border: 'none',
-              borderRadius: '12px',
-              color: activeTab === item.id ? '#4f46e5' : '#475569',
-              fontWeight: activeTab === item.id ? '600' : '500',
-              cursor: 'pointer',
-              marginBottom: '4px'
-            }
+            style: sidebarNavItemStyle(activeTab === item.id)
           },
-            React.createElement(item.icon, { size: 18 }),
-            item.label
+            React.createElement('div', { style: sidebarIconWrapStyle },
+              React.createElement(item.icon, { size: 18 })
+            ),
+            React.createElement('span', null, item.label)
           )
         ),
         React.createElement('button', {
@@ -1838,6 +1865,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             width: '100%',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'flex-start',
             gap: '12px',
             padding: '12px 16px',
             background: 'transparent',
@@ -1845,12 +1873,16 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             borderRadius: '12px',
             color: '#ef4444',
             fontWeight: '500',
+            fontSize: '14px',
             cursor: 'pointer',
-            marginTop: '16px'
+            marginTop: '16px',
+            textAlign: 'left'
           }
         },
-          React.createElement(LogOut, { size: 18 }),
-          'Logout'
+          React.createElement('div', { style: sidebarIconWrapStyle },
+            React.createElement(LogOut, { size: 18 })
+          ),
+          React.createElement('span', null, 'Logout')
         )
       )
     ),
