@@ -1,13 +1,14 @@
-﻿﻿// client/src/BusinessDashboard.jsx
+﻿// client/src/BusinessDashboard.jsx
 // =============================================
 // PREMIUM BUSINESS DASHBOARD - 2026 LUXURY DESIGN
 // Glass-morphism, gradients, animations, premium UX
 // UPDATED: Event business type support with "Venue" labels
+// UPDATED: Removed Staff tab from navigation
 // =============================================
 
 import React, { useState, useEffect } from 'react';
 import { 
-  LayoutDashboard, Calendar, Users, Settings, LogOut, 
+  LayoutDashboard, Calendar, Settings, LogOut, 
   Hotel, Trophy, Sparkles, Image, Clock,
   DollarSign, ChevronRight, Menu, X,
   Building2, TrendingUp, Plus, ExternalLink,
@@ -20,7 +21,6 @@ import RoomPage from './RoomPage';
 import BookingsManager from './BookingsManager';
 import BusinessProfile from './BusinessProfile';
 import BusinessSettings from './BusinessSettings';
-import StaffManagement from './StaffManagement';
 import UpgradeModal from './components/UpgradeModal';
 import API_BASE from './config';
 
@@ -496,12 +496,14 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   const remaining = Math.max(0, limit - confirmedBookings);
   const currentTier = getCurrentTier();
 
+  // ============================================================
+  // NAVIGATION ITEMS - STAFF REMOVED
+  // ============================================================
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'rooms', label: typeLabels.plural, icon: TypeIcon },
     { id: 'bookings', label: 'Bookings', icon: Calendar },
     { id: 'profile', label: 'Profile', icon: Building2 },
-    { id: 'staff', label: 'Staff', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
@@ -1106,7 +1108,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
               border: '1px solid #e2e8f0'
             }
           },
-            React.createElement(Users, { size: 16, color: '#64748b' }),
+            React.createElement(Calendar, { size: 16, color: '#64748b' }),
             React.createElement('span', { style: { fontSize: '13px', color: '#475569', fontWeight: '500' } },
               confirmedBookings, ' of ', limit, ' bookings used'
             )
@@ -1630,7 +1632,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   };
 
   // ============================================================
-  // RENDER CONTENT
+  // RENDER CONTENT - STAFF CASE REMOVED
   // ============================================================
   const renderContent = () => {
     switch(activeTab) {
@@ -1652,11 +1654,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           business: business, 
           onBack: () => setActiveTab('overview'),
           onUpdate: handleBusinessUpdate
-        });
-      case 'staff':
-        return React.createElement(StaffManagement, { 
-          business: business,
-          onBack: () => setActiveTab('overview')
         });
       case 'settings':
         return React.createElement(BusinessSettings, { 

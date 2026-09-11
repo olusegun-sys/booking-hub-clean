@@ -1,11 +1,12 @@
-﻿﻿import React from 'react';
+﻿// FILE: client/src/BusinessLogin.jsx
+// UPDATED: Removed Staff tab - Owner login only
+// Professional UI matching BusinessSignup design
+
+import React from 'react';
 import { Building2, X, LogIn, Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 import API_BASE from './config';
 
 var BusinessLogin = function (props) {
-  var _useState = React.useState('owner');
-  var loginType = _useState[0];
-  var setLoginType = _useState[1];
   var _useState2 = React.useState('');
   var email = _useState2[0];
   var setEmail = _useState2[1];
@@ -58,7 +59,7 @@ var BusinessLogin = function (props) {
     fetch(API_BASE + '/api/businesses/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, password: password, loginType: loginType })
+      body: JSON.stringify({ email: email, password: password })
     })
       .then(function (response) { return response.json(); })
       .then(function (data) {
@@ -134,43 +135,6 @@ var BusinessLogin = function (props) {
       ),
 
       React.createElement('div', { style: { padding: '1.5rem 2rem 2rem 2rem' } },
-        React.createElement('div', { style: { display: 'flex', background: '#f1f5f9', borderRadius: '12px', padding: '4px', marginBottom: '1.5rem' } },
-          React.createElement('button', {
-            type: 'button',
-            onClick: function () { setLoginType('owner'); setError(''); },
-            style: { 
-              flex: 1, 
-              padding: '0.5rem', 
-              border: 'none', 
-              background: loginType === 'owner' ? 'white' : 'transparent', 
-              borderRadius: '8px', 
-              fontSize: '0.875rem', 
-              fontWeight: '500', 
-              color: loginType === 'owner' ? '#4F46E5' : '#64748b', 
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              boxShadow: loginType === 'owner' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'
-            }
-          }, 'Business Owner'),
-          React.createElement('button', {
-            type: 'button',
-            onClick: function () { setLoginType('staff'); setError(''); },
-            style: { 
-              flex: 1, 
-              padding: '0.5rem', 
-              border: 'none', 
-              background: loginType === 'staff' ? 'white' : 'transparent', 
-              borderRadius: '8px', 
-              fontSize: '0.875rem', 
-              fontWeight: '500', 
-              color: loginType === 'staff' ? '#4F46E5' : '#64748b', 
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              boxShadow: loginType === 'staff' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'
-            }
-          }, 'Staff')
-        ),
-
         error && React.createElement('div', { style: { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.75rem', color: '#dc2626', textAlign: 'center' } }, error),
 
         React.createElement('div', { style: { marginBottom: '1rem' } },
@@ -254,7 +218,7 @@ var BusinessLogin = function (props) {
           },
           onMouseEnter: function(e) { if (!loading) e.currentTarget.style.background = '#4338CA'; },
           onMouseLeave: function(e) { if (!loading) e.currentTarget.style.background = '#4F46E5'; }
-        }, loading ? 'Signing in...' : [React.createElement(LogIn, { key: 'icon', size: 16 }), ' Login as ' + (loginType === 'owner' ? 'Owner' : 'Staff')]),
+        }, loading ? 'Signing in...' : [React.createElement(LogIn, { key: 'icon', size: 16 }), ' Login']),
 
         React.createElement('p', { style: { textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', color: '#94a3b8' } }, 
           "Don't have an account? ", 
