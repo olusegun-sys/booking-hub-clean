@@ -1,8 +1,9 @@
 ﻿// FILE: client/src/RoomPage.jsx
-// COMPLETE VENUE MANAGEMENT WITH FULL SETTINGS + IMAGES TAB
-// Features, Amenities, Area Guide, Property Details per venue
-// Updated: September 2026 - Added Images tab with drag-drop upload
-// UPDATED: Professional delete confirmation modal replacing Chrome alert
+// BUSINESS-CATEGORY-AWARE FORM EDITOR
+// Each business type (Hotel, Restaurant, Spa, etc.) sees only relevant fields
+// UPDATED: Config-driven tabs and fields based on business_type
+// UPDATED: Professional delete confirmation modal
+// UPDATED: Images tab with drag-drop upload, reorder, primary badge
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -15,7 +16,8 @@ import {
   ShoppingBag, GraduationCap, Landmark, Plane, Umbrella,
   Music, Utensils, Tent, Eye, Maximize, Layers, Grid3x3,
   Phone, Mail, Clock, Globe, Copy, Check,
-  GripVertical, AlertTriangle
+  GripVertical, AlertTriangle, Coffee, Scissors, Palette,
+  Activity, Dumbbell, Store, BedDouble, Timer
 } from 'lucide-react';
 import API_BASE from './config';
 import { showError, showSuccess } from './toast';
@@ -46,58 +48,465 @@ const iconMap = {
 };
 
 // ============================================================
-// HELPERS
+// BUSINESS TYPE CONFIGURATION
+// Each business type has its own form structure
 // ============================================================
-function getLabels(businessType) {
-  const type = businessType || 'venue';
-  if (type === 'hotel') {
-    return { 
-      singular: 'Room', 
-      plural: 'Rooms', 
-      icon: Hotel,
+const BUSINESS_CONFIG = {
+  // ============ STAYS ============
+  hotel: {
+    icon: Hotel,
+    headerIcon: Hotel,
+    headerLabel: 'Hotel',
+    singular: 'Room',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Room',
+    tabs: ['basic', 'details', 'images', 'features', 'amenities', 'areaGuide'],
+    basic: {
+      nameLabel: 'Room Name',
+      namePlaceholder: 'e.g., Deluxe Room 1',
+      showType: true,
       typeLabel: 'Room Type',
-      capacityLabel: 'Sleeps',
+      typeOptions: ['Standard', 'Deluxe', 'Suite', 'Executive', 'Presidential', 'Family'],
+      showCapacity: true,
+      capacityLabel: 'Sleeps (Guests)',
+      capacityPlaceholder: 'e.g., 2',
+      showPrice: true,
       priceLabel: 'Price per night',
       priceUnit: '/ night',
-      typeOptions: ['Standard', 'Deluxe', 'Suite', 'Executive', 'Presidential', 'Family']
-    };
-  } else if (type === 'sports') {
-    return { 
-      singular: 'Court', 
-      plural: 'Courts', 
-      icon: Trophy,
-      typeLabel: 'Court Type',
-      capacityLabel: 'Players',
-      priceLabel: 'Price per hour',
-      priceUnit: '/ hour',
-      typeOptions: ['Hard Court', 'Clay Court', 'Grass Court', 'Basketball', 'Football', 'Tennis']
-    };
-  } else if (type === 'event') {
-    return { 
-      singular: 'Venue', 
-      plural: 'Venues', 
-      icon: Sparkles,
-      typeLabel: 'Venue Type',
-      capacityLabel: 'Included Guests',
+      priceField: 'price_per_night',
+      showAddress: true,
+      showDescription: true,
+      descriptionLabel: 'Room Description',
+      descriptionPlaceholder: 'Describe this room for guests'
+    },
+    details: {
+      showPropertyType: true,
+      propertyTypeLabel: 'Property Type',
+      propertyTypeOptions: ['Single Room', 'Double Room', 'Suite', 'Deluxe', 'Executive'],
+      showListingStatus: true,
+      showFurnishing: true,
+      showYearBuilt: true,
+      showBathrooms: true,
+      showParking: true
+    },
+    showFeatures: true,
+    showAmenities: true,
+    showAreaGuide: true
+  },
+  apartment: {
+    icon: Home,
+    headerIcon: Home,
+    headerLabel: 'Apartment',
+    singular: 'Apartment',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Apartment',
+    tabs: ['basic', 'details', 'images', 'features', 'amenities', 'areaGuide'],
+    basic: {
+      nameLabel: 'Apartment Name',
+      namePlaceholder: 'e.g., 2-Bedroom Apartment',
+      showType: true,
+      typeLabel: 'Apartment Type',
+      typeOptions: ['Studio', '1-Bedroom', '2-Bedroom', '3-Bedroom', 'Penthouse'],
+      showCapacity: true,
+      capacityLabel: 'Sleeps (Guests)',
+      capacityPlaceholder: 'e.g., 4',
+      showPrice: true,
+      priceLabel: 'Price per night',
+      priceUnit: '/ night',
+      priceField: 'price_per_night',
+      showAddress: true,
+      showDescription: true,
+      descriptionLabel: 'Apartment Description',
+      descriptionPlaceholder: 'Describe this apartment for guests'
+    },
+    details: {
+      showPropertyType: true,
+      propertyTypeLabel: 'Property Type',
+      propertyTypeOptions: ['Studio', '1-Bedroom', '2-Bedroom', '3-Bedroom', 'Penthouse'],
+      showListingStatus: true,
+      showFurnishing: true,
+      showYearBuilt: true,
+      showBathrooms: true,
+      showParking: true
+    },
+    showFeatures: true,
+    showAmenities: true,
+    showAreaGuide: true
+  },
+  event_hall: {
+    icon: Sparkles,
+    headerIcon: Sparkles,
+    headerLabel: 'Event Hall',
+    singular: 'Event Hall',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Event Hall',
+    tabs: ['basic', 'details', 'images', 'features', 'amenities', 'areaGuide'],
+    basic: {
+      nameLabel: 'Event Hall Name',
+      namePlaceholder: 'e.g., Grand Ballroom',
+      showType: true,
+      typeLabel: 'Hall Type',
+      typeOptions: ['Banquet Hall', 'Conference Room', 'Ballroom', 'Theater', 'Boardroom'],
+      showCapacity: true,
+      capacityLabel: 'Capacity (Included Guests)',
+      capacityPlaceholder: 'e.g., 100',
+      showPrice: true,
       priceLabel: 'Base Price',
       priceUnit: '/ event',
-      typeOptions: ['Banquet Hall', 'Conference Room', 'Outdoor Space', 'Ballroom', 'Theater', 'Boardroom']
-    };
+      priceField: 'base_price',
+      showAddress: true,
+      showDescription: true,
+      descriptionLabel: 'Event Hall Description',
+      descriptionPlaceholder: 'Describe this event hall for guests'
+    },
+    details: {
+      showPropertyType: true,
+      propertyTypeLabel: 'Property Type',
+      propertyTypeOptions: ['Banquet Hall', 'Conference Room', 'Ballroom', 'Theater', 'Boardroom'],
+      showListingStatus: true,
+      showFurnishing: false,
+      showYearBuilt: true,
+      showBathrooms: true,
+      showParking: true
+    },
+    showFeatures: true,
+    showAmenities: true,
+    showAreaGuide: true
+  },
+  event: {
+    // Legacy alias for event_hall
+    icon: Sparkles,
+    headerIcon: Sparkles,
+    headerLabel: 'Event Venue',
+    singular: 'Event Hall',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Event Hall',
+    tabs: ['basic', 'details', 'images', 'features', 'amenities', 'areaGuide'],
+    basic: {
+      nameLabel: 'Event Hall Name',
+      namePlaceholder: 'e.g., Grand Ballroom',
+      showType: true,
+      typeLabel: 'Hall Type',
+      typeOptions: ['Banquet Hall', 'Conference Room', 'Ballroom', 'Theater', 'Boardroom'],
+      showCapacity: true,
+      capacityLabel: 'Capacity (Included Guests)',
+      capacityPlaceholder: 'e.g., 100',
+      showPrice: true,
+      priceLabel: 'Base Price',
+      priceUnit: '/ event',
+      priceField: 'base_price',
+      showAddress: true,
+      showDescription: true,
+      descriptionLabel: 'Event Hall Description',
+      descriptionPlaceholder: 'Describe this event hall for guests'
+    },
+    details: {
+      showPropertyType: true,
+      propertyTypeLabel: 'Property Type',
+      propertyTypeOptions: ['Banquet Hall', 'Conference Room', 'Ballroom', 'Theater', 'Boardroom'],
+      showListingStatus: true,
+      showFurnishing: false,
+      showYearBuilt: true,
+      showBathrooms: true,
+      showParking: true
+    },
+    showFeatures: true,
+    showAmenities: true,
+    showAreaGuide: true
+  },
+
+  // ============ FOOD ============
+  restaurant: {
+    icon: Utensils,
+    headerIcon: Utensils,
+    headerLabel: 'Restaurant',
+    singular: 'Menu Item',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Menu Item',
+    tabs: ['basic', 'images'],
+    basic: {
+      nameLabel: 'Item Name',
+      namePlaceholder: 'e.g., Jollof Rice',
+      showType: true,
+      typeLabel: 'Item Category',
+      typeOptions: ['Starter', 'Main Course', 'Dessert', 'Drink', 'Side', 'Combo'],
+      showCapacity: false,
+      showPrice: true,
+      priceLabel: 'Price',
+      priceUnit: '',
+      priceField: 'price_per_night', // Reuse existing field
+      showAddress: false,
+      showDescription: true,
+      descriptionLabel: 'Description',
+      descriptionPlaceholder: 'Brief description of this item'
+    },
+    details: null,
+    showFeatures: false,
+    showAmenities: false,
+    showAreaGuide: false
+  },
+  diner: {
+    icon: Store,
+    headerIcon: Store,
+    headerLabel: 'Diner',
+    singular: 'Menu Item',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Menu Item',
+    tabs: ['basic', 'images'],
+    basic: {
+      nameLabel: 'Item Name',
+      namePlaceholder: 'e.g., Classic Burger',
+      showType: true,
+      typeLabel: 'Item Category',
+      typeOptions: ['Starter', 'Main Course', 'Dessert', 'Drink', 'Side', 'Combo'],
+      showCapacity: false,
+      showPrice: true,
+      priceLabel: 'Price',
+      priceUnit: '',
+      priceField: 'price_per_night',
+      showAddress: false,
+      showDescription: true,
+      descriptionLabel: 'Description',
+      descriptionPlaceholder: 'Brief description of this item'
+    },
+    details: null,
+    showFeatures: false,
+    showAmenities: false,
+    showAreaGuide: false
+  },
+  cafe: {
+    icon: Coffee,
+    headerIcon: Coffee,
+    headerLabel: 'Cafe',
+    singular: 'Menu Item',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Menu Item',
+    tabs: ['basic', 'images'],
+    basic: {
+      nameLabel: 'Item Name',
+      namePlaceholder: 'e.g., Cappuccino',
+      showType: true,
+      typeLabel: 'Item Category',
+      typeOptions: ['Coffee', 'Tea', 'Pastry', 'Sandwich', 'Dessert', 'Drink'],
+      showCapacity: false,
+      showPrice: true,
+      priceLabel: 'Price',
+      priceUnit: '',
+      priceField: 'price_per_night',
+      showAddress: false,
+      showDescription: true,
+      descriptionLabel: 'Description',
+      descriptionPlaceholder: 'Brief description of this item'
+    },
+    details: null,
+    showFeatures: false,
+    showAmenities: false,
+    showAreaGuide: false
+  },
+  other_food: {
+    icon: Utensils,
+    headerIcon: Utensils,
+    headerLabel: 'Food Business',
+    singular: 'Menu Item',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Menu Item',
+    tabs: ['basic', 'images'],
+    basic: {
+      nameLabel: 'Item Name',
+      namePlaceholder: 'e.g., Item name',
+      showType: true,
+      typeLabel: 'Item Category',
+      typeOptions: ['Starter', 'Main Course', 'Dessert', 'Drink', 'Side', 'Combo'],
+      showCapacity: false,
+      showPrice: true,
+      priceLabel: 'Price',
+      priceUnit: '',
+      priceField: 'price_per_night',
+      showAddress: false,
+      showDescription: true,
+      descriptionLabel: 'Description',
+      descriptionPlaceholder: 'Brief description of this item'
+    },
+    details: null,
+    showFeatures: false,
+    showAmenities: false,
+    showAreaGuide: false
+  },
+
+  // ============ OTHERS ============
+  sports: {
+    icon: Dumbbell,
+    headerIcon: Dumbbell,
+    headerLabel: 'Sports Facility',
+    singular: 'Court',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Court',
+    tabs: ['basic', 'details', 'images', 'features', 'amenities'],
+    basic: {
+      nameLabel: 'Court Name',
+      namePlaceholder: 'e.g., Court A',
+      showType: true,
+      typeLabel: 'Court Type',
+      typeOptions: ['Tennis Court', 'Basketball Court', 'Football Pitch', 'Badminton', 'Squash'],
+      showCapacity: true,
+      capacityLabel: 'Players',
+      capacityPlaceholder: 'e.g., 10',
+      showPrice: true,
+      priceLabel: 'Price per hour',
+      priceUnit: '/ hour',
+      priceField: 'price_per_night',
+      showAddress: true,
+      showDescription: true,
+      descriptionLabel: 'Court Description',
+      descriptionPlaceholder: 'Describe this court for players'
+    },
+    details: {
+      showPropertyType: false,
+      showListingStatus: false,
+      showFurnishing: false,
+      showYearBuilt: true,
+      showBathrooms: false,
+      showParking: true
+    },
+    showFeatures: true,
+    showAmenities: true,
+    showAreaGuide: false
+  },
+  spa: {
+    icon: Heart,
+    headerIcon: Heart,
+    headerLabel: 'Spa',
+    singular: 'Service',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Service',
+    tabs: ['basic', 'images'],
+    basic: {
+      nameLabel: 'Service Name',
+      namePlaceholder: 'e.g., Deep Tissue Massage',
+      showType: true,
+      typeLabel: 'Service Type',
+      typeOptions: ['Massage', 'Facial', 'Body Treatment', 'Couples Package'],
+      showCapacity: false,
+      showPrice: true,
+      priceLabel: 'Price',
+      priceUnit: '',
+      priceField: 'price_per_night',
+      showAddress: false,
+      showDescription: true,
+      descriptionLabel: 'Description',
+      descriptionPlaceholder: 'Brief description of this service'
+    },
+    details: null,
+    showFeatures: false,
+    showAmenities: false,
+    showAreaGuide: false
+  },
+  beauty_salon: {
+    icon: Scissors,
+    headerIcon: Scissors,
+    headerLabel: 'Beauty Salon',
+    singular: 'Service',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Service',
+    tabs: ['basic', 'images'],
+    basic: {
+      nameLabel: 'Service Name',
+      namePlaceholder: 'e.g., Haircut & Blow Dry',
+      showType: true,
+      typeLabel: 'Service Type',
+      typeOptions: ['Hair', 'Nails', 'Makeup', 'Waxing', 'Barbering'],
+      showCapacity: false,
+      showPrice: true,
+      priceLabel: 'Price',
+      priceUnit: '',
+      priceField: 'price_per_night',
+      showAddress: false,
+      showDescription: true,
+      descriptionLabel: 'Description',
+      descriptionPlaceholder: 'Brief description of this service'
+    },
+    details: null,
+    showFeatures: false,
+    showAmenities: false,
+    showAreaGuide: false
+  },
+  activity_place: {
+    icon: Activity,
+    headerIcon: Activity,
+    headerLabel: 'Activity Place',
+    singular: 'Activity',
+    plural: 'Menu & Services',
+    actionLabel: 'Add Activity',
+    tabs: ['basic', 'details', 'images', 'features', 'amenities'],
+    basic: {
+      nameLabel: 'Activity Name',
+      namePlaceholder: 'e.g., Escape Room - Mystery',
+      showType: true,
+      typeLabel: 'Activity Type',
+      typeOptions: ['Escape Room', 'Bowling', 'Arcade', 'Trampoline', 'Karting'],
+      showCapacity: true,
+      capacityLabel: 'Capacity',
+      capacityPlaceholder: 'e.g., 6',
+      showPrice: true,
+      priceLabel: 'Price',
+      priceUnit: '',
+      priceField: 'price_per_night',
+      showAddress: true,
+      showDescription: true,
+      descriptionLabel: 'Activity Description',
+      descriptionPlaceholder: 'Describe this activity for guests'
+    },
+    details: {
+      showPropertyType: false,
+      showListingStatus: false,
+      showFurnishing: false,
+      showYearBuilt: true,
+      showBathrooms: false,
+      showParking: true
+    },
+    showFeatures: true,
+    showAmenities: true,
+    showAreaGuide: false
   }
-  return { 
-    singular: 'Item', 
-    plural: 'Items', 
-    icon: Hotel,
+};
+
+// Fallback config for unknown types
+const DEFAULT_CONFIG = {
+  icon: Building,
+  headerIcon: Building,
+  headerLabel: 'Business',
+  singular: 'Item',
+  plural: 'Menu & Services',
+  actionLabel: 'Add Item',
+  tabs: ['basic', 'images'],
+  basic: {
+    nameLabel: 'Item Name',
+    namePlaceholder: 'e.g., Item name',
+    showType: true,
     typeLabel: 'Type',
-    capacityLabel: 'Capacity',
+    typeOptions: ['Standard'],
+    showCapacity: false,
+    showPrice: true,
     priceLabel: 'Price',
     priceUnit: '',
-    typeOptions: ['Standard']
-  };
+    priceField: 'price_per_night',
+    showAddress: false,
+    showDescription: true,
+    descriptionLabel: 'Description',
+    descriptionPlaceholder: 'Brief description of this item'
+  },
+  details: null,
+  showFeatures: false,
+  showAmenities: false,
+  showAreaGuide: false
+};
+
+function getBusinessConfig(businessType) {
+  return BUSINESS_CONFIG[businessType] || DEFAULT_CONFIG;
 }
 
 // ============================================================
-// FEATURE CATEGORIES
+// FEATURE / AMENITY CATEGORIES (only shown when relevant)
 // ============================================================
 const featureCategories = [
   { id: 'interior', label: '🏠 Interior Features' },
@@ -112,12 +521,6 @@ const amenityCategories = [
   { id: 'safety', label: '🛡️ Security & Safety' },
   { id: 'outdoor', label: '🌳 Outdoor & Communal' },
   { id: 'utilities', label: '⚡ Power & Utilities' }
-];
-
-const propertyTypeOptions = [
-  'Event Hall', 'Conference Room', 'Boardroom', 'Training Hall',
-  'Warehouse', 'Office Space', 'Studio', 'Apartment', 'Hotel Room',
-  'Condo', 'Other'
 ];
 
 const furnishingOptions = [
@@ -148,29 +551,18 @@ const iconOptions = [
 ];
 
 // ============================================================
-// DELETE CONFIRMATION MODAL COMPONENT
+// DELETE CONFIRMATION MODAL
 // ============================================================
 function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) {
   const isMobile = window.innerWidth < 640;
-
   if (!isOpen) return null;
-
-  // Prevent click outside from closing
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      // Don't close - require explicit Cancel
-    }
-  };
 
   return React.createElement(
     'div',
     {
       style: {
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        top: 0, left: 0, right: 0, bottom: 0,
         backgroundColor: 'rgba(0,0,0,0.6)',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
@@ -179,8 +571,7 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
         justifyContent: 'center',
         padding: '20px',
         animation: 'fadeIn 0.25s ease'
-      },
-      onClick: handleBackdropClick
+      }
     },
     React.createElement(
       'div',
@@ -192,11 +583,9 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
           width: '100%',
           padding: isMobile ? '28px 24px' : '40px 32px',
           boxShadow: '0 40px 80px rgba(0,0,0,0.25)',
-          animation: 'slideUp 0.3s ease',
-          position: 'relative'
+          animation: 'slideUp 0.3s ease'
         }
       },
-      // Icon
       React.createElement(
         'div',
         {
@@ -213,7 +602,6 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
         },
         React.createElement(AlertTriangle, { size: isMobile ? 28 : 32, color: '#dc2626' })
       ),
-      // Title
       React.createElement(
         'h3',
         {
@@ -227,7 +615,6 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
         },
         'Delete ' + itemType + '?'
       ),
-      // Description
       React.createElement(
         'p',
         {
@@ -241,19 +628,11 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
         },
         'You are about to delete ',
         React.createElement('strong', { style: { color: '#0f172a' } }, '"' + itemName + '"'),
-        '. This action cannot be undone. Are you sure you want to continue?'
+        '. This action cannot be undone.'
       ),
-      // Buttons
       React.createElement(
         'div',
-        {
-          style: {
-            display: 'flex',
-            gap: '12px',
-            flexDirection: isMobile ? 'column-reverse' : 'row'
-          }
-        },
-        // Cancel Button
+        { style: { display: 'flex', gap: '12px', flexDirection: isMobile ? 'column-reverse' : 'row' } },
         React.createElement(
           'button',
           {
@@ -267,21 +646,11 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
               borderRadius: '12px',
               fontSize: isMobile ? '14px' : '15px',
               fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            },
-            onMouseEnter: function(e) {
-              e.currentTarget.style.borderColor = '#94a3b8';
-              e.currentTarget.style.backgroundColor = '#f8fafc';
-            },
-            onMouseLeave: function(e) {
-              e.currentTarget.style.borderColor = '#e2e8f0';
-              e.currentTarget.style.backgroundColor = 'white';
+              cursor: 'pointer'
             }
           },
           'Cancel'
         ),
-        // Delete Button
         React.createElement(
           'button',
           {
@@ -296,19 +665,10 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
               fontSize: isMobile ? '14px' : '15px',
               fontWeight: '600',
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px'
-            },
-            onMouseEnter: function(e) {
-              e.currentTarget.style.backgroundColor = '#b91c1c';
-              e.currentTarget.style.transform = 'scale(1.02)';
-            },
-            onMouseLeave: function(e) {
-              e.currentTarget.style.backgroundColor = '#dc2626';
-              e.currentTarget.style.transform = 'scale(1)';
             }
           },
           React.createElement(Trash2, { size: isMobile ? 16 : 18 }),
@@ -332,16 +692,16 @@ function RoomPage({ business, onBack }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState('basic');
 
-  // ============================================================
-  // DELETE CONFIRMATION STATE
-  // ============================================================
+  // Delete confirmation
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState(null);
 
-  const labels = getLabels(business?.business_type);
-  const IconComponent = labels.icon;
-  const isEvent = business?.business_type === 'event';
+  // Business config — THE core of the new architecture
+  const config = getBusinessConfig(business?.business_type);
+  const IconComponent = config.icon;
+
   const token = localStorage.getItem('auth_token');
+  const isMobile = window.innerWidth < 640;
 
   // ============================================================
   // FORM STATE
@@ -411,12 +771,16 @@ function RoomPage({ business, onBack }) {
   // ============================================================
   // MODAL CONTROLS
   // ============================================================
-  function openAddModal() {
-    setEditingRoom(null);
-    setActiveTab('basic');
-    setFormData({
+  function getDefaultFormData() {
+    // Default to the first option from config type options
+    const defaultType = config.basic.typeOptions[0] || '';
+    const defaultPropertyType = config.details && config.details.propertyTypeOptions 
+      ? config.details.propertyTypeOptions[0] 
+      : '';
+    
+    return {
       name: '',
-      type: labels.typeOptions[0] || '',
+      type: defaultType,
       capacity: '',
       price_per_night: '',
       base_price: '',
@@ -427,7 +791,7 @@ function RoomPage({ business, onBack }) {
       venue_description: '',
       address: '',
       images: [],
-      property_type: propertyTypeOptions[0] || '',
+      property_type: defaultPropertyType,
       bathrooms: 0,
       parking_spaces: 0,
       year_built: '',
@@ -443,16 +807,27 @@ function RoomPage({ business, onBack }) {
       newAreaTitle: '',
       newAreaContent: '',
       newAreaIcon: 'Home'
-    });
+    };
+  }
+
+  function openAddModal() {
+    setEditingRoom(null);
+    setActiveTab(config.tabs[0]);
+    setFormData(getDefaultFormData());
     setShowModal(true);
   }
 
   function openEditModal(room) {
     setEditingRoom(room);
-    setActiveTab('basic');
+    setActiveTab(config.tabs[0]);
+    const defaultType = config.basic.typeOptions[0] || '';
+    const defaultPropertyType = config.details && config.details.propertyTypeOptions 
+      ? config.details.propertyTypeOptions[0] 
+      : '';
+    
     setFormData({
       name: room.name || '',
-      type: room.type || labels.typeOptions[0] || '',
+      type: room.type || defaultType,
       capacity: room.capacity !== undefined ? String(room.capacity) : '',
       price_per_night: room.price_per_night !== undefined ? String(room.price_per_night) : '',
       base_price: room.base_price !== undefined ? String(room.base_price) : '',
@@ -463,7 +838,7 @@ function RoomPage({ business, onBack }) {
       venue_description: room.venue_description || room.description || '',
       address: room.address || '',
       images: room.images || [],
-      property_type: room.property_type || propertyTypeOptions[0] || '',
+      property_type: room.property_type || defaultPropertyType,
       bathrooms: room.bathrooms || 0,
       parking_spaces: room.parking_spaces || 0,
       year_built: room.year_built || '',
@@ -490,7 +865,7 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // DELETE HANDLER - Opens Professional Modal
+  // DELETE HANDLER
   // ============================================================
   function handleDeleteClick(room) {
     setRoomToDelete(room);
@@ -499,9 +874,7 @@ function RoomPage({ business, onBack }) {
 
   function handleConfirmDelete() {
     if (!roomToDelete) return;
-    
     const roomId = roomToDelete.id;
-    const roomName = roomToDelete.name;
     
     fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId, {
       method: 'DELETE',
@@ -510,10 +883,10 @@ function RoomPage({ business, onBack }) {
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.success) {
-          showSuccess(labels.singular + ' deleted successfully');
+          showSuccess(config.singular + ' deleted successfully');
           fetchRooms();
         } else {
-          showError('Failed to delete ' + labels.singular.toLowerCase());
+          showError('Failed to delete ' + config.singular.toLowerCase());
         }
         setDeleteModalOpen(false);
         setRoomToDelete(null);
@@ -540,7 +913,7 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // IMAGE UPLOAD HANDLERS
+  // IMAGE UPLOAD
   // ============================================================
   function handleVenueImageUpload(event) {
     const file = event.target.files[0];
@@ -559,14 +932,13 @@ function RoomPage({ business, onBack }) {
     const roomId = editingRoom ? editingRoom.id : null;
 
     if (!roomId) {
-      showError('Please save the venue first before uploading images');
+      showError('Please save this ' + config.singular.toLowerCase() + ' first before uploading images');
       return;
     }
 
-    // Check limit (max 16 images)
     const currentImages = formData.images || [];
     if (currentImages.length >= 16) {
-      showError('Maximum 16 images allowed per venue');
+      showError('Maximum 16 images allowed');
       return;
     }
 
@@ -647,28 +1019,23 @@ function RoomPage({ business, onBack }) {
           showError(data.error || 'Failed to remove image');
         }
       })
-      .catch(function() { showError('Something went wrong. Please try again.'); });
+      .catch(function() { showError('Something went wrong.'); });
   }
 
   function moveImageUp(index) {
     if (index === 0) return;
     const updated = [...(formData.images || [])];
     [updated[index], updated[index - 1]] = [updated[index - 1], updated[index]];
-    setFormData(function(prev) {
-      return { ...prev, images: updated };
-    });
+    setFormData(function(prev) { return { ...prev, images: updated }; });
   }
 
   function moveImageDown(index) {
     if (index === (formData.images || []).length - 1) return;
     const updated = [...(formData.images || [])];
     [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
-    setFormData(function(prev) {
-      return { ...prev, images: updated };
-    });
+    setFormData(function(prev) { return { ...prev, images: updated }; });
   }
 
-  // Drag and drop handlers
   function handleDragDrop(e) {
     e.preventDefault();
     const files = e.dataTransfer.files;
@@ -698,7 +1065,7 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // FEATURES
+  // FEATURES / AMENITIES / AREA GUIDE HANDLERS
   // ============================================================
   function addFeature() {
     if (!formData.newFeature.trim()) {
@@ -717,14 +1084,9 @@ function RoomPage({ business, onBack }) {
 
   function removeFeature(id) {
     const updated = (formData.features || []).filter(function(f) { return f.id !== id; });
-    setFormData(function(prev) {
-      return { ...prev, features: updated };
-    });
+    setFormData(function(prev) { return { ...prev, features: updated }; });
   }
 
-  // ============================================================
-  // AMENITIES
-  // ============================================================
   function addAmenity() {
     if (!formData.newAmenity.trim()) {
       showError('Please enter an amenity name');
@@ -742,14 +1104,9 @@ function RoomPage({ business, onBack }) {
 
   function removeAmenity(id) {
     const updated = (formData.amenities || []).filter(function(a) { return a.id !== id; });
-    setFormData(function(prev) {
-      return { ...prev, amenities: updated };
-    });
+    setFormData(function(prev) { return { ...prev, amenities: updated }; });
   }
 
-  // ============================================================
-  // AREA GUIDE
-  // ============================================================
   function addAreaSection() {
     if (!formData.newAreaTitle.trim() || !formData.newAreaContent.trim()) {
       showError('Please enter both title and content');
@@ -768,35 +1125,32 @@ function RoomPage({ business, onBack }) {
 
   function removeAreaSection(id) {
     const updated = (formData.areaGuide || []).filter(function(s) { return s.id !== id; });
-    setFormData(function(prev) {
-      return { ...prev, areaGuide: updated };
-    });
+    setFormData(function(prev) { return { ...prev, areaGuide: updated }; });
   }
 
   // ============================================================
-  // SAVE VENUE
+  // SAVE
   // ============================================================
   function handleSave() {
     if (!formData.name.trim()) {
-      showError(labels.singular + ' name is required');
+      showError(config.basic.nameLabel + ' is required');
       return;
     }
     
-    let priceValue;
-    if (isEvent) {
-      priceValue = parseFloat(formData.base_price);
-    } else {
-      priceValue = parseFloat(formData.price_per_night);
-    }
-    
+    // Price validation
+    let priceValue = parseFloat(formData.price_per_night) || parseFloat(formData.base_price);
     if (!priceValue || priceValue <= 0) {
-      showError('Valid ' + labels.priceLabel.toLowerCase() + ' is required');
+      showError('Valid ' + config.basic.priceLabel.toLowerCase() + ' is required');
       return;
     }
 
-    let capacity = parseInt(formData.capacity);
-    if (isNaN(capacity) || capacity <= 0) {
-      capacity = isEvent ? 50 : 2;
+    // Capacity validation (only if applicable)
+    let capacity = 1;
+    if (config.basic.showCapacity) {
+      capacity = parseInt(formData.capacity);
+      if (isNaN(capacity) || capacity <= 0) {
+        capacity = 1;
+      }
     }
 
     setSaving(true);
@@ -805,32 +1159,57 @@ function RoomPage({ business, onBack }) {
       : API_BASE + '/api/businesses/' + business.id + '/rooms/create';
     const method = editingRoom ? 'PUT' : 'POST';
 
+    // Build payload — only include fields that are relevant
     const payload = {
       name: formData.name.trim(),
       type: formData.type,
       capacity: capacity,
-      price_per_night: isEvent ? 0 : parseFloat(formData.price_per_night) || 0,
+      price_per_night: parseFloat(formData.price_per_night) || parseFloat(formData.base_price) || 0,
       description: formData.description || '',
       venue_description: formData.venue_description || formData.description || '',
       address: formData.address || '',
-      images: formData.images || [],
-      property_type: formData.property_type || propertyTypeOptions[0],
-      bathrooms: parseInt(formData.bathrooms) || 0,
-      parking_spaces: parseInt(formData.parking_spaces) || 0,
-      year_built: formData.year_built ? parseInt(formData.year_built) : null,
-      furnishing_status: formData.furnishing_status || 'unfurnished',
-      listing_status: formData.listing_status || 'for_rent',
-      features: formData.features || [],
-      amenities: formData.amenities || [],
-      area_guide: formData.areaGuide || []
+      images: formData.images || []
     };
 
-    if (isEvent) {
-      payload.base_price = parseFloat(formData.base_price) || 0;
-      payload.included_guests = parseInt(formData.included_guests) || 50;
-      payload.max_capacity = parseInt(formData.max_capacity) || 300;
-      payload.extra_guest_price = parseFloat(formData.extra_guest_price) || 2000;
-      payload.price_per_night = parseFloat(formData.base_price) || 0;
+    // Only add details fields if the tab was shown
+    if (config.details) {
+      if (config.details.showPropertyType) {
+        payload.property_type = formData.property_type || '';
+      }
+      if (config.details.showListingStatus) {
+        payload.listing_status = formData.listing_status || 'for_rent';
+      }
+      if (config.details.showFurnishing) {
+        payload.furnishing_status = formData.furnishing_status || 'unfurnished';
+      }
+      if (config.details.showYearBuilt) {
+        payload.year_built = formData.year_built ? parseInt(formData.year_built) : null;
+      }
+      if (config.details.showBathrooms) {
+        payload.bathrooms = parseInt(formData.bathrooms) || 0;
+      }
+      if (config.details.showParking) {
+        payload.parking_spaces = parseInt(formData.parking_spaces) || 0;
+      }
+    }
+
+    // Only add features/amenities/area guide if shown
+    if (config.showFeatures) {
+      payload.features = formData.features || [];
+    }
+    if (config.showAmenities) {
+      payload.amenities = formData.amenities || [];
+    }
+    if (config.showAreaGuide) {
+      payload.area_guide = formData.areaGuide || [];
+    }
+
+    // Event hall special handling
+    if (business?.business_type === 'event_hall' || business?.business_type === 'event') {
+      payload.base_price = parseFloat(formData.price_per_night) || 0;
+      payload.included_guests = parseInt(formData.capacity) || 50;
+      payload.max_capacity = parseInt(formData.capacity) || 300;
+      payload.extra_guest_price = 0;
     }
 
     fetch(url, {
@@ -844,7 +1223,7 @@ function RoomPage({ business, onBack }) {
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.success) {
-          showSuccess(editingRoom ? labels.singular + ' updated!' : labels.singular + ' added!');
+          showSuccess(editingRoom ? config.singular + ' updated!' : config.singular + ' added!');
           closeModal();
           fetchRooms();
           if (!editingRoom && data.room) {
@@ -863,6 +1242,18 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
+  // TAB LABELS
+  // ============================================================
+  const tabLabels = {
+    basic: '📋 Basic',
+    details: '🏷️ Details',
+    images: '📸 Images',
+    features: '⭐ Features',
+    amenities: '🛋️ Amenities',
+    areaGuide: '🗺️ Area Guide'
+  };
+
+  // ============================================================
   // RENDER
   // ============================================================
   if (loading) {
@@ -871,8 +1262,6 @@ function RoomPage({ business, onBack }) {
     );
   }
 
-  const isMobile = window.innerWidth < 640;
-
   return React.createElement('div', { style: { maxWidth: '1200px', margin: '0 auto', padding: '16px' } },
     // Delete Confirmation Modal
     React.createElement(DeleteConfirmModal, {
@@ -880,7 +1269,7 @@ function RoomPage({ business, onBack }) {
       onClose: handleCancelDelete,
       onConfirm: handleConfirmDelete,
       itemName: roomToDelete?.name || '',
-      itemType: labels.singular
+      itemType: config.singular
     }),
 
     // Header
@@ -891,46 +1280,47 @@ function RoomPage({ business, onBack }) {
           style: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }
         }, React.createElement(ArrowLeft, { size: 20, color: '#475569' })),
         React.createElement('div', null,
-          React.createElement('h2', { style: { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 } }, labels.plural),
+          React.createElement('h2', { style: { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 } }, config.plural),
           React.createElement('p', { style: { fontSize: '14px', color: '#64748b', margin: '2px 0 0' } }, 
-            'Manage your ' + labels.plural.toLowerCase() + ' with full settings'
+            'Manage your ' + config.plural.toLowerCase()
           )
         )
       ),
       React.createElement('button', { 
         onClick: openAddModal, 
         style: { padding: '10px 20px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }
-      }, React.createElement(Plus, { size: 16 }), 'Add ' + labels.singular)
+      }, React.createElement(Plus, { size: 16 }), config.actionLabel)
     ),
 
-    // Room List
+    // Empty State / List
     rooms.length === 0 ?
       React.createElement('div', { style: { textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' } },
         React.createElement(IconComponent, { size: 48, color: '#cbd5e1' }),
-        React.createElement('h3', { style: { fontSize: '18px', fontWeight: '600', color: '#0f172a', marginTop: '12px' } }, 'No ' + labels.plural.toLowerCase() + ' yet'),
-        React.createElement('p', { style: { color: '#94a3b8', fontSize: '14px', marginTop: '4px' } }, 'Add your first ' + labels.singular.toLowerCase()),
+        React.createElement('h3', { style: { fontSize: '18px', fontWeight: '600', color: '#0f172a', marginTop: '12px' } }, 'Nothing here yet'),
+        React.createElement('p', { style: { color: '#94a3b8', fontSize: '14px', marginTop: '4px' } }, 'Add your first ' + config.singular.toLowerCase()),
         React.createElement('button', { 
           onClick: openAddModal, 
           style: { marginTop: '16px', padding: '10px 24px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '40px', cursor: 'pointer' }
-        }, 'Add ' + labels.singular)
+        }, config.actionLabel)
       ) :
       React.createElement('div', { style: { display: 'grid', gap: '12px' } },
         rooms.map(function(room) {
-          const displayPrice = isEvent ? (room.base_price || room.price_per_night || 0) : (room.price_per_night || 0);
+          const displayPrice = room.base_price || room.price_per_night || 0;
           const imageCount = (room.images || []).length;
           const featureCount = (room.features || []).length;
+          const capacityValue = room.included_guests || room.capacity || 0;
           
           return React.createElement('div', { key: room.id, style: { background: 'white', borderRadius: '12px', padding: '16px 20px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' } },
             React.createElement('div', null,
               React.createElement('h4', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, room.name),
               React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '4px' } },
-                React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, room.type || labels.typeOptions[0]),
-                React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, 
+                room.type && React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, room.type),
+                config.basic.showCapacity && capacityValue > 0 && React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, 
                   React.createElement(Users, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
-                  labels.capacityLabel + ': ' + (isEvent ? (room.included_guests || room.capacity || 50) : (room.capacity || 2))
+                  config.basic.capacityLabel + ': ' + capacityValue
                 ),
                 React.createElement('span', { style: { fontSize: '12px', fontWeight: '600', color: '#4f46e5' } },
-                  '₦' + (displayPrice).toLocaleString() + labels.priceUnit
+                  '₦' + (displayPrice).toLocaleString() + (config.basic.priceUnit ? ' ' + config.basic.priceUnit : '')
                 ),
                 imageCount > 0 && React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } },
                   React.createElement(Image, { size: 10, style: { display: 'inline', marginRight: '2px' } }),
@@ -964,7 +1354,7 @@ function RoomPage({ business, onBack }) {
         // Modal Header
         React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' } },
           React.createElement('h3', { style: { fontSize: '20px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 
-            editingRoom ? 'Edit ' + labels.singular : 'Add ' + labels.singular
+            editingRoom ? 'Edit ' + config.singular : config.actionLabel
           ),
           React.createElement('button', { 
             onClick: closeModal, 
@@ -972,17 +1362,9 @@ function RoomPage({ business, onBack }) {
           }, React.createElement(X, { size: 20, color: '#64748b' }))
         ),
 
-        // TABS - Updated to include Images tab
+        // TABS - conditionally rendered based on config.tabs
         React.createElement('div', { style: { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' } },
-          ['basic', 'details', 'images', 'features', 'amenities', 'areaGuide'].map(function(tab) {
-            const tabLabels = {
-              basic: '📋 Basic',
-              details: '🏷️ Details',
-              images: '📸 Images',
-              features: '⭐ Features',
-              amenities: '🛋️ Amenities',
-              areaGuide: '🗺️ Area Guide'
-            };
+          config.tabs.map(function(tab) {
             return React.createElement('button', {
               key: tab,
               onClick: function() { setActiveTab(tab); },
@@ -1006,29 +1388,29 @@ function RoomPage({ business, onBack }) {
         // ============================================================
         activeTab === 'basic' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
           React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.singular + ' Name *'),
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, config.basic.nameLabel + ' *'),
             React.createElement('input', {
               type: 'text',
               value: formData.name,
               onChange: function(e) { handleChange('name', e.target.value); },
-              placeholder: 'e.g., ' + labels.singular + ' 1',
+              placeholder: config.basic.namePlaceholder,
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
           ),
-          React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.typeLabel),
+          config.basic.showType && React.createElement('div', null,
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, config.basic.typeLabel),
             React.createElement('select', {
               value: formData.type,
               onChange: function(e) { handleChange('type', e.target.value); },
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
-            }, labels.typeOptions.map(function(opt) { 
+            }, config.basic.typeOptions.map(function(opt) { 
               return React.createElement('option', { key: opt, value: opt }, opt);
             }))
           ),
-          React.createElement('div', null,
+          config.basic.showAddress && React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(MapPin, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
-              'Venue Address'
+              'Address'
             ),
             React.createElement('input', {
               type: 'text',
@@ -1038,111 +1420,73 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
           ),
-          React.createElement('div', null,
+          config.basic.showDescription && React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(FileText, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
-              'Venue Description'
+              config.basic.descriptionLabel
             ),
             React.createElement('textarea', {
               value: formData.venue_description || formData.description,
               onChange: function(e) { handleChange('venue_description', e.target.value); },
-              placeholder: 'Describe this venue for customers',
+              placeholder: config.basic.descriptionPlaceholder,
               rows: 3,
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }
             })
           ),
-          isEvent ? (
-            React.createElement(React.Fragment, null,
-              React.createElement('div', null,
-                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
-                  labels.priceLabel + ' (₦) *'
-                ),
-                React.createElement('div', { style: { position: 'relative' } },
-                  React.createElement('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' } }, '₦'),
-                  React.createElement('input', {
-                    type: 'number',
-                    value: formData.base_price,
-                    onChange: function(e) { handleChange('base_price', e.target.value); },
-                    placeholder: 'e.g., 800000',
-                    style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
-                  })
-                )
+          // Price + Capacity layout
+          React.createElement('div', { style: { display: 'grid', gridTemplateColumns: config.basic.showCapacity ? '1fr 1fr' : '1fr', gap: '12px' } },
+            config.basic.showCapacity && React.createElement('div', null,
+              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, config.basic.capacityLabel),
+              React.createElement('input', {
+                type: 'number',
+                value: formData.capacity,
+                onChange: function(e) { handleChange('capacity', e.target.value); },
+                placeholder: config.basic.capacityPlaceholder,
+                style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+              })
+            ),
+            React.createElement('div', null,
+              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
+                config.basic.priceLabel + ' (₦) *'
               ),
-              React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
-                React.createElement('div', null,
-                  React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 'Included Guests *'),
-                  React.createElement('input', {
-                    type: 'number',
-                    value: formData.included_guests,
-                    onChange: function(e) { handleChange('included_guests', e.target.value); },
-                    placeholder: 'e.g., 100',
-                    style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
-                  })
-                ),
-                React.createElement('div', null,
-                  React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 'Max Capacity *'),
-                  React.createElement('input', {
-                    type: 'number',
-                    value: formData.max_capacity,
-                    onChange: function(e) { handleChange('max_capacity', e.target.value); },
-                    placeholder: 'e.g., 300',
-                    style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
-                  })
-                )
-              )
-            )
-          ) : (
-            React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
-              React.createElement('div', null,
-                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, labels.capacityLabel),
+              React.createElement('div', { style: { position: 'relative' } },
+                React.createElement('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' } }, '₦'),
                 React.createElement('input', {
                   type: 'number',
-                  value: formData.capacity,
-                  onChange: function(e) { handleChange('capacity', e.target.value); },
-                  placeholder: 'e.g., 2',
-                  style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                  value: formData.price_per_night,
+                  onChange: function(e) { handleChange('price_per_night', e.target.value); },
+                  placeholder: 'e.g., 5000',
+                  style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
                 })
               ),
-              React.createElement('div', null,
-                React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
-                  labels.priceLabel + ' (₦) *'
-                ),
-                React.createElement('div', { style: { position: 'relative' } },
-                  React.createElement('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' } }, '₦'),
-                  React.createElement('input', {
-                    type: 'number',
-                    value: formData.price_per_night,
-                    onChange: function(e) { handleChange('price_per_night', e.target.value); },
-                    placeholder: 'e.g., 5000',
-                    style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
-                  })
-                )
+              config.basic.priceUnit && React.createElement('p', { style: { fontSize: '11px', color: '#94a3b8', marginTop: '4px' } }, 
+                'Displayed as ' + config.basic.priceUnit.trim()
               )
             )
           )
         ),
 
         // ============================================================
-        // TAB: PROPERTY DETAILS
+        // TAB: PROPERTY DETAILS (only if config.details exists)
         // ============================================================
-        activeTab === 'details' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
+        activeTab === 'details' && config.details && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '8px' } },
-            'Property details specific to this venue'
+            'Property details specific to this ' + config.singular.toLowerCase()
           ),
-          React.createElement('div', null,
+          config.details.showPropertyType && React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(Building, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
-              'Property Type'
+              config.details.propertyTypeLabel || 'Property Type'
             ),
             React.createElement('select', {
               value: formData.property_type,
               onChange: function(e) { handleChange('property_type', e.target.value); },
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
-            }, propertyTypeOptions.map(function(opt) {
+            }, (config.details.propertyTypeOptions || []).map(function(opt) {
               return React.createElement('option', { key: opt, value: opt }, opt);
             }))
           ),
-          React.createElement('div', null,
+          config.details.showListingStatus && React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(Tag, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
               'Listing Status'
@@ -1155,7 +1499,7 @@ function RoomPage({ business, onBack }) {
               return React.createElement('option', { key: opt.value, value: opt.value }, opt.label);
             }))
           ),
-          React.createElement('div', null,
+          config.details.showFurnishing && React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(Sofa, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
               'Furnishing Status'
@@ -1168,7 +1512,7 @@ function RoomPage({ business, onBack }) {
               return React.createElement('option', { key: opt.value, value: opt.value }, opt.label);
             }))
           ),
-          React.createElement('div', null,
+          config.details.showYearBuilt && React.createElement('div', null,
             React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
               React.createElement(Calendar, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
               'Year Built'
@@ -1181,8 +1525,8 @@ function RoomPage({ business, onBack }) {
               style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
             })
           ),
-          React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
-            React.createElement('div', null,
+          (config.details.showBathrooms || config.details.showParking) && React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
+            config.details.showBathrooms && React.createElement('div', null,
               React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
                 React.createElement(Bath, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
                 'Bathrooms'
@@ -1195,7 +1539,7 @@ function RoomPage({ business, onBack }) {
                 style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
               })
             ),
-            React.createElement('div', null,
+            config.details.showParking && React.createElement('div', null,
               React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
                 React.createElement(Car, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
                 'Parking Spaces'
@@ -1216,18 +1560,13 @@ function RoomPage({ business, onBack }) {
         // ============================================================
         activeTab === 'images' && React.createElement('div', null,
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
-            'Upload images to showcase this venue. Maximum 16 images allowed. The first image will be the primary display image.'
+            'Upload images to showcase this ' + config.singular.toLowerCase() + '. Maximum 16 images allowed. The first image will be the primary display image.'
           ),
           
-          // Image count indicator
           React.createElement('div', { style: { 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '12px',
-            padding: '8px 12px',
-            backgroundColor: '#f8fafc',
-            borderRadius: '8px'
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginBottom: '12px', padding: '8px 12px',
+            backgroundColor: '#f8fafc', borderRadius: '8px'
           } },
             React.createElement('span', { style: { fontSize: '13px', color: '#475569' } },
               React.createElement(Image, { size: 16, style: { display: 'inline', marginRight: '6px' } }),
@@ -1237,7 +1576,6 @@ function RoomPage({ business, onBack }) {
               React.createElement('span', { style: { fontSize: '12px', color: '#ef4444' } }, 'Limit reached')
           ),
           
-          // Upload area (drag & drop + button)
           React.createElement('div', {
             onDrop: handleDragDrop,
             onDragOver: handleDragOver,
@@ -1259,10 +1597,10 @@ function RoomPage({ business, onBack }) {
             React.createElement('label', { style: {
               display: 'inline-block',
               padding: '8px 20px',
-              backgroundColor: (uploading || (formData.images || []).length >= 16) ? '#94a3b8' : '#4F46E5',
+              backgroundColor: (uploading || (formData.images || []).length >= 16 || !editingRoom) ? '#94a3b8' : '#4F46E5',
               color: 'white',
               borderRadius: '8px',
-              cursor: (uploading || (formData.images || []).length >= 16) ? 'not-allowed' : 'pointer',
+              cursor: (uploading || (formData.images || []).length >= 16 || !editingRoom) ? 'not-allowed' : 'pointer',
               fontSize: '14px',
               fontWeight: '500',
               marginTop: '8px'
@@ -1279,43 +1617,28 @@ function RoomPage({ business, onBack }) {
               })
             ),
             uploading && React.createElement('div', { style: { 
-              marginTop: '12px', 
-              height: '4px', 
-              background: '#e2e8f0', 
-              borderRadius: '4px', 
-              overflow: 'hidden' 
+              marginTop: '12px', height: '4px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' 
             } },
               React.createElement('div', { style: { 
-                width: uploadProgress + '%', 
-                height: '100%', 
-                background: '#4F46E5', 
-                transition: 'width 0.3s ease' 
+                width: uploadProgress + '%', height: '100%', background: '#4F46E5', transition: 'width 0.3s ease' 
               } })
             ),
             React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } },
               'JPEG, PNG, WEBP up to 5MB each'
             ),
             !editingRoom && React.createElement('p', { style: { fontSize: '12px', color: '#f59e0b', marginTop: '4px' } },
-              '⚠️ Save the venue first, then upload images'
+              '⚠️ Save this ' + config.singular.toLowerCase() + ' first, then upload images'
             )
           ),
           
-          // Image grid
           (formData.images || []).length === 0 ?
             React.createElement('div', { style: {
-              padding: '40px 20px',
-              textAlign: 'center',
-              backgroundColor: '#f8fafc',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0'
+              padding: '40px 20px', textAlign: 'center',
+              backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0'
             } },
               React.createElement(Camera, { size: 40, color: '#94a3b8' }),
-              React.createElement('p', { style: { marginTop: '12px', color: '#64748b', fontSize: '14px' } },
-                'No images uploaded yet'
-              ),
-              React.createElement('p', { style: { color: '#94a3b8', fontSize: '12px' } },
-                'Upload images to showcase this venue'
-              )
+              React.createElement('p', { style: { marginTop: '12px', color: '#64748b', fontSize: '14px' } }, 'No images uploaded yet'),
+              React.createElement('p', { style: { color: '#94a3b8', fontSize: '12px' } }, 'Upload images to showcase this ' + config.singular.toLowerCase())
             ) :
             React.createElement('div', { style: {
               display: 'grid',
@@ -1336,69 +1659,44 @@ function RoomPage({ business, onBack }) {
                 },
                   React.createElement('img', {
                     src: url,
-                    alt: 'Venue image ' + (idx + 1),
-                    style: {
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }
+                    alt: 'Image ' + (idx + 1),
+                    style: { width: '100%', height: '100%', objectFit: 'cover' }
                   }),
-                  // Primary badge
                   idx === 0 &&
                     React.createElement('span', {
                       style: {
-                        position: 'absolute',
-                        top: '6px',
-                        left: '6px',
-                        backgroundColor: '#4F46E5',
-                        color: 'white',
-                        fontSize: '9px',
-                        fontWeight: '700',
-                        padding: '2px 8px',
-                        borderRadius: '999px',
+                        position: 'absolute', top: '6px', left: '6px',
+                        backgroundColor: '#4F46E5', color: 'white',
+                        fontSize: '9px', fontWeight: '700',
+                        padding: '2px 8px', borderRadius: '999px',
                         textTransform: 'uppercase'
                       }
                     }, 'Primary'),
-                  // Image number badge (if not primary)
                   idx > 0 &&
                     React.createElement('span', {
                       style: {
-                        position: 'absolute',
-                        top: '6px',
-                        left: '6px',
-                        backgroundColor: 'rgba(0,0,0,0.6)',
-                        color: 'white',
-                        fontSize: '10px',
-                        fontWeight: '600',
-                        padding: '2px 8px',
-                        borderRadius: '999px'
+                        position: 'absolute', top: '6px', left: '6px',
+                        backgroundColor: 'rgba(0,0,0,0.6)', color: 'white',
+                        fontSize: '10px', fontWeight: '600',
+                        padding: '2px 8px', borderRadius: '999px'
                       }
                     }, idx + 1),
-                  // Reorder controls
                   React.createElement('div', {
                     style: {
-                      position: 'absolute',
-                      bottom: '6px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      display: 'flex',
-                      gap: '4px'
+                      position: 'absolute', bottom: '6px',
+                      left: '50%', transform: 'translateX(-50%)',
+                      display: 'flex', gap: '4px'
                     }
                   },
                     idx > 0 &&
                       React.createElement('button', {
                         onClick: function() { moveImageUp(idx); },
                         style: {
-                          background: 'rgba(0,0,0,0.7)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          width: '28px',
-                          height: '28px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          background: 'rgba(0,0,0,0.7)', color: 'white',
+                          border: 'none', borderRadius: '4px',
+                          width: '28px', height: '28px',
+                          cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center',
                           fontSize: '14px'
                         }
                       }, '↑'),
@@ -1406,37 +1704,24 @@ function RoomPage({ business, onBack }) {
                       React.createElement('button', {
                         onClick: function() { moveImageDown(idx); },
                         style: {
-                          background: 'rgba(0,0,0,0.7)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          width: '28px',
-                          height: '28px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          background: 'rgba(0,0,0,0.7)', color: 'white',
+                          border: 'none', borderRadius: '4px',
+                          width: '28px', height: '28px',
+                          cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center',
                           fontSize: '14px'
                         }
                       }, '↓')
                   ),
-                  // Delete button
                   React.createElement('button', {
                     onClick: function() { removeVenueImage(idx); },
                     style: {
-                      position: 'absolute',
-                      top: '6px',
-                      right: '6px',
+                      position: 'absolute', top: '6px', right: '6px',
                       backgroundColor: 'rgba(239,68,68,0.9)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '28px',
-                      height: '28px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      color: 'white', border: 'none',
+                      borderRadius: '50%', width: '28px', height: '28px',
+                      cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
                       fontSize: '16px'
                     }
                   }, '×')
@@ -1444,68 +1729,40 @@ function RoomPage({ business, onBack }) {
               })
             ),
           
-          // Reorder hint
           (formData.images || []).length > 1 &&
             React.createElement('p', { style: {
-              fontSize: '12px',
-              color: '#94a3b8',
-              textAlign: 'center',
-              marginTop: '12px'
+              fontSize: '12px', color: '#94a3b8',
+              textAlign: 'center', marginTop: '12px'
             } },
-              '⬆⬇ Use the arrows to reorder images. The first image is the primary display image.'
+              '⬆⬇ Use the arrows to reorder. First image is primary.'
             )
         ),
 
         // ============================================================
-        // TAB: FEATURES
+        // TAB: FEATURES (only if config.showFeatures)
         // ============================================================
-        activeTab === 'features' && React.createElement('div', null,
+        activeTab === 'features' && config.showFeatures && React.createElement('div', null,
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
-            'Features specific to this venue'
+            'Features specific to this ' + config.singular.toLowerCase()
           ),
           React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' } },
             React.createElement('input', {
               type: 'text',
               value: formData.newFeature,
               onChange: function(e) { handleChange('newFeature', e.target.value); },
-              placeholder: 'Enter a feature (e.g., Air Conditioning)',
-              style: {
-                flex: 2,
-                padding: '10px 14px',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '14px',
-                minWidth: '150px'
-              }
+              placeholder: 'Enter a feature',
+              style: { flex: 2, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', minWidth: '150px' }
             }),
             React.createElement('select', {
               value: formData.newFeatureCategory,
               onChange: function(e) { handleChange('newFeatureCategory', e.target.value); },
-              style: {
-                flex: 1,
-                padding: '10px 14px',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '13px',
-                backgroundColor: 'white',
-                minWidth: '120px'
-              }
+              style: { flex: 1, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', backgroundColor: 'white', minWidth: '120px' }
             }, featureCategories.map(function(cat) {
               return React.createElement('option', { key: cat.id, value: cat.id }, cat.label);
             })),
             React.createElement('button', {
               onClick: addFeature,
-              style: {
-                padding: '10px 20px',
-                backgroundColor: '#4f46e5',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }
+              style: { padding: '10px 20px', backgroundColor: '#4f46e5', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }
             }, 'Add')
           ),
           featureCategories.map(function(category) {
@@ -1516,13 +1773,9 @@ function RoomPage({ business, onBack }) {
               React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
                 categoryFeatures.map(function(feature) {
                   return React.createElement('div', { key: feature.id, style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: '#f1f5f9',
-                    borderRadius: '20px',
-                    fontSize: '13px'
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 12px', backgroundColor: '#f1f5f9',
+                    borderRadius: '20px', fontSize: '13px'
                   } },
                     React.createElement('span', null, feature.name),
                     React.createElement('button', {
@@ -1535,60 +1788,35 @@ function RoomPage({ business, onBack }) {
             );
           }),
           (formData.features || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', padding: '20px' } },
-            'No features added yet. Add your first feature above.'
+            'No features added yet.'
           )
         ),
 
         // ============================================================
-        // TAB: AMENITIES
+        // TAB: AMENITIES (only if config.showAmenities)
         // ============================================================
-        activeTab === 'amenities' && React.createElement('div', null,
+        activeTab === 'amenities' && config.showAmenities && React.createElement('div', null,
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
-            'Amenities specific to this venue'
+            'Amenities specific to this ' + config.singular.toLowerCase()
           ),
           React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' } },
             React.createElement('input', {
               type: 'text',
               value: formData.newAmenity,
               onChange: function(e) { handleChange('newAmenity', e.target.value); },
-              placeholder: 'Enter an amenity (e.g., WiFi)',
-              style: {
-                flex: 2,
-                padding: '10px 14px',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '14px',
-                minWidth: '150px'
-              }
+              placeholder: 'Enter an amenity',
+              style: { flex: 2, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', minWidth: '150px' }
             }),
             React.createElement('select', {
               value: formData.newAmenityCategory,
               onChange: function(e) { handleChange('newAmenityCategory', e.target.value); },
-              style: {
-                flex: 1,
-                padding: '10px 14px',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '13px',
-                backgroundColor: 'white',
-                minWidth: '120px'
-              }
+              style: { flex: 1, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', backgroundColor: 'white', minWidth: '120px' }
             }, amenityCategories.map(function(cat) {
               return React.createElement('option', { key: cat.id, value: cat.id }, cat.label);
             })),
             React.createElement('button', {
               onClick: addAmenity,
-              style: {
-                padding: '10px 20px',
-                backgroundColor: '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }
+              style: { padding: '10px 20px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }
             }, 'Add')
           ),
           amenityCategories.map(function(category) {
@@ -1599,13 +1827,9 @@ function RoomPage({ business, onBack }) {
               React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
                 categoryAmenities.map(function(amenity) {
                   return React.createElement('div', { key: amenity.id, style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: '#d1fae5',
-                    borderRadius: '20px',
-                    fontSize: '13px'
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 12px', backgroundColor: '#d1fae5',
+                    borderRadius: '20px', fontSize: '13px'
                   } },
                     React.createElement('span', null, amenity.name),
                     React.createElement('button', {
@@ -1618,16 +1842,16 @@ function RoomPage({ business, onBack }) {
             );
           }),
           (formData.amenities || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', padding: '20px' } },
-            'No amenities added yet. Add your first amenity above.'
+            'No amenities added yet.'
           )
         ),
 
         // ============================================================
-        // TAB: AREA GUIDE
+        // TAB: AREA GUIDE (only if config.showAreaGuide)
         // ============================================================
-        activeTab === 'areaGuide' && React.createElement('div', null,
+        activeTab === 'areaGuide' && config.showAreaGuide && React.createElement('div', null,
           React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
-            'Area guide specific to this venue'
+            'Area guide specific to this ' + config.singular.toLowerCase()
           ),
           React.createElement('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' } },
             iconOptions.map(function(icon) {
@@ -1641,10 +1865,7 @@ function RoomPage({ business, onBack }) {
                   border: formData.newAreaIcon === icon.value ? '2px solid #4f46e5' : '1px solid #e2e8f0',
                   background: formData.newAreaIcon === icon.value ? '#eef2ff' : 'white',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '12px'
+                  display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px'
                 }
               },
                 IconComponent2 ? React.createElement(IconComponent2, { size: 16, color: formData.newAreaIcon === icon.value ? '#4f46e5' : '#64748b' }) : null,
@@ -1657,56 +1878,27 @@ function RoomPage({ business, onBack }) {
               type: 'text',
               value: formData.newAreaTitle,
               onChange: function(e) { handleChange('newAreaTitle', e.target.value); },
-              placeholder: 'Section Title (e.g., Interesting Facts)',
-              style: {
-                flex: 2,
-                padding: '10px 14px',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '14px',
-                minWidth: '150px'
-              }
+              placeholder: 'Section Title',
+              style: { flex: 2, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', minWidth: '150px' }
             }),
             React.createElement('textarea', {
               value: formData.newAreaContent,
               onChange: function(e) { handleChange('newAreaContent', e.target.value); },
-              placeholder: 'Section Content (e.g., Known for technology...)',
-              style: {
-                flex: 3,
-                padding: '10px 14px',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '14px',
-                minWidth: '200px',
-                resize: 'vertical'
-              },
+              placeholder: 'Section Content',
+              style: { flex: 3, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', minWidth: '200px', resize: 'vertical' },
               rows: '2'
             }),
             React.createElement('button', {
               onClick: addAreaSection,
-              style: {
-                padding: '10px 20px',
-                backgroundColor: '#f59e0b',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }
+              style: { padding: '10px 20px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }
             }, 'Add')
           ),
           (formData.areaGuide || []).map(function(section) {
             var IconComponent2 = iconMap[section.icon] || Home;
             return React.createElement('div', { key: section.id, style: {
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px 16px',
-              backgroundColor: '#fef3c7',
-              borderRadius: '10px',
-              marginBottom: '8px'
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 16px', backgroundColor: '#fef3c7',
+              borderRadius: '10px', marginBottom: '8px'
             } },
               React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', flex: 1 } },
                 IconComponent2 ? React.createElement(IconComponent2, { size: 20, color: '#d97706' }) : null,
@@ -1732,16 +1924,7 @@ function RoomPage({ business, onBack }) {
         React.createElement('div', { style: { marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' } },
           React.createElement('button', {
             onClick: closeModal,
-            style: {
-              padding: '10px 24px',
-              backgroundColor: '#f1f5f9',
-              color: '#475569',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }
+            style: { padding: '10px 24px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }
           }, 'Cancel'),
           React.createElement('button', {
             onClick: handleSave,
@@ -1749,17 +1932,12 @@ function RoomPage({ business, onBack }) {
             style: {
               padding: '10px 24px',
               backgroundColor: saving ? '#94a3b8' : '#4f46e5',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: '14px',
-              fontWeight: '600',
+              color: 'white', border: 'none', borderRadius: '10px',
+              fontSize: '14px', fontWeight: '600',
               cursor: saving ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
+              display: 'flex', alignItems: 'center', gap: '8px'
             }
-          }, saving ? React.createElement(Loader2, { size: 18, style: { animation: 'spin 1s linear infinite' } }) : React.createElement(Save, { size: 18 }), saving ? 'Saving...' : 'Save Venue')
+          }, saving ? React.createElement(Loader2, { size: 18, style: { animation: 'spin 1s linear infinite' } }) : React.createElement(Save, { size: 18 }), saving ? 'Saving...' : 'Save')
         )
       )
     )

@@ -1,10 +1,12 @@
 ﻿// FILE: client/src/BusinessSignup.jsx
-// PROFESSIONAL REDESIGN - OCTOBER 2026
+// PROFESSIONAL REDESIGN - SEPTEMBER 2026
 // Two-step flow: Account Setup → Location
 // Removed domain step (moved to BusinessSettings)
 // Full address input with Nigerian states dropdown
 // Premium UI with glass-morphism, animations, and professional UX
 // Fully responsive across all devices
+// UPDATED: Business types restructured into Stays / Food / Others
+// UPDATED: Grouped dropdown replaces tile selection (industry standard)
 // FIXED: Removed non-existent MapPinHouse icon, replaced with MapPin
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -14,7 +16,9 @@ import {
   Loader, CheckCircle, Hotel, Dumbbell, CalendarDays,
   Building2, Sparkles, MapPin, Phone, Mail, Lock,
   User, Briefcase, Globe, Check, AlertCircle, X,
-  Search
+  Search, ChevronDown, Utensils, Coffee, Music,
+  Palette, Activity, Home, Store, BedDouble,
+  PartyPopper, Heart, Sparkle
 } from 'lucide-react';
 import API_BASE from './config';
 
@@ -30,37 +34,66 @@ const NIGERIAN_STATES = [
 ];
 
 // ============================================================
-// BUSINESS TYPES
+// BUSINESS TYPES - GROUPED (Stays / Food / Others)
 // ============================================================
-const BUSINESS_TYPES = [
-  { 
-    id: 'hotel', 
-    icon: Hotel, 
-    label: 'Hotel', 
-    desc: 'Rooms & Suites', 
-    color: '#4f46e5', 
+const BUSINESS_TYPE_GROUPS = [
+  {
+    id: 'stays',
+    label: 'Stays',
+    icon: BedDouble,
+    color: '#4f46e5',
     bg: '#eef2ff',
-    borderColor: '#4f46e5'
+    options: [
+      { value: 'hotel', label: 'Hotels', icon: Hotel },
+      { value: 'apartment', label: 'Apartments', icon: Home },
+      { value: 'event_hall', label: 'Event Halls', icon: PartyPopper }
+    ]
   },
-  { 
-    id: 'sports', 
-    icon: Dumbbell, 
-    label: 'Sports', 
-    desc: 'Courts & Pitches', 
-    color: '#059669', 
+  {
+    id: 'food',
+    label: 'Food',
+    icon: Utensils,
+    color: '#059669',
     bg: '#d1fae5',
-    borderColor: '#059669'
+    options: [
+      { value: 'restaurant', label: 'Restaurants', icon: Utensils },
+      { value: 'diner', label: 'Diners', icon: Store },
+      { value: 'cafe', label: 'Cafe', icon: Coffee },
+      { value: 'other_food', label: 'Others', icon: Sparkle }
+    ]
   },
-  { 
-    id: 'event', 
-    icon: CalendarDays, 
-    label: 'Event', 
-    desc: 'Venues & Halls', 
-    color: '#d97706', 
+  {
+    id: 'others',
+    label: 'Others',
+    icon: Sparkles,
+    color: '#d97706',
     bg: '#fef3c7',
-    borderColor: '#d97706'
+    options: [
+      { value: 'sports', label: 'Sports', icon: Dumbbell },
+      { value: 'spa', label: 'Spa', icon: Heart },
+      { value: 'beauty_salon', label: 'Beauty Salons', icon: Palette },
+      { value: 'activity_place', label: 'Activity Place', icon: Activity }
+    ]
   }
 ];
+
+// Flatten for lookup — used to display the selected option label
+const ALL_BUSINESS_OPTIONS = BUSINESS_TYPE_GROUPS.flatMap(function(group) {
+  return group.options.map(function(opt) {
+    return {
+      value: opt.value,
+      label: opt.label,
+      groupLabel: group.label,
+      groupColor: group.color,
+      groupBg: group.bg,
+      icon: opt.icon
+    };
+  });
+});
+
+function getOptionByValue(value) {
+  return ALL_BUSINESS_OPTIONS.find(function(opt) { return opt.value === value; });
+}
 
 // ============================================================
 // MAIN COMPONENT
@@ -77,13 +110,16 @@ function BusinessSignup() {
   const [successMsg, setSuccessMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showStateDropdown, setShowStateDropdown] = useState(false);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [stateSearch, setStateSearch] = useState('');
   const [focusedField, setFocusedField] = useState(null);
   const [touchedFields, setTouchedFields] = useState({});
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   
   const stateInputRef = useRef(null);
-  const dropdownRef = useRef(null);
+  const stateDropdownRef = useRef(null);
+  const typeInputRef = useRef(null);
+  const typeDropdownRef = useRef(null);
 
   // ============================================================
   // RESPONSIVE HANDLER
@@ -99,17 +135,27 @@ function BusinessSignup() {
   }, []);
 
   // ============================================================
-  // CLICK OUTSIDE HANDLER
+  // CLICK OUTSIDE HANDLERS
   // ============================================================
   useEffect(function() {
     function handleClickOutside(e) {
+      // State dropdown
       if (
-        dropdownRef.current && 
-        !dropdownRef.current.contains(e.target) &&
+        stateDropdownRef.current && 
+        !stateDropdownRef.current.contains(e.target) &&
         stateInputRef.current &&
         !stateInputRef.current.contains(e.target)
       ) {
         setShowStateDropdown(false);
+      }
+      // Business type dropdown
+      if (
+        typeDropdownRef.current && 
+        !typeDropdownRef.current.contains(e.target) &&
+        typeInputRef.current &&
+        !typeInputRef.current.contains(e.target)
+      ) {
+        setShowTypeDropdown(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -123,7 +169,7 @@ function BusinessSignup() {
   // ============================================================
   const [formData, setFormData] = useState({
     businessName: '',
-    businessType: 'hotel',
+    businessType: 'hotel',  // default to Hotels
     email: '',
     password: '',
     phone: '',
@@ -131,6 +177,8 @@ function BusinessSignup() {
     city: '',
     state: ''
   });
+
+  const selectedTypeOption = getOptionByValue(formData.businessType);
 
   // ============================================================
   // FILTERED STATES
@@ -167,6 +215,12 @@ function BusinessSignup() {
     handleBlur('state');
   }
 
+  function selectBusinessType(value) {
+    updateField('businessType', value);
+    setShowTypeDropdown(false);
+    handleBlur('businessType');
+  }
+
   // ============================================================
   // VALIDATION
   // ============================================================
@@ -175,6 +229,9 @@ function BusinessSignup() {
     
     if (!formData.businessName || formData.businessName.trim().length < 2) {
       errors.push('Business name is required');
+    }
+    if (!formData.businessType) {
+      errors.push('Please select a business type');
     }
     if (!formData.email || !formData.email.includes('@')) {
       errors.push('Valid email address is required');
@@ -238,7 +295,6 @@ function BusinessSignup() {
     setLoading(true);
     setError('');
     
-    // Remove customDomain from payload (step removed)
     const payload = {
       businessName: formData.businessName,
       businessType: formData.businessType,
@@ -294,7 +350,6 @@ function BusinessSignup() {
 
   function getStepIcon() {
     if (step === 1) return React.createElement(User, { size: 20, color: '#4f46e5' });
-    // FIXED: Using MapPin instead of non-existent MapPinHouse
     return React.createElement(MapPin, { size: 20, color: '#4f46e5' });
   }
 
@@ -731,68 +786,200 @@ function BusinessSignup() {
               }, 'Business name is required')
             ),
 
-            // Business Type
-            React.createElement('div', null,
+            // ============================================================
+            // BUSINESS TYPE - GROUPED DROPDOWN
+            // ============================================================
+            React.createElement('div', {
+              style: {
+                position: 'relative'
+              }
+            },
               React.createElement('label', { style: labelStyle },
                 'Business Type',
                 React.createElement('span', { style: { color: '#ef4444', marginLeft: '2px' } }, '*')
               ),
               React.createElement('div', {
+                ref: typeInputRef,
                 style: {
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)',
-                  gap: isMobile ? '0.5rem' : '0.625rem'
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center'
                 }
               },
-                BUSINESS_TYPES.map(function(bt) {
-                  var Icon = bt.icon;
-                  var isSelected = formData.businessType === bt.id;
-                  return React.createElement('div', {
-                    key: bt.id,
-                    onClick: function() { updateField('businessType', bt.id); },
+                React.createElement(Briefcase, {
+                  size: isMobile ? 16 : 18,
+                  color: focusedField === 'businessType' ? '#4f46e5' : '#94a3b8',
+                  style: {
+                    position: 'absolute',
+                    left: '0.75rem',
+                    transition: 'color 0.2s'
+                  }
+                }),
+                React.createElement('div', {
+                  onClick: function() { 
+                    setShowTypeDropdown(!showTypeDropdown);
+                    setFocusedField('businessType');
+                  },
+                  style: {
+                    ...inputBaseStyle,
+                    padding: isMobile ? '0.625rem 2.5rem 0.625rem 2.5rem' : '0.75rem 2.75rem 0.75rem 2.75rem',
+                    border: '1.5px solid ' + (showTypeDropdown ? '#4f46e5' : '#e2e8f0'),
+                    boxShadow: showTypeDropdown ? '0 0 0 3px rgba(79,70,229,0.1)' : 'none',
+                    fontSize: isMobile ? '0.8125rem' : '0.875rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    minHeight: isMobile ? '38px' : '42px'
+                  }
+                },
+                  React.createElement('span', {
                     style: {
-                      padding: isMobile ? '0.625rem 0.25rem' : '0.75rem 0.5rem',
-                      background: isSelected ? bt.bg : 'white',
-                      border: '2px solid ' + (isSelected ? bt.color : '#e2e8f0'),
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.2s ease',
-                      transform: isSelected ? 'scale(1.02)' : 'scale(1)',
-                      boxShadow: isSelected ? '0 4px 12px ' + bt.color + '25' : 'none'
-                    },
-                    onMouseEnter: function(e) {
-                      if (!isSelected) {
-                        e.currentTarget.style.borderColor = '#cbd5e1';
-                        e.currentTarget.style.background = '#f8fafc';
-                      }
-                    },
-                    onMouseLeave: function(e) {
-                      if (!isSelected) {
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.background = 'white';
-                      }
+                      color: '#0f172a',
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
                     }
                   },
-                    React.createElement(Icon, {
-                      size: isMobile ? 20 : 24,
-                      color: bt.color,
-                      style: { marginBottom: isMobile ? '0.25rem' : '0.375rem' }
-                    }),
+                    selectedTypeOption && React.createElement('span', {
+                      style: {
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.375rem'
+                      }
+                    },
+                      React.createElement('span', {
+                        style: {
+                          fontSize: '0.65rem',
+                          fontWeight: '600',
+                          color: selectedTypeOption.groupColor,
+                          background: selectedTypeOption.groupBg,
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.3px'
+                        }
+                      }, selectedTypeOption.groupLabel),
+                      React.createElement('span', null, selectedTypeOption.label)
+                    )
+                  ),
+                  React.createElement(ChevronDown, {
+                    size: isMobile ? 14 : 16,
+                    color: '#94a3b8',
+                    style: {
+                      transition: 'transform 0.2s',
+                      transform: showTypeDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                      flexShrink: 0
+                    }
+                  })
+                )
+              ),
+              // Grouped Dropdown
+              showTypeDropdown && React.createElement('div', {
+                ref: typeDropdownRef,
+                style: {
+                  position: 'absolute',
+                  zIndex: 30,
+                  marginTop: '4px',
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  maxHeight: isMobile ? '260px' : '320px',
+                  overflowY: 'auto',
+                  width: '100%',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                  animation: 'fadeIn 0.2s ease',
+                  padding: '6px'
+                }
+              },
+                BUSINESS_TYPE_GROUPS.map(function(group) {
+                  var GroupIcon = group.icon;
+                  return React.createElement('div', {
+                    key: group.id,
+                    style: { marginBottom: '4px' }
+                  },
+                    // Group header
                     React.createElement('div', {
                       style: {
-                        fontSize: isMobile ? '0.625rem' : '0.75rem',
-                        fontWeight: isSelected ? '700' : '600',
-                        color: isSelected ? bt.color : '#1e293b'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.75rem 0.375rem',
+                        fontSize: isMobile ? '0.65rem' : '0.7rem',
+                        fontWeight: '700',
+                        color: group.color,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.6px'
                       }
-                    }, bt.label),
-                    React.createElement('div', {
-                      style: {
-                        fontSize: isMobile ? '0.5rem' : '0.6rem',
-                        color: '#94a3b8',
-                        marginTop: '1px'
-                      }
-                    }, bt.desc)
+                    },
+                      React.createElement(GroupIcon, { size: isMobile ? 12 : 14 }),
+                      group.label
+                    ),
+                    // Group options
+                    group.options.map(function(opt) {
+                      var OptIcon = opt.icon;
+                      var isSelected = formData.businessType === opt.value;
+                      return React.createElement('div', {
+                        key: opt.value,
+                        onClick: function() { selectBusinessType(opt.value); },
+                        style: {
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem',
+                          padding: isMobile ? '0.5rem 0.75rem' : '0.625rem 0.875rem',
+                          cursor: 'pointer',
+                          fontSize: isMobile ? '0.8125rem' : '0.875rem',
+                          background: isSelected ? group.bg : 'transparent',
+                          color: isSelected ? group.color : '#334155',
+                          borderRadius: '8px',
+                          fontWeight: isSelected ? '600' : '400',
+                          transition: 'background 0.15s',
+                          marginBottom: '2px'
+                        },
+                        onMouseEnter: function(e) {
+                          if (!isSelected) {
+                            e.currentTarget.style.background = '#f8fafc';
+                          }
+                        },
+                        onMouseLeave: function(e) {
+                          if (!isSelected) {
+                            e.currentTarget.style.background = 'transparent';
+                          }
+                        }
+                      },
+                        React.createElement('div', {
+                          style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.625rem',
+                            minWidth: 0
+                          }
+                        },
+                          React.createElement(OptIcon, {
+                            size: isMobile ? 14 : 16,
+                            color: isSelected ? group.color : '#64748b',
+                            style: { flexShrink: 0 }
+                          }),
+                          React.createElement('span', {
+                            style: {
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }
+                          }, opt.label)
+                        ),
+                        isSelected && React.createElement(Check, {
+                          size: isMobile ? 14 : 16,
+                          color: group.color,
+                          style: { flexShrink: 0 }
+                        })
+                      );
+                    })
                   );
                 })
               )
@@ -1153,7 +1340,7 @@ function BusinessSignup() {
               ),
               // Dropdown
               showStateDropdown && React.createElement('div', {
-                ref: dropdownRef,
+                ref: stateDropdownRef,
                 style: {
                   position: 'absolute',
                   zIndex: 20,
