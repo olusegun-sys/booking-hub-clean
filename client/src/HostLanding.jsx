@@ -1,6 +1,7 @@
 ﻿// FILE: client/src/HostLanding.jsx
 // UPDATED: Event-focused messaging, accurate pricing tiers, unique branding
 // UPDATED: Slideshow images now use Nigerian event venues
+// UPDATED: CTA changed from "Start Free Trial" to "Get Started" (14 Sept meeting decision)
 // Professional industry standard approach - October 2026
 
 import React, { useState, useEffect } from 'react';
@@ -228,7 +229,8 @@ function HostLanding() {
             React.createElement('button', { onClick: function() { scrollToSection('pricing'); }, style: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', fontWeight: '500', color: '#475569' } }, 'Pricing'),
             React.createElement('button', { onClick: function() { scrollToSection('testimonials'); }, style: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', fontWeight: '500', color: '#475569' } }, 'Testimonials'),
             React.createElement('a', { href: '/login', style: { ...secondaryButtonStyle, padding: '8px 20px' } }, 'Sign In'),
-            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, padding: '8px 20px' } }, 'Start Free Trial')
+            // CHANGED: "Start Free Trial" → "Get Started"
+            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, padding: '8px 20px' } }, 'Get Started')
           ),
           React.createElement('button', { onClick: function() { setMobileMenuOpen(!mobileMenuOpen); }, style: mobileMenuButtonStyle },
             mobileMenuOpen ? React.createElement(X, { size: 24 }) : React.createElement(Menu, { size: 24 })
@@ -239,7 +241,8 @@ function HostLanding() {
           React.createElement('button', { onClick: function() { scrollToSection('pricing'); }, style: { background: 'none', border: 'none', cursor: 'pointer', padding: '12px', textAlign: 'left', fontSize: '16px' } }, 'Pricing'),
           React.createElement('button', { onClick: function() { scrollToSection('testimonials'); }, style: { background: 'none', border: 'none', cursor: 'pointer', padding: '12px', textAlign: 'left', fontSize: '16px' } }, 'Testimonials'),
           React.createElement('a', { href: '/login', style: { display: 'block', textAlign: 'center', padding: '12px', borderTop: '1px solid #e2e8f0', color: '#475569', textDecoration: 'none' } }, 'Sign In'),
-          React.createElement('a', { href: '/signup', style: { display: 'block', textAlign: 'center', padding: '12px', backgroundColor: '#4f46e5', color: 'white', borderRadius: '40px', fontWeight: '600', textDecoration: 'none' } }, 'Start Free Trial →')
+          // CHANGED: "Start Free Trial →" → "Get Started →"
+          React.createElement('a', { href: '/signup', style: { display: 'block', textAlign: 'center', padding: '12px', backgroundColor: '#4f46e5', color: 'white', borderRadius: '40px', fontWeight: '600', textDecoration: 'none' } }, 'Get Started →')
         )
       )
     ),
@@ -280,7 +283,8 @@ function HostLanding() {
             'Accept bookings, manage events, track revenue — all on your own domain. First 50 bookings free.'
           ),
           React.createElement('div', { style: { display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' } },
-            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, padding: isDesktop ? '14px 32px' : '12px 24px', fontSize: isDesktop ? '16px' : '14px' } }, 'Start Free Trial →'),
+            // CHANGED: "Start Free Trial →" → "Get Started →"
+            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, padding: isDesktop ? '14px 32px' : '12px 24px', fontSize: isDesktop ? '16px' : '14px' } }, 'Get Started →'),
             React.createElement('a', { href: '#features', style: { ...secondaryButtonStyle, padding: isDesktop ? '14px 32px' : '12px 24px', fontSize: isDesktop ? '16px' : '14px' } }, 'Learn More')
           )
         ),
@@ -542,7 +546,8 @@ function HostLanding() {
               React.createElement('li', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px', fontSize: '14px', color: '#475569' } }, React.createElement(CheckCircle, { size: 16, color: '#10b981' }), 'Staff management (5 users)'),
               React.createElement('li', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px', fontSize: '14px', color: '#475569' } }, React.createElement(CheckCircle, { size: 16, color: '#10b981' }), 'Email notifications')
             ),
-            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, width: '100%', justifyContent: 'center', backgroundColor: '#4f46e5' } }, 'Start Free Trial →')
+            // CHANGED: "Start Free Trial →" → "Get Started →"
+            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, width: '100%', justifyContent: 'center', backgroundColor: '#4f46e5' } }, 'Get Started →')
           ),
 
           // Pro Tier
@@ -582,7 +587,8 @@ function HostLanding() {
               React.createElement('li', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px', fontSize: '14px', color: '#475569' } }, React.createElement(CheckCircle, { size: 16, color: '#10b981' }), 'SMS notifications'),
               React.createElement('li', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px', fontSize: '14px', color: '#475569' } }, React.createElement(CheckCircle, { size: 16, color: '#10b981' }), 'Dedicated account manager')
             ),
-            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, width: '100%', justifyContent: 'center', backgroundColor: '#d97706' } }, 'Start Free Trial →')
+            // CHANGED: "Start Free Trial →" → "Get Started →"
+            React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, width: '100%', justifyContent: 'center', backgroundColor: '#d97706' } }, 'Get Started →')
           )
         ),
         React.createElement('p', { style: { textAlign: 'center', fontSize: '13px', color: '#94a3b8', marginTop: '32px' } }, 'All plans include: Branded booking page · Staff management · Real-time dashboard · Email notifications')
@@ -594,7 +600,8 @@ function HostLanding() {
       React.createElement('div', { style: { ...containerStyle, textAlign: 'center' } },
         React.createElement('h2', { style: { fontSize: isDesktop ? '36px' : '28px', fontWeight: '800', color: 'white', marginBottom: '16px' } }, 'Ready to launch your booking page?'),
         React.createElement('p', { style: { fontSize: isDesktop ? '18px' : '16px', color: 'rgba(255,255,255,0.9)', marginBottom: '32px', maxWidth: '600px', margin: '0 auto 32px' } }, 'Join 200+ Nigerian businesses. First 50 bookings free. Cancel anytime.'),
-        React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, backgroundColor: 'white', color: '#4f46e5', padding: isDesktop ? '16px 40px' : '14px 32px', fontSize: isDesktop ? '16px' : '14px' } }, 'Start Your Free Trial →'),
+        // CHANGED: "Start Your Free Trial →" → "Get Started →"
+        React.createElement('a', { href: '/signup', style: { ...ctaButtonStyle, backgroundColor: 'white', color: '#4f46e5', padding: isDesktop ? '16px 40px' : '14px 32px', fontSize: isDesktop ? '16px' : '14px' } }, 'Get Started →'),
         React.createElement('p', { style: { fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginTop: '24px' } }, 'No credit card required. Free for first 50 bookings.')
       )
     ),
@@ -615,7 +622,8 @@ function HostLanding() {
             React.createElement('ul', { style: { listStyle: 'none', padding: 0, margin: 0 } },
               React.createElement('li', { style: { marginBottom: '8px' } }, React.createElement('a', { href: '#features', style: { color: '#94a3b8', textDecoration: 'none', fontSize: '13px' } }, 'Features')),
               React.createElement('li', { style: { marginBottom: '8px' } }, React.createElement('a', { href: '#pricing', style: { color: '#94a3b8', textDecoration: 'none', fontSize: '13px' } }, 'Pricing')),
-              React.createElement('li', { style: { marginBottom: '8px' } }, React.createElement('a', { href: '/signup', style: { color: '#94a3b8', textDecoration: 'none', fontSize: '13px' } }, 'Start Free Trial'))
+              // CHANGED: "Start Free Trial" → "Get Started"
+              React.createElement('li', { style: { marginBottom: '8px' } }, React.createElement('a', { href: '/signup', style: { color: '#94a3b8', textDecoration: 'none', fontSize: '13px' } }, 'Get Started'))
             )
           ),
           React.createElement('div', null,
