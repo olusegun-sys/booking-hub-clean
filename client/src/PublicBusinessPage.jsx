@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import RoomPage from './RoomPage';
 import SportsBooking from './SportsBooking';
 import EventBooking from './EventBooking';
+import API_BASE from './config';
 
 function PublicBusinessPage() {
   const { businessSlug } = useParams();
@@ -21,7 +22,7 @@ function PublicBusinessPage() {
 
   const fetchBusiness = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/businesses/slug/${businessSlug}`);
+      const response = await fetch(`${API_BASE}/api/businesses/slug/${businessSlug}`);
       const data = await response.json();
       
       if (data.success && data.business) {

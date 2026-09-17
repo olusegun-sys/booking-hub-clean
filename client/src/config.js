@@ -8,6 +8,9 @@ const hostname = window.location.hostname;
 const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
 
+// Local dev port for the API server (override with VITE_API_PORT)
+const DEV_API_PORT = import.meta.env.VITE_API_PORT || '5000';
+
 let API_BASE;
 
 // ============================================================
@@ -28,14 +31,14 @@ else if (hostname.includes('onrender.com') || hostname.includes('render.com')) {
 // STEP 3: Mobile local testing
 // ============================================================
 else if (isMobile && !isLocalhost) {
-  API_BASE = `http://${hostname}:5000`;
+  API_BASE = `http://${hostname}:${DEV_API_PORT}`;
   console.log('[Config] 📱 Mobile local:', API_BASE);
 }
 // ============================================================
 // STEP 4: Desktop local development
 // ============================================================
 else {
-  API_BASE = 'http://localhost:5000';
+  API_BASE = `http://localhost:${DEV_API_PORT}`;
   console.log('[Config] 💻 Local development:', API_BASE);
 }
 
