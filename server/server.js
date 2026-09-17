@@ -17,7 +17,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
-const { sendBookingConfirmation, sendWelcomeEmail, sendApprovalEmail } = require('./src/services/emailService');
+const { sendBookingConfirmation, sendWelcomeEmail, sendApprovalEmail, sendBookingValidated, sendAwaitingValidation } = require('./src/services/emailService');
 const { initializePayment, verifyPayment } = require('./src/services/paystackService');
 const detectBusinessFromDomain = require('./src/middleware/domainDetector');
 const { verifyDomainTxtRecord } = require('./src/services/dnsService');
@@ -233,6 +233,23 @@ async function authenticateAdmin(req, res, next) {
 app.use('/api/businesses/slug', detectBusinessFromDomain);
 app.use('/api/domain-info', detectBusinessFromDomain);
 app.use('/book', detectBusinessFromDomain);
+
+// ============================================================
+// PLAZZAA V1 BOOKING ENGINE
+// Services, bank details, availability, bank-transfer bookings
+// and merchant validation. Mounted under /api/v1 so the existing
+// hotel endpoints above are untouched.
+// ============================================================
+const createPlazzaaV1Router = require('./routes/plazzaaV1');
+
+app.use('/api/v1', createPlazzaaV1Router({
+  supabase: supabase,
+  authenticateBusiness: authenticateBusiness,
+  email: {
+    sendBookingValidated: sendBookingValidated,
+    sendAwaitingValidation: sendAwaitingValidation
+  }
+}));
 
 // ============================================================
 // HEALTH & TEST ROUTES

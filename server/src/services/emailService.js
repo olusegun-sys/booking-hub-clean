@@ -38,6 +38,12 @@ console.log('[Email] ========================================');
 // ============================================================
 
 async function sendEmail({ to, subject, html }) {
+  // Local testing: set EMAIL_DRY_RUN=true to log instead of sending
+  if (process.env.EMAIL_DRY_RUN === 'true') {
+    console.log('[Email] 🚫 DRY RUN - not sending. To:', to, '| Subject:', subject);
+    return { success: true, dryRun: true, data: { messageId: 'dry-run' } };
+  }
+
   // Validate inputs
   if (!to || !to.includes('@')) {
     console.error('[Email] ❌ Invalid recipient:', to);
@@ -218,6 +224,120 @@ async function sendApprovalEmail(business) {
 }
 
 // ============================================================
+// PLAZZAA V1 - BANK TRANSFER BOOKING FLOW
+// ============================================================
+// The customer hears from us once: when the merchant confirms
+// the transfer arrived. Payment itself happens outside Plazzaa.
+
+function businessOffsetMinutes() {
+  var raw = parseInt(process.env.BUSINESS_UTC_OFFSET_MINUTES, 10);
+  return isFinite(raw) ? raw : 60; // Africa/Lagos
+}
+
+function formatNaira(amount) {
+  var value = Number(amount || 0);
+  return '\u20a6' + value.toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+// Show the merchant's local wall-clock time, not the server's
+function formatSlot(startIso, endIso) {
+  if (!startIso) return { date: 'Date to be confirmed', time: '' };
+  var offset = businessOffsetMinutes() * 60000;
+  var start = new Date(new Date(startIso).getTime() + offset);
+  var end = endIso ? new Date(new Date(endIso).getTime() + offset) : null;
+
+  var date = start.toLocaleDateString('en-NG', {
+    timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  var startTime = start.toLocaleTimeString('en-NG', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' });
+  var endTime = end ? end.toLocaleTimeString('en-NG', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' }) : '';
+
+  return { date: date, time: endTime ? startTime + ' - ' + endTime : startTime };
+}
+
+function detailRow(label, value) {
+  return '<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #e2e8f0">' +
+    '<span style="color:#64748b;font-weight:500">' + label + '</span>' +
+    '<span style="color:#0f172a;font-weight:600">' + value + '</span></div>';
+}
+
+function validatedTemplate(booking, business, service) {
+  var slot = formatSlot(booking.start_datetime, booking.end_datetime);
+  var businessName = (business && business.name) || 'the business';
+  var serviceName = (service && service.name) || 'Your booking';
+  var contact = (business && business.phone) || '';
+
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"></head>' +
+    '<body style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#1e293b;margin:0;padding:0">' +
+    '<div style="max-width:600px;margin:0 auto;background:#ffffff">' +
+    '<div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#ffffff;padding:40px 30px;text-align:center">' +
+    '<h1 style="margin:0;font-size:26px;font-weight:700">Booking Confirmed</h1>' +
+    '<p style="margin:10px 0 0;opacity:0.95">' + businessName + ' has confirmed your payment</p></div>' +
+    '<div style="padding:30px;background:#f8fafc">' +
+    '<p style="font-size:17px;margin-top:0">Hi ' + (booking.customer_name || 'there') + ',</p>' +
+    '<p>Your booking is confirmed. Here are the details:</p>' +
+    '<div style="background:#ffffff;border-radius:12px;padding:24px;margin:24px 0">' +
+    detailRow('Reference', booking.booking_reference) +
+    detailRow('Service', serviceName) +
+    detailRow('Date', slot.date) +
+    detailRow('Time', slot.time || 'To be confirmed') +
+    detailRow('Amount', formatNaira(booking.total_amount)) +
+    '</div>' +
+    '<div style="background:#ffffff;border-radius:12px;padding:20px;margin:24px 0">' +
+    '<h3 style="margin:0 0 6px;color:#0f172a">' + businessName + '</h3>' +
+    ((business && business.address) ? '<p style="color:#64748b;margin:0">' + business.address + '</p>' : '') +
+    (contact ? '<p style="color:#64748b;margin:6px 0 0">' + contact + '</p>' : '') +
+    '</div>' +
+    '<p style="color:#64748b;font-size:14px">Need to change something? Contact ' + businessName + ' directly.</p>' +
+    '</div>' +
+    '<div style="text-align:center;padding:24px;color:#64748b;font-size:13px;border-top:1px solid #e2e8f0">' +
+    'Booked with Plazzaa</div></div></body></html>';
+}
+
+function awaitingValidationTemplate(booking, business) {
+  var slot = formatSlot(booking.start_datetime, booking.end_datetime);
+
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"></head>' +
+    '<body style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#1e293b;margin:0;padding:0">' +
+    '<div style="max-width:600px;margin:0 auto;background:#ffffff">' +
+    '<div style="background:#0f172a;color:#ffffff;padding:32px 30px">' +
+    '<h1 style="margin:0;font-size:22px;font-weight:700">A booking is waiting for you</h1>' +
+    '<p style="margin:8px 0 0;opacity:0.9">' + (booking.customer_name || 'A customer') + ' says they have paid</p></div>' +
+    '<div style="padding:30px;background:#f8fafc">' +
+    '<div style="background:#ffffff;border-radius:12px;padding:24px;margin:0 0 24px">' +
+    detailRow('Reference', booking.booking_reference) +
+    detailRow('Customer', booking.customer_name || '') +
+    detailRow('WhatsApp', booking.customer_whatsapp || booking.customer_phone || 'Not provided') +
+    detailRow('Date', slot.date) +
+    detailRow('Time', slot.time || 'To be confirmed') +
+    detailRow('Amount', formatNaira(booking.total_amount)) +
+    '</div>' +
+    '<p>Check that the transfer arrived, then validate the booking from your dashboard. ' +
+    'The customer gets their confirmation email as soon as you do.</p>' +
+    '</div></div></body></html>';
+}
+
+async function sendBookingValidated(booking, business, service) {
+  return sendEmail({
+    to: booking.customer_email,
+    subject: 'Booking confirmed - ' + booking.booking_reference,
+    html: validatedTemplate(booking, business, service)
+  });
+}
+
+async function sendAwaitingValidation(booking, business) {
+  if (!business || !business.email || String(business.email).indexOf('@') === -1) {
+    console.log('[Email] No business email on file - skipping validation notice');
+    return { success: false, error: 'No business email' };
+  }
+  return sendEmail({
+    to: business.email,
+    subject: 'Payment marked as made - ' + booking.booking_reference,
+    html: awaitingValidationTemplate(booking, business)
+  });
+}
+
+// ============================================================
 // EXPORTS
 // ============================================================
 
@@ -226,5 +346,8 @@ module.exports = {
   sendBookingConfirmation, 
   sendReminderEmail, 
   sendWelcomeEmail, 
-  sendApprovalEmail 
+  sendApprovalEmail,
+  // Plazzaa V1
+  sendBookingValidated,
+  sendAwaitingValidation
 };
