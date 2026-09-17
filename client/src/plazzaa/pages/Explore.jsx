@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Compass, Utensils, Flower2, Bike, Music, BedDouble } from 'lucide-react';
+import SmoothScroll from '../lib/SmoothScroll';
 import TopNav from '../components/TopNav';
-import ExploreSearch from '../components/ExploreSearch';
+import ExploreHero from '../components/ExploreHero';
 import VenueRail from '../components/VenueRail';
 import SiteFooter from '../components/SiteFooter';
 import GatewayBar from '../components/GatewayBar';
@@ -53,42 +54,33 @@ export default function Explore() {
   const offers = pool.filter((v) => v.rating >= 4.6).slice(0, 6);
 
   return (
+    <SmoothScroll>
     <div className="plz-root min-h-screen bg-white">
       <TopNav tone="solid" />
 
       <main className="pt-[64px] md:pt-[76px]">
-        <section className="border-b border-plz-line bg-plz-surface pb-6 pt-8 md:pb-8 md:pt-10">
-          <div className="plz-edge">
-            <h1 className="text-h2 text-plz-ink" style={{ textWrap: 'balance' }}>
-              What are you looking for?
-            </h1>
-            <p className="mt-2 text-lead text-plz-body">
+        <ExploreHero
+          search={{ query, setQuery, city, setCity, budget, setBudget, when, setWhen }}
+        />
+
+        <section className="border-b border-plz-line bg-white py-4">
+          <div className="plz-edge flex items-center justify-between gap-6">
+            <p className="shrink-0 text-[15px] text-plz-body">
               {pool.length} places in {city} · {when.toLowerCase()}
             </p>
-
-            <div className="mt-6">
-              <ExploreSearch
-                query={query}
-                setQuery={setQuery}
-                city={city}
-                setCity={setCity}
-                budget={budget}
-                setBudget={setBudget}
-                when={when}
-                setWhen={setWhen}
-              />
-            </div>
-
-            <div className="plz-rail mt-5 -mx-1 px-1 pb-1">
+            <div className="plz-rail -mx-1 px-1">
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const active = t.id === tab;
                 return (
-                  <button
+                  <motion.button
                     key={t.label}
                     type="button"
                     onClick={() => setTab(t.id)}
                     aria-pressed={active}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.96 }}
+                    transition={{ type: 'spring', stiffness: 440, damping: 26 }}
                     className={
                       'flex h-11 items-center gap-2 rounded-full px-4 text-[15px] font-medium transition-colors duration-micro ease-plz ' +
                       (active
@@ -98,7 +90,7 @@ export default function Explore() {
                   >
                     <Icon size={16} />
                     {t.label}
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
@@ -214,7 +206,8 @@ export default function Explore() {
       </main>
 
       <SiteFooter />
-      <GatewayBar emphasis="customer" />
+      <GatewayBar />
     </div>
+    </SmoothScroll>
   );
 }

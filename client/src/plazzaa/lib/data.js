@@ -18,12 +18,27 @@ import salonOwner from '../../assets/plazzaa/salon-owner.jpg';
 import spaReception from '../../assets/plazzaa/spa-reception.jpg';
 import restaurantOwner from '../../assets/plazzaa/restaurant-owner.jpg';
 import barberShop from '../../assets/plazzaa/barber-shop.jpg';
+import nailStudio from '../../assets/plazzaa/nail-studio.jpg';
+import makeupStudio from '../../assets/plazzaa/makeup-studio.jpg';
+import restaurantKitchen from '../../assets/plazzaa/restaurant-kitchen.jpg';
 
 export const images = {
   viRooftop, suyaGrill, spaTreatment, nightlife, jabiLake, artGallery,
   beachClub, brunchTable, ikoyiGarden, padelCourt, hotelRoom, abujaLounge,
-  salonOwner, spaReception, restaurantOwner, barberShop
+  salonOwner, spaReception, restaurantOwner, barberShop,
+  nailStudio, makeupStudio, restaurantKitchen
 };
+
+// Plazzaa for Business leads with the trades that live on DM bookings:
+// restaurants, spas, beauty.
+export const merchantTrades = [
+  { id: 'salon', label: 'Hair & braiding', image: salonOwner, service: 'Knotless braids', price: 35000, minutes: 180 },
+  { id: 'spa', label: 'Spas & massage', image: spaReception, service: 'Deep tissue, 60 mins', price: 25000, minutes: 60 },
+  { id: 'nails', label: 'Nails', image: nailStudio, service: 'Gel manicure', price: 12000, minutes: 45 },
+  { id: 'makeup', label: 'Makeup', image: makeupStudio, service: 'Full glam', price: 40000, minutes: 90 },
+  { id: 'barber', label: 'Barbering', image: barberShop, service: 'Cut and line-up', price: 7000, minutes: 40 },
+  { id: 'restaurant', label: 'Restaurants', image: restaurantKitchen, service: 'Table for four', price: 0, minutes: 120 }
+];
 
 export const naira = (value) =>
   '₦' + Math.round(value).toLocaleString('en-NG');
