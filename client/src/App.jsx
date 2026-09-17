@@ -18,6 +18,12 @@ import HostLanding from './HostLanding';
 import BusinessSignup from './BusinessSignup';
 import API_BASE from './config';
 
+// Plazzaa (new brand surfaces)
+import './plazzaa/plazzaa.css';
+import Landing from './plazzaa/pages/Landing';
+import Explore from './plazzaa/pages/Explore';
+import ForBusiness from './plazzaa/pages/ForBusiness';
+
 var _useState = React.useState;
 var _useEffect = React.useEffect;
 
@@ -143,7 +149,10 @@ function App() {
   return React.createElement(Router, null,
     React.createElement(Toaster, null),
     React.createElement(Routes, null,
-      React.createElement(Route, { path: '/', element: React.createElement(HomePage, null) }),
+      React.createElement(Route, { path: '/', element: React.createElement(Landing, null) }),
+      React.createElement(Route, { path: '/explore', element: React.createElement(Explore, null) }),
+      React.createElement(Route, { path: '/business', element: React.createElement(ForBusiness, null) }),
+      React.createElement(Route, { path: '/hotels', element: React.createElement(HomePage, null) }),
       React.createElement(Route, { path: '/become-host', element: React.createElement(HostLanding, null) }),
       React.createElement(Route, { path: '/signup', element: React.createElement(BusinessSignup, null) }),
       React.createElement(Route, { path: '/login', element: React.createElement(LoginPage, null) }),

@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "instrument serif",
+        "reason": "Plazzaa Design System v1.1 section 3 specifies Instrument Serif as the editorial display face",
+        "createdAt": "2026-09-17T15:07:26.676Z"
+      }
+    ]
+  }
+}
