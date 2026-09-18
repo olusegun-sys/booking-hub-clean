@@ -1,6 +1,7 @@
 ﻿// FILE: server.js
 // COMPLETE PRODUCTION-READY VERSION WITH SUBSCRIPTION SYSTEM
 // DEPLOY TO RENDER: Replace your server.js with this
+// UPDATED (19 Sept 2026): Email calls now surface { success: false } failures
 
 // ============================================================
 // LOAD ENVIRONMENT VARIABLES FROM server/.env
@@ -8,7 +9,6 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-// Debug: Check if env loaded
 console.log('[server.js] Loading .env from:', path.join(__dirname, '.env'));
 console.log('[server.js] SUPABASE_URL exists:', !!process.env.SUPABASE_URL);
 
@@ -44,7 +44,6 @@ const {
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-// Debug logging
 console.log('[server.js] Checking Supabase credentials...');
 console.log('[server.js] SUPABASE_URL:', supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING');
 console.log('[server.js] SUPABASE_KEY exists:', !!supabaseKey);
@@ -83,14 +82,29 @@ function getLocalIpAddress() {
   return 'localhost';
 }
 
-// ============================================================
-// HELPER: Remove sensitive fields from objects
-// ============================================================
 function removeSensitiveFields(obj, ...fields) {
   if (!obj) return obj;
   const result = { ...obj };
   fields.forEach(field => delete result[field]);
   return result;
+}
+
+// ============================================================
+// EMAIL RESULT LOGGER
+// ============================================================
+// WHY: sendEmail returns { success: false } on failure — that's not
+// a thrown error, so .catch() alone doesn't catch it. This helper
+// makes every email send visibly logged so silent failures stop.
+function logEmailResult(label, result) {
+  if (!result) {
+    console.error('[Email] ⚠️  ' + label + ': no result returned');
+    return;
+  }
+  if (result.success) {
+    console.log('[Email] ✅ ' + label + ': delivered — ID:', result.data && result.data.messageId ? result.data.messageId : 'n/a');
+  } else {
+    console.error('[Email] ❌ ' + label + ': FAILED —', result.error || 'unknown error', '| status:', result.status || 'n/a');
+  }
 }
 
 // ============================================================
@@ -543,8 +557,11 @@ app.post('/api/businesses/register', async function(req, res) {
       return res.status(500).json({ success: false, error: 'Registration failed: ' + error.message });
     }
     
+    // EMAIL: Welcome — now checks return value so failures are visible
     if (data) {
-      sendWelcomeEmail(data).catch(function(err) { console.error('Welcome email failed:', err); });
+      sendWelcomeEmail(data)
+        .then(function(result) { logEmailResult('Welcome (' + data.email + ')', result); })
+        .catch(function(err) { console.error('[Email] ❌ Welcome threw an exception:', err); });
     }
     
     res.json({ success: true, business: data, message: 'Business registered! A confirmation email has been sent.' });
@@ -680,8 +697,11 @@ app.put('/api/admin/businesses/:id/status', authenticateAdmin, async function(re
     
     if (error) throw error;
     
+    // EMAIL: Approval — now checks return value so failures are visible
     if (req.body.status === 'approved' && data) {
-      sendApprovalEmail(data).catch(function(err) { console.error('Approval email failed:', err); });
+      sendApprovalEmail(data)
+        .then(function(result) { logEmailResult('Approval (' + data.email + ')', result); })
+        .catch(function(err) { console.error('[Email] ❌ Approval threw an exception:', err); });
     }
     
     res.json({ success: true, business: data });
@@ -760,10 +780,9 @@ app.get('/api/admin/stats', authenticateAdmin, async function(req, res) {
 });
 
 // ============================================================
-// SUBSCRIPTION ROUTES - COMPLETE
+// SUBSCRIPTION ROUTES
 // ============================================================
 
-// GET: Check if business can accept bookings
 app.get('/api/businesses/:businessId/can-book', async function(req, res) {
   try {
     const { businessId } = req.params;
@@ -800,7 +819,6 @@ app.get('/api/businesses/:businessId/can-book', async function(req, res) {
   }
 });
 
-// GET: Business subscription status
 app.get('/api/businesses/:businessId/subscription', authenticateBusiness, async function(req, res) {
   try {
     const { businessId } = req.params;
@@ -837,7 +855,6 @@ app.get('/api/businesses/:businessId/subscription', authenticateBusiness, async 
   }
 });
 
-// POST: Create upgrade request
 app.post('/api/businesses/:businessId/upgrade-request', authenticateBusiness, async function(req, res) {
   try {
     const { businessId } = req.params;
@@ -876,7 +893,7 @@ app.post('/api/businesses/:businessId/upgrade-request', authenticateBusiness, as
         bankDetails: {
           bankName: 'GTBank',
           accountNumber: '0123456789',
-          accountName: 'Booking Hub Limited'
+          accountName: 'Plazzaa Limited'
         }
       },
       message: 'Upgrade request created. Transfer the amount and we\'ll verify within 24 hours.'
@@ -887,7 +904,6 @@ app.post('/api/businesses/:businessId/upgrade-request', authenticateBusiness, as
   }
 });
 
-// POST: Admin verify and activate upgrade
 app.post('/api/admin/subscription/verify', authenticateAdmin, async function(req, res) {
   try {
     const { upgradeId } = req.body;
@@ -947,7 +963,6 @@ app.post('/api/admin/subscription/verify', authenticateAdmin, async function(req
   }
 });
 
-// GET: Admin pending upgrades
 app.get('/api/admin/pending-upgrades', authenticateAdmin, async function(req, res) {
   try {
     const { data: upgrades, error } = await supabase
@@ -1035,10 +1050,9 @@ app.put('/api/businesses/:id', authenticateBusiness, async function(req, res) {
 });
 
 // ============================================================
-// ROOM MANAGEMENT - ENHANCED WITH ALL VENUE FIELDS (FIXED)
+// ROOM MANAGEMENT
 // ============================================================
 
-// POST: Create room with all enhanced fields
 app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async function(req, res) {
   try {
     var { 
@@ -1097,7 +1111,6 @@ app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async
   }
 });
 
-// PUT: Update room with all enhanced fields (FIXED - uses 'amenities' not 'venueAmenities')
 app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async function(req, res) {
   try {
     var { 
@@ -1158,7 +1171,6 @@ app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async
   }
 });
 
-// DELETE: Delete room
 app.delete('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async function(req, res) {
   try {
     var { error } = await supabase
@@ -1180,14 +1192,13 @@ app.delete('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, as
 });
 
 // ============================================================
-// 🆕 VENUE IMAGE UPLOAD ROUTES
+// VENUE IMAGE UPLOAD ROUTES
 // ============================================================
 
-// POST: Upload an image for a specific venue/room
 app.post('/api/businesses/:businessId/rooms/:roomId/upload-image', authenticateBusiness, async function(req, res) {
   try {
     const { businessId, roomId } = req.params;
-    const { fileName, fileType, fileData } = req.body;
+    const { fileName, fileData } = req.body;
 
     if (!fileName || !fileData) {
       return res.status(400).json({ success: false, error: 'File name and data are required.' });
@@ -1228,7 +1239,7 @@ app.post('/api/businesses/:businessId/rooms/:roomId/upload-image', authenticateB
 
     console.log('[Venue Upload] Uploading to:', filePath);
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('venue-images')
       .upload(filePath, fileBuffer, {
         contentType: mimeType,
@@ -1287,7 +1298,6 @@ app.post('/api/businesses/:businessId/rooms/:roomId/upload-image', authenticateB
   }
 });
 
-// DELETE: Delete an image from a venue
 app.delete('/api/businesses/:businessId/rooms/:roomId/images', authenticateBusiness, async function(req, res) {
   try {
     const { businessId, roomId } = req.params;
@@ -1565,27 +1575,23 @@ app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness,
 // ENHANCED BUSINESS ROUTES
 // ============================================================
 
-// Public enhanced business routes
 app.get('/api/businesses/:identifier/enhanced', getEnhancedBusinessRoute);
 app.get('/api/businesses/:businessId/gallery/public', getPublicGalleryRoute);
 app.get('/api/businesses/:businessId/phone-numbers/public', getPublicPhoneNumbersRoute);
 
-// Authenticated business routes
 app.put('/api/businesses/:businessId/features', authenticateBusiness, updateFeaturesRoute);
 app.put('/api/businesses/:businessId/amenities', authenticateBusiness, updateAmenitiesRoute);
 app.put('/api/businesses/:businessId/area-guide', authenticateBusiness, updateAreaGuideRoute);
 app.put('/api/businesses/:businessId/phone-numbers', authenticateBusiness, updatePhoneNumbersRoute);
 app.put('/api/businesses/:businessId/property-details', authenticateBusiness, updatePropertyDetailsRoute);
 
-// Gallery routes (authenticated)
 app.post('/api/businesses/:businessId/gallery', authenticateBusiness, addGalleryImageRoute);
 app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness, deleteGalleryImageRoute);
 
 // ============================================================
-// PUBLIC BOOKING ROUTES WITH LIMIT CHECK
+// PUBLIC BOOKING ROUTES
 // ============================================================
 
-// GET: Check if booking can be made (public)
 app.get('/api/businesses/:businessId/booking-capacity', async function(req, res) {
   try {
     const { businessId } = req.params;
@@ -1615,7 +1621,6 @@ app.get('/api/businesses/:businessId/booking-capacity', async function(req, res)
   }
 });
 
-// POST: Create booking with limit check
 app.post('/api/bookings', async function(req, res) {
   try {
     console.log('Booking request received:', req.body);
@@ -1759,9 +1764,24 @@ app.post('/api/bookings', async function(req, res) {
       }
     };
 
-    sendBookingConfirmation(emailDetails, business).catch(function(err) {
-      console.error('Email error:', err);
-    });
+    // EMAIL: Booking confirmation — now checks return value so failures are visible
+    // WHY: sendBookingConfirmation returns { customer: {...}, owner: {...} } on success
+    // or failure — not a thrown error. Without this check, a 403 from Resend would
+    // only show up buried in emailService logs, not at the booking endpoint.
+    sendBookingConfirmation(emailDetails, business)
+      .then(function(emailResults) {
+        if (!emailResults) {
+          console.error('[Booking] ⚠️  Email system returned no result');
+          return;
+        }
+        logEmailResult('Customer booking confirmation (' + booking.customer_email + ')', emailResults.customer);
+        if (emailResults.owner) {
+          logEmailResult('Owner booking notification (' + business.email + ')', emailResults.owner);
+        }
+      })
+      .catch(function(err) {
+        console.error('[Booking] ❌ Email system threw an exception:', err);
+      });
 
     console.log('Booking created successfully:', bookingRef);
 
@@ -1912,9 +1932,9 @@ app.post('/api/verify-payment', async function(req, res) {
 
 app.post('/api/upload-gallery-image', async function(req, res) {
   try {
-    var { businessId, fileName, fileType, fileData } = req.body;
+    var { businessId, fileName, fileData } = req.body;
 
-    console.log('Upload request received:', { businessId: businessId, fileName: fileName, fileType: fileType, dataLength: fileData?.length });
+    console.log('Upload request received:', { businessId: businessId, fileName: fileName, dataLength: fileData?.length });
 
     if (!businessId || !fileName || !fileData) {
       return res.status(400).json({ error: 'Business ID, file name, and file data are required' });
@@ -1944,7 +1964,7 @@ app.post('/api/upload-gallery-image', async function(req, res) {
 
     console.log('Uploading to storage path:', filePath);
 
-    var { data, error } = await supabase.storage
+    var { error } = await supabase.storage
       .from('business-images')
       .upload(filePath, fileBuffer, {
         contentType: mimeType,
@@ -2098,8 +2118,6 @@ app.post('/api/businesses/generate-verification', authenticateBusiness, async fu
     expiresAt.setHours(expiresAt.getHours() + 24);
 
     console.log('[DNS] Generating code for business:', businessId);
-    console.log('[DNS] Code length:', verificationCode.length);
-    console.log('[DNS] Code:', verificationCode);
 
     var { data, error } = await supabase
       .from('businesses')
@@ -2128,8 +2146,6 @@ app.post('/api/businesses/generate-verification', authenticateBusiness, async fu
     if (!data) {
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
-
-    console.log('[DNS] Code generated successfully for:', data.name);
 
     res.json({
       success: true,
@@ -2197,13 +2213,7 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async funct
       }
     }
 
-    console.log('[DNS] Verifying domain for:', business.name);
-    console.log('[DNS] Domain:', custom_domain);
-    console.log('[DNS] Expected code:', business.domain_verification_code);
-
     var result = await verifyDomainTxtRecord(custom_domain, business.domain_verification_code);
-
-    console.log('[DNS] Verification result:', result);
 
     if (!result.verified) {
       return res.status(400).json({
@@ -2257,7 +2267,7 @@ app.get('/api/rooms/:id/availability', function(req, res) {
 });
 
 app.get('/', function(req, res) {
-  res.send('Booking System API is running!');
+  res.send('Plazzaa API is running!');
 });
 
 // ============================================================
@@ -2274,16 +2284,17 @@ async function ensureAdminUser() {
     if (!existingAdmin) {
       console.log('Creating default admin user...');
       var hashedPassword = await bcrypt.hash('admin123', 10);
+      // WHY: password field is no longer written — only password_hash.
+      // Storing plaintext passwords is a security risk.
       var { error } = await supabase.from('admin_users').insert({
         email: 'admin@bookinghub.com',
-        password: 'admin123',
         password_hash: hashedPassword,
         created_at: new Date().toISOString()
       });
       if (error) {
         console.error('Failed to create admin user:', error.message);
       } else {
-        console.log('Admin user created: admin@bookinghub.com / admin123');
+        console.log('Admin user created: admin@bookinghub.com');
       }
     } else {
       console.log('Admin user already exists');
@@ -2304,32 +2315,7 @@ async function ensureSubscriptionTable() {
       .limit(1);
     
     if (checkError && checkError.message.includes('does not exist')) {
-      console.log('Creating subscription_upgrades table...');
-      
-      const { error: createError } = await supabase.rpc('create_subscription_table');
-      
-      if (createError) {
-        console.log('Please create subscription_upgrades table manually in Supabase SQL Editor:');
-        console.log(`
-          CREATE TABLE subscription_upgrades (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
-            plan VARCHAR(50) NOT NULL,
-            amount DECIMAL(10,2) NOT NULL,
-            payment_reference VARCHAR(255) UNIQUE NOT NULL,
-            status VARCHAR(50) DEFAULT 'pending',
-            notes TEXT,
-            verified_at TIMESTAMP,
-            verified_by UUID,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
-          );
-          
-          CREATE INDEX idx_subscription_business ON subscription_upgrades(business_id);
-          CREATE INDEX idx_subscription_status ON subscription_upgrades(status);
-          CREATE INDEX idx_subscription_reference ON subscription_upgrades(payment_reference);
-        `);
-      }
+      console.log('Please create subscription_upgrades table manually in Supabase SQL Editor.');
     } else {
       console.log('Subscription upgrades table exists');
     }
@@ -2344,7 +2330,7 @@ async function ensureSubscriptionTable() {
 app.listen(PORT, '0.0.0.0', async function() {
   var localIp = getLocalIpAddress();
   console.log('\n========================================');
-  console.log('Booking Hub Server Running');
+  console.log('Plazzaa Server Running');
   console.log('========================================');
   console.log('On your COMPUTER: http://localhost:' + PORT);
   console.log('On your PHONE:     http://' + localIp + ':' + PORT);
