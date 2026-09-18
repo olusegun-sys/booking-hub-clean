@@ -9,8 +9,8 @@ const axios = require('axios');
 // RESEND CONFIGURATION - HARDCODED
 // ============================================================
 const RESEND_API_KEY = 're_HKNwSoQN_EMxpAYEKreWgqSrLJci3Dif5';
-const FROM_EMAIL = 'onboarding@resend.dev';
-const FROM_NAME = 'Booking Hub';
+const FROM_EMAIL = 'booking@myplazzaa.com';
+const FROM_NAME = 'Plazzaa';
 
 console.log('[Email] ✅ Resend configured directly');
 
