@@ -8,7 +8,7 @@ const axios = require('axios');
 // ============================================================
 // RESEND CONFIGURATION - HARDCODED
 // ============================================================
-const RESEND_API_KEY = 're_HKNwSoQN_EMxpAYEKreWgqSrLJci3Dif5';
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = 'booking@myplazzaa.com';
 const FROM_NAME = 'Plazzaa';
 
