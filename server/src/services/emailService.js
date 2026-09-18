@@ -2,27 +2,63 @@
 // REBRANDED: Booking Hub → Plazzaa (18 Sept 2026)
 // SMART: Business-type-aware email labels — same pattern as UnifiedBookingPage.jsx
 // SECURITY: Secrets now read from env vars (RESEND_API_KEY, FROM_EMAIL, FROM_NAME)
+// HARDENED (19 Sept 2026): Env vars trimmed and validated so malformed `from` headers can't reach Resend
 // FIXED: Sports/event/restaurant/spa emails no longer show "Check-in/Check-out"
 
 const axios = require('axios');
 
 // ============================================================
-// CONFIGURATION — READ FROM ENV VARS (with safe fallbacks)
+// CONFIGURATION — READ FROM ENV VARS (with sanitization)
 // ============================================================
-// WHY: Hardcoded secrets are a security risk. Env vars let us
-// rotate keys without changing code, and keep secrets out of git.
+// WHY: Env vars pasted into dashboards often carry invisible trailing
+// whitespace or stray quote characters. Trim them at load so the
+// `from` header is always clean. This prevents the 422 "invalid from
+// field" error from Resend when the value is slightly malformed.
+function cleanEnv(value, fallback) {
+  if (value === undefined || value === null) return fallback;
+  const trimmed = String(value).trim().replace(/^["']|["']$/g, '');
+  return trimmed.length > 0 ? trimmed : fallback;
+}
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
-const FROM_NAME = process.env.FROM_NAME || 'Plazzaa';
-const APP_URL = process.env.APP_URL || 'https://myplazzaa.com';
+const RESEND_API_KEY = cleanEnv(process.env.RESEND_API_KEY, '');
+const RAW_FROM_EMAIL = cleanEnv(process.env.FROM_EMAIL, 'onboarding@resend.dev');
+const RAW_FROM_NAME = cleanEnv(process.env.FROM_NAME, 'Plazzaa');
+const APP_URL = cleanEnv(process.env.APP_URL, 'https://myplazzaa.com');
+
+// WHY: FROM_NAME must not contain angle brackets or quotes — they break
+// the "Name <email>" format that Resend expects.
+const FROM_NAME = RAW_FROM_NAME.replace(/[<>"]/g, '').trim() || 'Plazzaa';
+
+// WHY: A valid email must have non-space characters, an @, a dot in the
+// domain, and no whitespace anywhere. If it fails this check we fall
+// back to onboarding@resend.dev so at least something sends.
+function isValidFromEmail(email) {
+  return typeof email === 'string'
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+const FROM_EMAIL = isValidFromEmail(RAW_FROM_EMAIL) ? RAW_FROM_EMAIL : 'onboarding@resend.dev';
+
+// WHY: Log the raw and sanitized values so misconfiguration is visible
+// in the logs the moment the server starts. If FROM_EMAIL shows as
+// invalid here, fix it in Render → booking-backend-clean → Environment.
+console.log('[Email] ========================================');
+console.log('[Email] Configuration:');
+console.log('[Email] - RESEND_API_KEY:', RESEND_API_KEY ? 'set (' + RESEND_API_KEY.substring(0, 8) + '...)' : '❌ MISSING');
+console.log('[Email] - FROM_NAME (raw):', JSON.stringify(RAW_FROM_NAME));
+console.log('[Email] - FROM_NAME (safe):', JSON.stringify(FROM_NAME));
+console.log('[Email] - FROM_EMAIL (raw):', JSON.stringify(RAW_FROM_EMAIL));
+console.log('[Email] - FROM_EMAIL (valid):', isValidFromEmail(RAW_FROM_EMAIL) ? 'yes' : 'no');
+console.log('[Email] - From header will be:', FROM_NAME + ' <' + FROM_EMAIL + '>');
+console.log('[Email] - APP_URL:', APP_URL);
+console.log('[Email] ========================================');
 
 if (!RESEND_API_KEY) {
   console.error('[Email] ❌ RESEND_API_KEY is not set — emails will fail');
-} else {
-  console.log('[Email] ✅ Resend configured');
-  console.log('[Email] - From:', FROM_NAME, '<' + FROM_EMAIL + '>');
-  console.log('[Email] - App URL:', APP_URL);
+}
+if (!isValidFromEmail(RAW_FROM_EMAIL)) {
+  console.error('[Email] ⚠️  FROM_EMAIL is not a valid email — falling back to onboarding@resend.dev');
+  console.error('[Email] ⚠️  Fix this in Render → booking-backend-clean → Environment → FROM_EMAIL');
 }
 
 // ============================================================
@@ -462,5 +498,13 @@ module.exports = {
   sendReminderEmail,
   sendWelcomeEmail,
   sendApprovalEmail,
-  getBookingEmailLabels  // WHY: Exported for testing — lets you verify labels per type
+  getBookingEmailLabels,
+  // WHY: Exported for testing — lets you verify labels per type
+  // and check whether env vars were parsed correctly at startup
+  _config: {
+    FROM_NAME: FROM_NAME,
+    FROM_EMAIL: FROM_EMAIL,
+    APP_URL: APP_URL,
+    hasApiKey: !!RESEND_API_KEY
+  }
 };
