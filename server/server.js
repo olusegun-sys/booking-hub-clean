@@ -2,6 +2,7 @@
 // COMPLETE PRODUCTION-READY VERSION WITH SUBSCRIPTION SYSTEM
 // DEPLOY TO RENDER: Replace your server.js with this
 // UPDATED (19 Sept 2026): Email calls now surface { success: false } failures
+// UPDATED (19 Sept 2026): Search route supports comma-separated business types (group search)
 
 // ============================================================
 // LOAD ENVIRONMENT VARIABLES FROM server/.env
@@ -316,6 +317,9 @@ app.get('/api/businesses/featured', async function(req, res) {
   }
 });
 
+// ============================================================
+// SEARCH — SUPPORTS GROUP (comma-separated) BUSINESS TYPES
+// ============================================================
 app.get('/api/businesses/search/category', async function(req, res) {
   try {
     const { category, location } = req.query;
@@ -324,8 +328,16 @@ app.get('/api/businesses/search/category', async function(req, res) {
       .select('*')
       .eq('status', 'approved');
     
+    // WHY: category can be a single type ("hotel") or a comma-separated
+    // group ("hotel,apartment,event_hall"). Split and use .in() when multiple
+    // so searches like "Stays" find hotels, apartments, and event halls.
     if (category) {
-      query = query.eq('business_type', category);
+      const types = String(category).split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+      if (types.length === 1) {
+        query = query.eq('business_type', types[0]);
+      } else if (types.length > 1) {
+        query = query.in('business_type', types);
+      }
     }
     
     if (location && location.trim()) {
@@ -336,8 +348,8 @@ app.get('/api/businesses/search/category', async function(req, res) {
     
     if (error) throw error;
     res.json({ success: true, businesses: data });
-  } catch {
-    console.error('Search error:');
+  } catch (err) {
+    console.error('Search error:', err);
     res.status(500).json({ error: 'Search failed', details: 'An error occurred during search' });
   }
 });
@@ -1765,9 +1777,6 @@ app.post('/api/bookings', async function(req, res) {
     };
 
     // EMAIL: Booking confirmation — now checks return value so failures are visible
-    // WHY: sendBookingConfirmation returns { customer: {...}, owner: {...} } on success
-    // or failure — not a thrown error. Without this check, a 403 from Resend would
-    // only show up buried in emailService logs, not at the booking endpoint.
     sendBookingConfirmation(emailDetails, business)
       .then(function(emailResults) {
         if (!emailResults) {

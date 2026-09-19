@@ -1,18 +1,18 @@
 ﻿// FILE: client/src/HomePage.jsx
-// LOCATION: Entire file (FIXED - Mobile header spacing)
+// UPDATED 19 Sept 2026: Categories changed to Stays/Food/Others (group-based search)
+// Book Now routes to /book/{slug} so all business types work via UnifiedBookingPage
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Building2, 
-  Trophy, 
-  PartyPopper, 
+  Utensils,
+  Sparkles,
   Shield, 
   Search, 
   MapPin, 
   Phone, 
   Star, 
-  Sparkles, 
   Clock, 
   CreditCard, 
   Award, 
@@ -20,18 +20,12 @@ import {
   Calendar, 
   Users, 
   Headphones, 
-  Loader2,
-  Waves,
-  Landmark
+  Loader2
 } from 'lucide-react';
 import { showError } from './toast';
-import HotelBooking from './HotelBooking';
-import SportsBooking from './SportsBooking';
-import EventBooking from './EventBooking';
 import BusinessLogin from './BusinessLogin';
 import BusinessDashboard from './BusinessDashboard';
 import StaffDashboard from './StaffDashboard';
-import HostLanding from './HostLanding';
 import DestinationCards from './components/DestinationCards';
 import PopularStays from './components/PopularStays';
 import API_BASE from './config';
@@ -41,48 +35,85 @@ const brandIndigo = '#4F46E5';
 const brandIndigoLight = '#6366F1';
 const brandIndigoDark = '#4338CA';
 
-// Hero images for each category
-const heroImages = {
-  hotel: 'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=1920&h=650&fit=crop',
-  sports: 'https://images.pexels.com/photos/46798/the-ball-stadion-football-the-pitch-46798.jpeg?auto=compress&cs=tinysrgb&w=1920&h=650&fit=crop',
-  event: 'https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=1920&h=650&fit=crop'
+// ============================================================
+// CATEGORY GROUPS
+// ============================================================
+// WHY: The homepage shows 3 groups, but the database stores 11 specific
+// business types. This map translates group → business_type values so a
+// search for "Stays" finds hotels, apartments, and event halls.
+const categoryGroups = {
+  stays: ['hotel', 'apartment', 'event_hall', 'event'],
+  food: ['restaurant', 'diner', 'cafe', 'other_food'],
+  others: ['sports', 'spa', 'beauty_salon', 'activity_place']
 };
 
-// Hero titles and subtitles
+// Hero images for each group (first URL per category from provided list)
+const heroImages = {
+  stays: 'https://www.savoydubai.com/wp-content/uploads/sites/183/2022/09/Savoy-Suites-Master-Bedroom-2BR-1-2200x1200.jpg',
+  food: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSS0klqKVCFMw_l2R1UnjsXzmvozatheQZ5dekGoBFyX1oFdK3HXtX7qvs&s=10',
+  others: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQGyiajxYGnmi6i-mnxHCw0ZifBMBDgMHeTbqJNki2TGLmA7CNHCbalzWIE&s=10'
+};
+
+// Hero titles and subtitles per group
 const heroTitles = {
-  hotel: 'Find Your Perfect Stay',
-  sports: 'Book Your Court',
-  event: 'Plan Your Event'
+  stays: 'Find Your Perfect Stay',
+  food: 'Order From the Best',
+  others: 'Book Anything'
 };
 
 const heroSubtitles = {
-  hotel: 'Discover and book the finest hotels across Nigeria',
-  sports: 'Find and reserve courts, pitches, and facilities near you',
-  event: 'Plan your next celebration at premier venues across Nigeria'
+  stays: 'Discover hotels, apartments, and venues across Nigeria',
+  food: 'Discover restaurants, cafés, and food spots near you',
+  others: 'Spas, salons, sports, and activities — all in one place'
 };
 
-// Business images for search results
+// Business images for search result cards (grouped)
 const businessImages = {
-  hotel: [
-    'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop',
-    'https://images.pexels.com/photos/164595/pexels-photo-164595.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop',
-    'https://images.pexels.com/photos/261169/pexels-photo-261169.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop'
+  stays: [
+    'https://www.savoydubai.com/wp-content/uploads/sites/183/2022/09/Savoy-Suites-Master-Bedroom-2BR-1-2200x1200.jpg',
+    'https://image-tc.galaxy.tf/wijpeg-dpc83c0rm760hobndf6les3wk/file.jpg',
+    'https://pub-c3c5765215d14e3d882d51123be2ba44.r2.dev/media/images/diary/2025-09-27%2022%3A06%3A53.871437%2B00%3A00/.jpeg'
   ],
-  sports: [
-    'https://images.pexels.com/photos/46798/the-ball-stadion-football-the-pitch-46798.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop',
-    'https://images.pexels.com/photos/1884574/pexels-photo-1884574.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop',
-    'https://images.pexels.com/photos/260024/pexels-photo-260024.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop'
+  food: [
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSS0klqKVCFMw_l2R1UnjsXzmvozatheQZ5dekGoBFyX1oFdK3HXtX7qvs&s=10',
+    'https://images.jdmagicbox.com/v2/comp/kolkata/s1/033pxx33.xx33.251029132716.e1s1/catalogue/sab-cafe-and-restaurant-belgharia-kolkata-restaurants-j5q0ve4g0k.jpg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH_r3Fi031vv8vHSYWtrSBAolln592tf14vYEMvr7dS-WDFPmT75RI15Dg&s=10'
   ],
-  event: [
-    'https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop',
-    'https://images.pexels.com/photos/2608518/pexels-photo-2608518.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop',
-    'https://images.pexels.com/photos/587741/pexels-photo-587741.jpeg?auto=compress&cs=tinysrgb&w=800&h=500&fit=crop'
+  others: [
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQGyiajxYGnmi6i-mnxHCw0ZifBMBDgMHeTbqJNki2TGLmA7CNHCbalzWIE&s=10',
+    'https://s3-media0.fl.yelpcdn.com/bphoto/8I-EWHCn5r9ej8jZaoB7yg/l.jpg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT3ggMTUN2DW27NXqv3DMCl7fPfA88B5_L_AAtbLgqgV2kwJXFsk3H9JCg&s=10'
   ]
 };
 
-// Helper function to get business image
-const getBusinessImage = (type, index) => {
-  const images = businessImages[type] || businessImages.hotel;
+// WHY: Result cards can show any specific business_type. Map each
+// specific type back to its display group so we pick the right images.
+const businessTypeToGroup = {
+  hotel: 'stays', apartment: 'stays', event_hall: 'stays', event: 'stays',
+  restaurant: 'food', diner: 'food', cafe: 'food', other_food: 'food',
+  sports: 'others', spa: 'others', beauty_salon: 'others', activity_place: 'others'
+};
+
+// WHY: Display name + icon for each specific business_type on result cards.
+const businessTypeDisplay = {
+  hotel: { label: 'Hotel', icon: Building2 },
+  apartment: { label: 'Apartment', icon: Building2 },
+  event_hall: { label: 'Event Hall', icon: Building2 },
+  event: { label: 'Event Venue', icon: Building2 },
+  restaurant: { label: 'Restaurant', icon: Utensils },
+  diner: { label: 'Diner', icon: Utensils },
+  cafe: { label: 'Café', icon: Utensils },
+  other_food: { label: 'Food', icon: Utensils },
+  sports: { label: 'Sports', icon: Sparkles },
+  spa: { label: 'Spa', icon: Sparkles },
+  beauty_salon: { label: 'Salon', icon: Sparkles },
+  activity_place: { label: 'Activity', icon: Sparkles }
+};
+
+// Helper function to get business image based on business_type (via group)
+const getBusinessImage = (businessType, index) => {
+  const group = businessTypeToGroup[businessType] || 'stays';
+  const images = businessImages[group] || businessImages.stays;
   return images[index % images.length];
 };
 
@@ -90,17 +121,15 @@ function HomePage() {
   const navigate = useNavigate();
   
   // State
-  const [selectedCategory, setSelectedCategory] = useState('hotel');
+  const [selectedCategory, setSelectedCategory] = useState('stays');
   const [location, setLocation] = useState('');
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
-  const [eventDate, setEventDate] = useState('');
-  const [sportsDate, setSportsDate] = useState('');
+  const [otherDate, setOtherDate] = useState('');
+  const [foodDate, setFoodDate] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedBusiness, setSelectedBusiness] = useState(null);
-  const [showDirectBooking, setShowDirectBooking] = useState(false);
   const [showBusinessLogin, setShowBusinessLogin] = useState(false);
   const [heroKey, setHeroKey] = useState(0);
   const [isDesktop, setIsDesktop] = useState(true);
@@ -157,9 +186,13 @@ function HomePage() {
 
     setLoading(true);
     try {
-      // Build search parameters
+      // WHY: Send comma-separated business types for the selected group.
+      // Backend expands this into an IN query.
+      const typesForGroup = categoryGroups[selectedCategory] || [];
+      const categoryParam = typesForGroup.join(',');
+
       let searchParams = { location };
-      if (selectedCategory === 'hotel') {
+      if (selectedCategory === 'stays') {
         searchParams.checkIn = checkIn;
         searchParams.checkOut = checkOut;
         searchParams.guests = guests;
@@ -167,14 +200,14 @@ function HomePage() {
       
       const params = new URLSearchParams(searchParams);
       const response = await fetch(
-        `${API_BASE}/api/businesses/search/category?category=${selectedCategory}&${params}`
+        `${API_BASE}/api/businesses/search/category?category=${categoryParam}&${params}`
       );
       const data = await response.json();
       
       if (data.success) {
         setResults(data.businesses);
         if (data.businesses.length === 0 && location) {
-          showError(`No ${selectedCategory} found in ${location}`);
+          showError(`No results found in ${location}`);
         }
         
         // Scroll to results
@@ -201,8 +234,11 @@ function HomePage() {
 
     setLoading(true);
     try {
+      const typesForGroup = categoryGroups[selectedCategory] || [];
+      const categoryParam = typesForGroup.join(',');
+
       let searchParams = { location: searchLocation };
-      if (selectedCategory === 'hotel') {
+      if (selectedCategory === 'stays') {
         searchParams.checkIn = checkIn;
         searchParams.checkOut = checkOut;
         searchParams.guests = guests;
@@ -210,14 +246,14 @@ function HomePage() {
       
       const params = new URLSearchParams(searchParams);
       const response = await fetch(
-        `${API_BASE}/api/businesses/search/category?category=${selectedCategory}&${params}`
+        `${API_BASE}/api/businesses/search/category?category=${categoryParam}&${params}`
       );
       const data = await response.json();
       
       if (data.success) {
         setResults(data.businesses);
         if (data.businesses.length === 0 && searchLocation) {
-          showError(`No ${selectedCategory} found in ${searchLocation}`);
+          showError(`No results found in ${searchLocation}`);
         }
         
         setTimeout(() => {
@@ -234,10 +270,12 @@ function HomePage() {
     setLoading(false);
   };
 
-  // Handle direct booking
+  // WHY: Every "Book Now" click routes to the UnifiedBookingPage.
+  // That page handles ALL business types (hotel, apartment, restaurant,
+  // spa, sports, event_hall, etc.) via its own business-type-aware config.
+  // Routing through it avoids duplicating logic and prevents blank pages.
   const handleDirectBook = (business) => {
-    setSelectedBusiness(business);
-    setShowDirectBooking(true);
+    navigate(`/book/${business.slug}`);
   };
 
   // Navigate to admin
@@ -248,13 +286,6 @@ function HomePage() {
     } else {
       navigate('/admin');
     }
-  };
-
-  // Handle booking back
-  const handleBookingBack = () => {
-    setShowDirectBooking(false);
-    setSelectedBusiness(null);
-    navigate('/', { replace: true });
   };
 
   // Render business dashboard if logged in
@@ -278,42 +309,35 @@ function HomePage() {
     });
   }
 
-  // Render direct booking if selected
-  if (showDirectBooking && selectedBusiness) {
-    if (selectedBusiness.business_type === 'hotel') {
-      return React.createElement(HotelBooking, { 
-        business: selectedBusiness,
-        checkIn: checkIn, 
-        checkOut: checkOut, 
-        guests: guests, 
-        onBack: handleBookingBack
-      });
-    }
-    if (selectedBusiness.business_type === 'sports') {
-      return React.createElement(SportsBooking, { 
-        business: selectedBusiness, 
-        onBack: handleBookingBack
-      });
-    }
-    if (selectedBusiness.business_type === 'event') {
-      return React.createElement(EventBooking, { 
-        business: selectedBusiness, 
-        onBack: handleBookingBack
-      });
-    }
-  }
-
   // Helper functions
   const getCategoryPlaceholder = () => 'e.g., Lagos, Abuja, Port Harcourt';
   
   const getSearchButtonText = () => {
     if (loading) return 'Searching...';
     const texts = { 
-      hotel: 'Search Hotels', 
-      sports: 'Search Sports', 
-      event: 'Search Events' 
+      stays: 'Search Stays', 
+      food: 'Search Food', 
+      others: 'Search Others' 
     };
     return texts[selectedCategory];
+  };
+
+  const getResultsHeading = () => {
+    const headings = {
+      stays: 'Available Stays',
+      food: 'Food Options',
+      others: 'Available in Others'
+    };
+    return headings[selectedCategory];
+  };
+
+  const getNoResultsCopy = () => {
+    const copy = {
+      stays: 'stays',
+      food: 'food options',
+      others: 'options'
+    };
+    return copy[selectedCategory];
   };
 
   // ========== STYLES ==========
@@ -326,14 +350,13 @@ function HomePage() {
     background: '#ffffff'
   };
 
-  // FIX: Header with proper spacing on mobile
   const headerStyle = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: isDesktop ? '32px' : '16px',
     flexWrap: 'wrap',
-    gap: isDesktop ? '16px' : '8px' // Smaller gap on mobile
+    gap: isDesktop ? '16px' : '8px'
   };
 
   const logoStyle = {
@@ -345,16 +368,15 @@ function HomePage() {
     color: brandIndigo,
     letterSpacing: '-0.01em',
     cursor: 'pointer',
-    flexShrink: 0 // Prevent logo from shrinking
+    flexShrink: 0
   };
 
-  // FIX: Header buttons with proper alignment
   const headerButtonsStyle = {
     display: 'flex',
-    gap: isDesktop ? '12px' : '6px', // Smaller gap on mobile
+    gap: isDesktop ? '12px' : '6px',
     flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'flex-end' // Align buttons to the right
+    justifyContent: 'flex-end'
   };
 
   const buttonStyle = {
@@ -365,7 +387,7 @@ function HomePage() {
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     border: 'none',
-    whiteSpace: 'nowrap' // Prevent text wrapping
+    whiteSpace: 'nowrap'
   };
 
   const primaryButtonStyle = {
@@ -430,7 +452,7 @@ function HomePage() {
     lineHeight: '1.4'
   };
 
-  // Category Cards - Horizontal on mobile
+  // Category Cards
   const categoryCardStyle = (isActive) => ({
     flex: 1,
     minWidth: isDesktop ? 'auto' : '0',
@@ -673,11 +695,11 @@ function HomePage() {
 
   // ========== RENDER ==========
   return React.createElement('div', { style: containerStyle },
-    // Header - FIXED: Better mobile spacing
+    // Header
     React.createElement('div', { style: headerStyle },
       React.createElement('div', { style: logoStyle, onClick: () => window.location.reload() },
         React.createElement(Building2, { size: isDesktop ? 24 : 18, color: brandIndigo }),
-        React.createElement('span', null, 'BookingHub')
+        React.createElement('span', null, 'BookingHub')  // NOTE: logo swap comes later from Emmanuel's file
       ),
       React.createElement('div', { style: headerButtonsStyle },
         React.createElement('button', 
@@ -711,7 +733,7 @@ function HomePage() {
       )
     ),
 
-    // Category Cards - Horizontal on mobile
+    // Category Cards
     React.createElement('div', { 
       style: { 
         display: 'flex', 
@@ -720,79 +742,79 @@ function HomePage() {
         flexWrap: 'nowrap'
       } 
     },
-      // Hotel Category
+      // STAYS
       React.createElement('div', 
         { 
-          onClick: () => handleCategoryChange('hotel'), 
-          style: categoryCardStyle(selectedCategory === 'hotel'),
+          onClick: () => handleCategoryChange('stays'), 
+          style: categoryCardStyle(selectedCategory === 'stays'),
           onMouseEnter: (e) => { 
-            if (selectedCategory !== 'hotel') { 
+            if (selectedCategory !== 'stays') { 
               e.currentTarget.style.borderColor = brandIndigoLight; 
               e.currentTarget.style.transform = 'translateY(-2px)'; 
             } 
           },
           onMouseLeave: (e) => { 
-            if (selectedCategory !== 'hotel') { 
+            if (selectedCategory !== 'stays') { 
               e.currentTarget.style.borderColor = '#e8e8e8'; 
               e.currentTarget.style.transform = 'translateY(0)'; 
             } 
           }
         },
-        React.createElement('div', { style: categoryIconStyle(selectedCategory === 'hotel') },
-          React.createElement(Building2, { size: isDesktop ? 20 : 14, color: selectedCategory === 'hotel' ? 'white' : brandIndigo })
+        React.createElement('div', { style: categoryIconStyle(selectedCategory === 'stays') },
+          React.createElement(Building2, { size: isDesktop ? 20 : 14, color: selectedCategory === 'stays' ? 'white' : brandIndigo })
         ),
-        React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'hotel') }, 'Hotels'),
-        React.createElement('div', { style: categoryDescStyle(selectedCategory === 'hotel') }, 'Luxury stays')
+        React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'stays') }, 'Stays'),
+        React.createElement('div', { style: categoryDescStyle(selectedCategory === 'stays') }, 'Hotels, apartments & venues')
       ),
       
-      // Sports Category
+      // FOOD
       React.createElement('div', 
         { 
-          onClick: () => handleCategoryChange('sports'), 
-          style: categoryCardStyle(selectedCategory === 'sports'),
+          onClick: () => handleCategoryChange('food'), 
+          style: categoryCardStyle(selectedCategory === 'food'),
           onMouseEnter: (e) => { 
-            if (selectedCategory !== 'sports') { 
+            if (selectedCategory !== 'food') { 
               e.currentTarget.style.borderColor = brandIndigoLight; 
               e.currentTarget.style.transform = 'translateY(-2px)'; 
             } 
           },
           onMouseLeave: (e) => { 
-            if (selectedCategory !== 'sports') { 
+            if (selectedCategory !== 'food') { 
               e.currentTarget.style.borderColor = '#e8e8e8'; 
               e.currentTarget.style.transform = 'translateY(0)'; 
             } 
           }
         },
-        React.createElement('div', { style: categoryIconStyle(selectedCategory === 'sports') },
-          React.createElement(Trophy, { size: isDesktop ? 20 : 14, color: selectedCategory === 'sports' ? 'white' : brandIndigo })
+        React.createElement('div', { style: categoryIconStyle(selectedCategory === 'food') },
+          React.createElement(Utensils, { size: isDesktop ? 20 : 14, color: selectedCategory === 'food' ? 'white' : brandIndigo })
         ),
-        React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'sports') }, 'Sports'),
-        React.createElement('div', { style: categoryDescStyle(selectedCategory === 'sports') }, 'Courts & pitches')
+        React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'food') }, 'Food'),
+        React.createElement('div', { style: categoryDescStyle(selectedCategory === 'food') }, 'Restaurants, cafés & more')
       ),
       
-      // Events Category
+      // OTHERS
       React.createElement('div', 
         { 
-          onClick: () => handleCategoryChange('event'), 
-          style: categoryCardStyle(selectedCategory === 'event'),
+          onClick: () => handleCategoryChange('others'), 
+          style: categoryCardStyle(selectedCategory === 'others'),
           onMouseEnter: (e) => { 
-            if (selectedCategory !== 'event') { 
+            if (selectedCategory !== 'others') { 
               e.currentTarget.style.borderColor = brandIndigoLight; 
               e.currentTarget.style.transform = 'translateY(-2px)'; 
             } 
           },
           onMouseLeave: (e) => { 
-            if (selectedCategory !== 'event') { 
+            if (selectedCategory !== 'others') { 
               e.currentTarget.style.borderColor = '#e8e8e8'; 
               e.currentTarget.style.transform = 'translateY(0)'; 
             } 
           }
         },
-        React.createElement('div', { style: categoryIconStyle(selectedCategory === 'event') },
-          React.createElement(PartyPopper, { size: isDesktop ? 20 : 14, color: selectedCategory === 'event' ? 'white' : brandIndigo })
+        React.createElement('div', { style: categoryIconStyle(selectedCategory === 'others') },
+          React.createElement(Sparkles, { size: isDesktop ? 20 : 14, color: selectedCategory === 'others' ? 'white' : brandIndigo })
         ),
-        React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'event') }, 'Events'),
-        React.createElement('div', { style: categoryDescStyle(selectedCategory === 'event') }, 'Venues & halls')
+        React.createElement('div', { style: categoryTitleStyle(selectedCategory === 'others') }, 'Others'),
+        React.createElement('div', { style: categoryDescStyle(selectedCategory === 'others') }, 'Spas, salons & activities')
       )
     ),
 
@@ -823,8 +845,8 @@ function HomePage() {
           })
         ),
         
-        // Hotel - Check-in
-        selectedCategory === 'hotel' && React.createElement('div', { style: inputWrapperStyle },
+        // STAYS - Check-in
+        selectedCategory === 'stays' && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Calendar, { size: 14, style: inputIconStyle }),
           React.createElement('input', { 
             type: 'date', 
@@ -836,8 +858,8 @@ function HomePage() {
           })
         ),
         
-        // Hotel - Check-out
-        selectedCategory === 'hotel' && React.createElement('div', { style: inputWrapperStyle },
+        // STAYS - Check-out
+        selectedCategory === 'stays' && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Calendar, { size: 14, style: inputIconStyle }),
           React.createElement('input', { 
             type: 'date', 
@@ -849,8 +871,8 @@ function HomePage() {
           })
         ),
         
-        // Hotel - Guests
-        selectedCategory === 'hotel' && React.createElement('div', { style: inputWrapperStyle },
+        // STAYS - Guests
+        selectedCategory === 'stays' && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Users, { size: 14, style: inputIconStyle }),
           React.createElement('select', { 
             value: guests, 
@@ -865,13 +887,13 @@ function HomePage() {
           )
         ),
         
-        // Sports/Event - Date
-        (selectedCategory === 'sports' || selectedCategory === 'event') && React.createElement('div', { style: inputWrapperStyle },
+        // FOOD / OTHERS - single date
+        (selectedCategory === 'food' || selectedCategory === 'others') && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Calendar, { size: 14, style: inputIconStyle }),
           React.createElement('input', { 
             type: 'date', 
-            value: selectedCategory === 'sports' ? sportsDate : eventDate, 
-            onChange: (e) => selectedCategory === 'sports' ? setSportsDate(e.target.value) : setEventDate(e.target.value), 
+            value: selectedCategory === 'food' ? foodDate : otherDate, 
+            onChange: (e) => selectedCategory === 'food' ? setFoodDate(e.target.value) : setOtherDate(e.target.value), 
             style: inputFieldStyle,
             min: new Date().toISOString().split('T')[0],
             onFocus: (e) => { e.currentTarget.style.borderColor = brandIndigo; e.currentTarget.style.background = 'white'; },
@@ -931,9 +953,7 @@ function HomePage() {
     results.length > 0 && React.createElement('div', { id: 'results-section' },
       React.createElement('div', { style: resultsHeaderStyle },
         React.createElement('div', null,
-          React.createElement('h2', { style: resultsTitleStyle }, 
-            `Available ${selectedCategory === 'hotel' ? 'Hotels' : selectedCategory === 'sports' ? 'Sports Facilities' : 'Event Venues'}`
-          ),
+          React.createElement('h2', { style: resultsTitleStyle }, getResultsHeading()),
           React.createElement('p', { style: { fontSize: '13px', color: '#888', marginTop: '2px' } }, 
             `${results.length} ${results.length === 1 ? 'result' : 'results'} found`
           )
@@ -961,8 +981,12 @@ function HomePage() {
 
     // Results Grid
     !loading && results.length > 0 && React.createElement('div', { style: resultsGridStyle },
-      results.map((business, index) => 
-        React.createElement('div', 
+      results.map((business, index) => {
+        // WHY: Resolve display label + icon for this specific business_type.
+        const display = businessTypeDisplay[business.business_type] || { label: 'Business', icon: Building2 };
+        const TypeIcon = display.icon;
+
+        return React.createElement('div', 
           { 
             key: business.id, 
             style: resultCardStyle,
@@ -990,13 +1014,8 @@ function HomePage() {
                 React.createElement('h3', { style: resultNameStyle }, business.name),
                 React.createElement('div', { style: { marginTop: '6px' } },
                   React.createElement('div', { style: resultTypeBadgeStyle },
-                    business.business_type === 'hotel' ? React.createElement(Building2, { size: 10 }) : 
-                    business.business_type === 'sports' ? React.createElement(Trophy, { size: 10 }) : 
-                    React.createElement(PartyPopper, { size: 10 }),
-                    React.createElement('span', null, 
-                      business.business_type === 'hotel' ? 'Hotel' : 
-                      business.business_type === 'sports' ? 'Sports' : 'Event'
-                    )
+                    React.createElement(TypeIcon, { size: 10 }),
+                    React.createElement('span', null, display.label)
                   )
                 )
               ),
@@ -1043,8 +1062,8 @@ function HomePage() {
               )
             )
           )
-        )
-      )
+        );
+      })
     ),
 
     // No Results
@@ -1052,10 +1071,10 @@ function HomePage() {
       React.createElement(Search, { size: 48, color: '#ccc', style: { marginBottom: '16px' } }),
       React.createElement('h3', { style: { fontSize: '18px', fontWeight: '500', color: '#1a1a1a', marginBottom: '8px' } }, 'No results found'),
       React.createElement('p', { style: { color: '#888', marginBottom: '20px', fontSize: '14px' } }, 
-        `We couldn't find any ${selectedCategory === 'hotel' ? 'hotels' : selectedCategory === 'sports' ? 'sports facilities' : 'event venues'} in "${location}".`
+        `We couldn't find any ${getNoResultsCopy()} in "${location}".`
       ),
       React.createElement('button', { 
-        onClick: () => { setLocation(''); setSelectedCategory('hotel'); }, 
+        onClick: () => { setLocation(''); setSelectedCategory('stays'); }, 
         style: { padding: '10px 24px', background: brandIndigo, border: 'none', borderRadius: '100px', cursor: 'pointer', fontWeight: '500', color: 'white', fontSize: '13px' } 
       }, 
         'Clear Search'
