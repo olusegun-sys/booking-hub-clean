@@ -3,25 +3,23 @@ import useStageProgress from '../lib/useStageProgress';
 import useMediaQuery from '../lib/useMediaQuery';
 
 /**
- * Every section on the landing page is a stage: a tall block of scroll with one
- * screen pinned inside it. The page therefore never slides content past you in
- * the ordinary way — you travel through a sequence of held scenes, each one
- * assembling from outside the frame and then flying back out past the camera.
+ * A stage: a tall block of scroll with one screen pinned inside it.
  *
- * Stages are deliberately long (about three screens each, the pacing
- * telescope.fyi uses) so a scene has time to arrive, be read, and leave.
- * Phones get the same choreography on a slightly shorter runway.
+ * The pinned screen is edge-to-edge — nothing here constrains its children to a
+ * content column. Scenes that need reading width apply `plz-edge` themselves,
+ * which is what lets a focal image grow past the text grid and fill the
+ * viewport instead of staying trapped in a card.
  *
- * A stage's own background cross-fades with its contents, so the moment where
- * one stage hands over to the next has nothing in it to see — no colour edge
- * sliding up the screen, no half-empty section.
+ * Stage length is measured in screens of scroll. Roughly 3–4.5 screens is the
+ * pacing telescope.fyi uses for a cinematic sequence; phones get a shorter
+ * runway for the same choreography.
  */
 export default function ScrollStage({
   children,
   id,
-  length = 3.2,          // screens of scroll
+  length = 3.2,
   mobileLength = 2.6,
-  backdrop,              // colour that fades in with the scene
+  backdrop,
   className = ''
 }) {
   const ref = useRef(null);
@@ -36,10 +34,8 @@ export default function ScrollStage({
       className={'relative ' + className}
       style={{ height: `${screens * 100}vh`, background: backdrop }}
     >
-      <div className="sticky top-0 h-screen overflow-hidden">
-        <div className="relative mx-auto h-full w-full max-w-page">
-          {typeof children === 'function' ? children(progress) : children}
-        </div>
+      <div className="sticky top-0 h-screen w-full overflow-hidden">
+        {typeof children === 'function' ? children(progress) : children}
       </div>
     </section>
   );

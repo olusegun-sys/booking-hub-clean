@@ -1,254 +1,215 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useTransform, AnimatePresence } from 'motion/react';
-import { ArrowRight, MapPin } from 'lucide-react';
+import { motion, useTransform, useMotionValueEvent, useReducedMotion } from 'motion/react';
+import { ArrowRight, ArrowDown } from 'lucide-react';
 import ScrollStage from '../components/ScrollStage';
-import StageLayer from '../components/StageLayer';
-import HoverImage from '../components/HoverImage';
-import { categories, cities, venues, venuesByCategory, nairaShort } from '../lib/data';
-import { EASE } from '../lib/motion';
+import HeroPrint from '../components/HeroPrint';
+import { venues, venueById } from '../lib/data';
+import { step, mix, band } from '../lib/phase';
+import useViewport from '../lib/useViewport';
 import useMediaQuery from '../lib/useMediaQuery';
 
-// Where each print sits, and the direction it travels when the scene opens.
-const SCENE = [
-  { left: 8,  top: 10, w: 200, ratio: 'aspect-[4/5]',  vec: [-320, -110], depth: 1.5 },
-  { left: 22, top: 9,  w: 156, ratio: 'aspect-square', vec: [-170, -250], depth: 1.1 },
-  { left: 75, top: 9,  w: 214, ratio: 'aspect-[3/2]',  vec: [220, -240],  depth: 1.2 },
-  { left: 93, top: 13, w: 200, ratio: 'aspect-[4/5]',  vec: [330, -90],   depth: 1.6 },
-  { left: 6,  top: 63, w: 208, ratio: 'aspect-[3/2]',  vec: [-340, 160],  depth: 1.5 },
-  { left: 27, top: 70, w: 166, ratio: 'aspect-square', vec: [-180, 260],  depth: 1.1 },
-  { left: 73, top: 66, w: 220, ratio: 'aspect-[3/2]',  vec: [250, 230],   depth: 1.3 },
-  { left: 94, top: 62, w: 182, ratio: 'aspect-square', vec: [350, 140],   depth: 1.6 }
-];
-
-// Same scene on a phone, fewer prints and closer to the edges.
-const SCENE_MOBILE = [
-  { left: 20, top: 9,  w: 132, ratio: 'aspect-[4/5]',  vec: [-150, -190], depth: 1.3 },
-  { left: 82, top: 12, w: 122, ratio: 'aspect-square', vec: [170, -160],  depth: 1.2 },
-  { left: 16, top: 73, w: 128, ratio: 'aspect-square', vec: [-160, 200],  depth: 1.3 },
-  { left: 84, top: 70, w: 138, ratio: 'aspect-[4/5]',  vec: [180, 190],   depth: 1.4 }
-];
-
 /**
- * The first stage. A scene of places you could be tonight sits around the
- * question; choosing a category or city rearranges it. Scrolling sends the
- * prints back out past the camera and the answer assembles in the space they
- * leave behind.
+ * THE HERO TIMELINE
+ *
+ *   0.00 → 0.16  discovery    scattered prints at rest, headline readable,
+ *                             hover live — the scene is interesting before
+ *                             anyone scrolls
+ *   0.14 → 0.40  convergence  prints travel in and gather around one focal
+ *                             image; headline steps back
+ *   0.40 → 0.68  expansion    the focal image leaves the card grid entirely
+ *                             and opens to 94vw × 88vh
+ *   0.68 → 0.94  dispersion   the gathered prints burst back out past the
+ *                             camera; the statement lands on the focal
+ *   0.88 → 1.00  handoff      the focal pushes in and dissolves into the
+ *                             next stage
+ *
+ * Every value is a pure function of scroll position, so scrubbing backwards
+ * retraces the whole sequence exactly.
  */
-export default function HeroStage({ category, setCategory, city, setCity }) {
+
+// Rest positions as a share of the viewport, with the direction each print
+// travels. Asymmetric on purpose; several sit hard against the edges.
+// Rest positions, as a share of the viewport, for the centre of each print.
+// The middle of the screen is left clear for the headline; several prints sit
+// hard against the edges and bleed off them. Index 0 is the focal image — the
+// one that later leaves the grid and opens across the screen.
+const SCENE_DESKTOP = [
+  { id: 'kofa', x: 0.10, y: 0.33, w: 262, ratio: 'aspect-[4/5]', focal: true },
+  { id: 'suya', x: 0.245, y: 0.19, w: 176, ratio: 'aspect-square' },
+  { id: 'ilaje', x: 0.085, y: 0.75, w: 250, ratio: 'aspect-[3/2]' },
+  { id: 'ile', x: 0.27, y: 0.82, w: 170, ratio: 'aspect-[4/5]' },
+  { id: 'ruwa', x: 0.90, y: 0.30, w: 240, ratio: 'aspect-[4/5]' },
+  { id: 'maitama-sky', x: 0.745, y: 0.18, w: 200, ratio: 'aspect-[3/2]' },
+  { id: 'court24', x: 0.925, y: 0.75, w: 230, ratio: 'aspect-[3/2]' },
+  { id: 'adio', x: 0.715, y: 0.855, w: 175, ratio: 'aspect-square' }
+];
+
+// Phones carry the same choreography with four prints and shorter travel.
+const SCENE_MOBILE = [
+  { id: 'kofa', x: 0.26, y: 0.21, w: 150, ratio: 'aspect-[4/5]', focal: true },
+  { id: 'ruwa', x: 0.82, y: 0.26, w: 124, ratio: 'aspect-[4/5]' },
+  { id: 'ilaje', x: 0.20, y: 0.82, w: 148, ratio: 'aspect-[3/2]' },
+  { id: 'maitama-sky', x: 0.82, y: 0.80, w: 126, ratio: 'aspect-square' }
+];
+
+// Supporting prints gather on a ring behind the focal image rather than
+// stacking on one point, so the gathered composition still reads as a group.
+function ringSlot(index, count, isDesktop) {
+  const radius = isDesktop ? 178 : 104;
+  const angle = (index / Math.max(1, count - 1)) * Math.PI * 2 + 0.7;
+  return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * 0.72 };
+}
+
+function HeroScene({ progress }) {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const [hovering, setHovering] = useState(null);
+  const { width, height } = useViewport();
+  const reduce = useReducedMotion();
+  const [hovered, setHovered] = useState(null);
+  const [interactive, setInteractive] = useState(true);
 
-  const matches = venuesByCategory(category, city);
-  const pool = [];
-  const seen = new Set();
-  [...matches, ...venues.filter((v) => v.city === city), ...venues].forEach((v) => {
-    if (!seen.has(v.id)) { seen.add(v.id); pool.push(v); }
+  // Hover only belongs to the discovery phase; once the scene starts moving
+  // the prints stop taking the pointer so they can't fight the scroll.
+  useMotionValueEvent(progress, 'change', (p) => {
+    const live = p < 0.22;
+    setInteractive((was) => (was === live ? was : live));
+    if (!live && hovered !== null) setHovered(null);
   });
-  const answer = (matches.length ? matches : pool).slice(0, isDesktop ? 3 : 2);
-  const cheapest = Math.min(...(matches.length ? matches : venues).map((v) => v.forTwo));
 
-  const chips = (
-    <div className="flex flex-wrap items-center justify-center gap-2">
-      {categories.map((c) => {
-        const active = c.id === category;
-        return (
-          <motion.button
-            key={c.id}
-            type="button"
-            onClick={() => setCategory(active ? null : c.id)}
-            aria-pressed={active}
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-            className={
-              'h-11 rounded-full px-5 text-[15px] font-medium transition-colors duration-micro ease-plz ' +
-              (active
-                ? 'bg-plz-ink text-white'
-                : 'border border-plz-line bg-white/80 text-plz-ink hover:border-plz-ink')
-            }
-          >
-            {c.label}
-          </motion.button>
-        );
-      })}
-    </div>
+  const layout = isDesktop ? SCENE_DESKTOP : SCENE_MOBILE;
+  const focalSpot = layout.find((spot) => spot.focal) || layout[0];
+  const focal = venueById(focalSpot.id) || venues[0];
+
+  // Where the expansion begins: the focal print's own rect, once it has
+  // gathered at the centre. Matching it exactly makes the hand-over invisible.
+  const cardW = focalSpot.w;
+  const cardH = Math.round(focalSpot.w * 1.25);
+
+  // ---- focal image: card rect → 94vw × 88vh -------------------------------
+  const focalClip = useTransform(progress, (p) => {
+    const grow = reduce ? 1 : step(p, 0.4, 0.68);
+    const startX = (width - cardW) / 2;
+    const startY = (height - cardH) / 2;
+    const endX = width * 0.03;
+    const endY = height * 0.06;
+    const x = mix(startX, endX, grow);
+    const y = mix(startY, endY, grow);
+    const r = mix(20, 12, grow);
+    return `inset(${y}px ${x}px ${y}px ${x}px round ${r}px)`;
+  });
+
+  const focalOpacity = useTransform(progress, (p) =>
+    reduce ? 1 : step(p, 0.36, 0.41) * (1 - step(p, 0.9, 1))
+  );
+  const focalScale = useTransform(progress, (p) => (reduce ? 1 : mix(1, 1.09, step(p, 0.86, 1))));
+  const focalImageScale = useTransform(progress, (p) =>
+    reduce ? 1 : mix(1.2, 1.02, step(p, 0.4, 0.72))
   );
 
-  const cityToggle = (
-    <div className="flex items-center justify-center gap-1 text-[15px] text-plz-body">
-      <MapPin size={15} className="text-plz-grey" />
-      <span>in</span>
-      {cities.map((c) => (
-        <motion.button
-          key={c}
-          type="button"
-          onClick={() => setCity(c)}
-          aria-pressed={c === city}
-          whileTap={{ scale: 0.95 }}
-          className={
-            'ml-1 h-9 rounded-full px-3 text-[15px] font-semibold transition-colors duration-micro ease-plz ' +
-            (c === city ? 'bg-plz-blue text-white' : 'text-plz-ink hover:bg-plz-surface')
-          }
-        >
-          {c}
-        </motion.button>
-      ))}
-    </div>
+  // ---- headline ------------------------------------------------------------
+  const headOpacity = useTransform(progress, (p) => (reduce ? 1 : 1 - step(p, 0.13, 0.28)));
+  const headScale = useTransform(progress, (p) => (reduce ? 1 : mix(1, 0.9, step(p, 0.13, 0.32))));
+  const headY = useTransform(progress, (p) => (reduce ? 0 : mix(0, -70, step(p, 0.13, 0.32))));
+  const hintOpacity = useTransform(progress, (p) => (reduce ? 0 : 1 - step(p, 0.03, 0.1)));
+
+  // ---- statement over the opened image ------------------------------------
+  const veil = useTransform(progress, (p) => (reduce ? 0.35 : band(p, 0.6, 0.86, 0.12, 0.08) * 0.52));
+  const statementOpacity = useTransform(progress, (p) =>
+    reduce ? 1 : band(p, 0.62, 0.86, 0.1, 0.06)
   );
+  const statementY = useTransform(progress, (p) => (reduce ? 0 : mix(40, 0, step(p, 0.56, 0.7))));
 
   return (
-    <ScrollStage id="hero" length={4} mobileLength={3.2}>
-      {(p) => {
-        const answerHold = [0.4, 0.92];
-        return (
-          <>
-            {/* the scene, already in place, leaving as you scroll */}
-            {(isDesktop ? SCENE : SCENE_MOBILE).map((spec, i) => (
-                <StageLayer
-                  key={spec.left + '-' + spec.top}
-                  progress={p}
-                  vec={spec.vec}
-                  depth={spec.depth}
-                  hold={[0, 0.3]}
-                  arrive={false}
-                  fade={0.1}
-                  className="absolute"
-                  style={{
-                    left: spec.left + '%',
-                    top: spec.top + '%',
-                    width: spec.w,
-                    translateX: '-50%',
-                    zIndex: hovering === i ? 9 : 2
-                  }}
-                >
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={pool[i % pool.length].id}
-                      initial={{ opacity: 0, scale: 0.97 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.97 }}
-                      transition={{ duration: 0.3, ease: EASE }}
-                      onPointerEnter={() => setHovering(i)}
-                      onPointerLeave={() => setHovering(null)}
-                    >
-                      <HoverImage
-                        src={pool[i % pool.length].image}
-                        alt={`${pool[i % pool.length].name}, ${pool[i % pool.length].kind} in ${pool[i % pool.length].area}`}
-                        caption={pool[i % pool.length].name}
-                        meta={`${pool[i % pool.length].kind} · from ${nairaShort(pool[i % pool.length].from)}`}
-                        ratio={spec.ratio}
-                        eager={i < 4}
-                      />
-                    </motion.div>
-                  </AnimatePresence>
-              </StageLayer>
-            ))}
+    <div className="relative h-full w-full">
+      {/* ---------------------------------------------- the scattered scene */}
+      {layout.map((spot, index) => (
+        <HeroPrint
+          key={spot.id}
+          venue={venueById(spot.id) || venues[index]}
+          spot={spot}
+          ring={ringSlot(index, layout.length, isDesktop)}
+          progress={progress}
+          viewport={{ width, height }}
+          index={index}
+          hovered={hovered}
+          onHover={setHovered}
+          interactive={interactive}
+          reduce={reduce}
+          isFocal={Boolean(spot.focal)}
+        />
+      ))}
 
-            {/* two annotations in Plazzaa's voice */}
-            {isDesktop && (
-              <>
-                <StageLayer
-                  progress={p}
-                  vec={[-300, 0]}
-                  depth={1.4}
-                  hold={[0, 0.26]}
-                  arrive={false}
-                  className="absolute left-[3%] top-[40%] z-[4] w-[206px]"
-                >
-                  <div className="rounded-card bg-plz-yellow p-4">
-                    <p className="text-[22px] font-semibold leading-none text-plz-ink">
-                      {nairaShort(cheapest)} tonight
-                    </p>
-                    <p className="mt-2 text-[14px] leading-snug text-plz-ink/70">
-                      {(matches.length || venues.length)} places in {city} fit that
-                    </p>
-                  </div>
-                </StageLayer>
+      {/* ------------------------------------------- the focal image opening */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-[4] h-full w-full"
+        style={{ clipPath: focalClip, opacity: focalOpacity, scale: focalScale }}
+      >
+        <motion.img
+          src={focal.image}
+          alt={`${focal.name}, ${focal.kind} in ${focal.area}`}
+          className="plz-fill"
+          style={{ scale: focalImageScale }}
+        />
+        <motion.div className="absolute inset-0 bg-plz-ink" style={{ opacity: veil }} />
 
-                <StageLayer
-                  progress={p}
-                  vec={[320, 0]}
-                  depth={1.4}
-                  hold={[0, 0.26]}
-                  arrive={false}
-                  className="absolute right-[3%] top-[42%] z-[4] w-[216px]"
-                >
-                  <div className="rounded-card border border-plz-line bg-white p-4">
-                    <p className="text-[14px] text-plz-body">Looking for somewhere calm?</p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {['Date night', 'Outdoor', 'Under ₦40k'].map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-plz-surface px-2.5 py-1 text-[12px] font-medium text-plz-ink"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </StageLayer>
-              </>
-            )}
+        <motion.div
+          className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center"
+          style={{ opacity: statementOpacity, y: statementY }}
+        >
+          <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-white/75">
+            {focal.area}, {focal.city}
+          </p>
+          <p
+            className="mt-4 max-w-[16ch] text-hero text-white md:max-w-[18ch]"
+            style={{ textWrap: 'balance' }}
+          >
+            Know before <span className="plz-serif italic">you go</span>.
+          </p>
+        </motion.div>
+      </motion.div>
 
-            {/* the question */}
-            <StageLayer
-              progress={p}
-              vec={[0, -60]}
-              depth={0.5}
-              hold={[0, 0.28]}
-              arrive={false}
-              className="absolute inset-0 z-[5] flex flex-col items-center justify-center px-6 text-center"
-            >
-              <h1 className="max-w-[13ch] text-hero text-plz-ink" style={{ textWrap: 'balance' }}>
-                Where could <span className="plz-serif italic">today</span> take you?
-              </h1>
-              <p className="mt-6 max-w-[50ch] text-lead text-plz-body">
-                Discover somewhere new, plan around what you want to spend, and find
-                something that fits tonight.
-              </p>
-              <div className="mt-10 flex flex-col gap-4">
-                {chips}
-                {cityToggle}
-              </div>
-            </StageLayer>
+      {/* ------------------------------------------------------- the question */}
+      <motion.div
+        className="absolute inset-0 z-[6] flex flex-col items-center justify-center px-5 text-center"
+        style={{ opacity: headOpacity, scale: headScale, y: headY }}
+      >
+        <h1 className="max-w-[12ch] text-hero text-plz-ink" style={{ textWrap: 'balance' }}>
+          Where could <span className="plz-serif italic text-plz-blue">today</span> take you?
+        </h1>
+        <p className="mt-6 max-w-[48ch] text-lead text-plz-body">
+          Discover places, explore experiences, and see where your budget can take you.
+        </p>
 
-            {/* the answer, in the space the scene left */}
-            <StageLayer
-              progress={p}
-              vec={[0, 90]}
-              depth={0.8}
-              hold={answerHold}
-              className="absolute inset-0 z-[6] flex items-center justify-center px-5"
-            >
-              <div className="w-full max-w-[900px]">
-                <p className="text-center text-h3 text-plz-ink">Tonight in {city}</p>
-                <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5">
-                  {answer.map((venue) => (
-                    <Link key={venue.id} to="/explore" className="block">
-                      <HoverImage
-                        src={venue.image}
-                        alt={`${venue.name}, ${venue.kind} in ${venue.area}`}
-                        caption={venue.name}
-                        meta={`${venue.kind} · from ${nairaShort(venue.from)}`}
-                        ratio="aspect-[4/5]"
-                      />
-                    </Link>
-                  ))}
-                </div>
-                <div className="mt-9 flex justify-center">
-                  <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
-                    <Link to="/explore" className="plz-btn plz-btn-primary">
-                      Explore places
-                      <ArrowRight size={16} />
-                    </Link>
-                  </motion.div>
-                </div>
-              </div>
-            </StageLayer>
-          </>
-        );
-      }}
+        <div className="pointer-events-auto mt-9 flex flex-col gap-3 sm:flex-row">
+          <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}>
+            <Link to="/explore" className="plz-btn plz-btn-primary w-full sm:w-auto">
+              Explore places
+              <ArrowRight size={16} />
+            </Link>
+          </motion.div>
+          <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}>
+            <Link to="/business" className="plz-btn plz-btn-quiet w-full sm:w-auto">
+              Plazzaa for Business
+            </Link>
+          </motion.div>
+        </div>
+
+        <motion.p
+          className="mt-12 flex items-center gap-2 text-[13px] font-medium text-plz-grey"
+          style={{ opacity: hintOpacity }}
+        >
+          <ArrowDown size={14} />
+          Scroll
+        </motion.p>
+      </motion.div>
+    </div>
+  );
+}
+
+export default function HeroStage() {
+  return (
+    <ScrollStage id="hero" length={4.6} mobileLength={3.6}>
+      {(progress) => <HeroScene progress={progress} />}
     </ScrollStage>
   );
 }

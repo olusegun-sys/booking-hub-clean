@@ -45,7 +45,7 @@ export default function TopNav({ tone = 'light' }) {
         (solid ? 'bg-white border-b border-plz-line' : 'bg-transparent')
       }
     >
-      <div className="plz-edge flex h-[64px] items-center justify-between md:h-[76px]">
+      <div className="plz-edge flex h-[64px] min-w-0 items-center justify-between gap-3 md:h-[76px]">
         <Link
           to="/"
           className="text-[19px] font-bold tracking-[-0.03em] text-plz-ink md:text-[21px]"

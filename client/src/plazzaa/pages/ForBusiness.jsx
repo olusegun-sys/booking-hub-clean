@@ -1,78 +1,54 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import {
-  ArrowRight, Check, Scissors, Sparkles, Hand, Brush, Utensils, Hotel
-} from 'lucide-react';
+import { ArrowRight, Check, Scissors, Sparkles, Hand, Brush, Utensils, Hotel } from 'lucide-react';
 import SmoothScroll from '../lib/SmoothScroll';
 import TopNav from '../components/TopNav';
-import SiteFooter from '../components/SiteFooter';
 import GatewayBar from '../components/GatewayBar';
 import DMCollapse from '../components/DMCollapse';
-import HoverImage from '../components/HoverImage';
+import DashboardMock from '../components/DashboardMock';
 import {
   ServicesMock, AvailabilityMock, LinkMock, BookingMock, ValidateMock
 } from '../components/MerchantMocks';
-import { images, merchantTrades, venues } from '../lib/data';
+import { images, merchantTrades } from '../lib/data';
 import { EASE } from '../lib/motion';
 
 const STEPS = [
   {
     title: 'Add your services.',
-    body: 'Name, price, how long it takes. Capacity if more than one person can book the same slot. That is the whole form.',
+    body: 'Name, price, how long it takes, and how many people can take the same slot. That is the whole form.',
     mock: ServicesMock
   },
   {
-    title: 'Say when you are open.',
-    body: 'Your opening days and hours become real bookable times. Block an afternoon and it disappears from the page.',
+    title: 'Set your availability.',
+    body: 'Your opening days become real bookable times. Block an afternoon and it disappears from the page.',
     mock: AvailabilityMock
   },
   {
-    title: 'Share one link.',
-    body: 'It works in an Instagram bio, a WhatsApp status, a TikTok caption, or a reply. One address, everywhere you already are.',
+    title: 'Share your link.',
+    body: 'One address that works in an Instagram bio, a WhatsApp status, a TikTok caption, or a reply.',
     mock: LinkMock
   },
   {
-    title: 'Customers book themselves.',
-    body: 'They pick a time that is genuinely free, leave their number, and get your account details. No account, no back and forth.',
+    title: 'Customers book.',
+    body: 'They pick a time that is genuinely free and leave their details. No account, no back and forth.',
     mock: BookingMock
   },
   {
-    title: 'You confirm the money landed.',
-    body: 'Check your transfer, tap validate, and Plazzaa sends the confirmation. Unpaid holds expire and give the slot back.',
+    title: 'Validate the payment.',
+    body: 'They transfer to your account. You check it landed and tap validate — Plazzaa sends the confirmation.',
     mock: ValidateMock
   }
 ];
 
 const TRADE_ICONS = {
-  salon: Scissors,
-  spa: Sparkles,
-  nails: Hand,
-  makeup: Brush,
-  barber: Scissors,
-  restaurant: Utensils
+  salon: Scissors, spa: Sparkles, nails: Hand, makeup: Brush, barber: Scissors, restaurant: Utensils
 };
 
 const CARDS = [
-  {
-    title: 'Slot capacity',
-    body: 'One chair or ten. Set how many people can take the same time and Plazzaa counts them down.',
-    tone: 'bg-plz-lavender'
-  },
-  {
-    title: 'Holds that expire',
-    body: 'An unpaid booking releases its slot automatically, so your Saturday is never blocked by someone who vanished.',
-    tone: 'bg-plz-cream'
-  },
-  {
-    title: 'Per-service links',
-    body: 'Send bridal makeup to one client and a quick manicure to another. Same page, different front door.',
-    tone: 'bg-plz-blue-wash'
-  },
-  {
-    title: 'Blocked afternoons',
-    body: 'Going to a wedding? Block it once and nobody can book into it.',
-    tone: 'bg-white border border-plz-line'
-  }
+  { title: 'Slot capacity', body: 'One chair or ten. Set how many people can take the same time and Plazzaa counts them down.', tone: 'bg-plz-lavender' },
+  { title: 'Holds that expire', body: 'An unpaid booking releases its slot automatically, so your Saturday is never blocked by someone who vanished.', tone: 'bg-plz-cream' },
+  { title: 'Per-service links', body: 'Send bridal makeup to one client and a quick manicure to another. Same page, different front door.', tone: 'bg-plz-blue-wash' },
+  { title: 'Blocked afternoons', body: 'Going to a wedding? Block it once and nobody can book into it.', tone: 'bg-white border border-plz-line' }
 ];
 
 function Reveal({ children, delay = 0, y = 26, className = '' }) {
@@ -90,88 +66,105 @@ function Reveal({ children, delay = 0, y = 26, className = '' }) {
 }
 
 /**
- * Plazzaa for Business.
+ * Plazzaa for Business — the merchant marketing site.
  *
- * Structured the way the reference lays a product story out: a bold branded
- * hero, then alternating rows where each claim is paired with the screen that
- * does it, a row of capability cards, a full-bleed band for the channels, a
- * grid of the trades it fits, the coming-soon marketplace, and one closing ask.
+ * Styled to sit flush with the product mockups: the pale blue working surface,
+ * white panels, blue as the only interaction colour, yellow as punctuation, and
+ * the handwritten brand line running through it. Every claim is paired with the
+ * screen that does it, and nothing is shown that the V1 product cannot do.
  */
 export default function ForBusiness() {
   return (
     <SmoothScroll>
-      <div className="plz-root min-h-screen bg-white">
+      <div className="plz-root min-h-screen overflow-x-clip bg-white">
         <TopNav tone="solid" />
 
         <main className="pt-[64px] md:pt-[76px]">
           {/* ---------------------------------------------------------- hero */}
-          <section className="relative overflow-hidden bg-plz-yellow">
-            <div className="plz-edge grid items-center gap-10 py-14 lg:grid-cols-12 lg:gap-14 lg:py-22">
+          <section className="relative overflow-hidden bg-[#F6F8FE]">
+            <div className="plz-edge relative grid items-center gap-10 py-14 lg:grid-cols-12 lg:gap-12 lg:py-20">
               <motion.div
                 initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.65, ease: EASE }}
                 className="lg:col-span-6"
               >
-                <h1 className="text-hero text-plz-ink" style={{ textWrap: 'balance' }}>
-                  Get booked, <span className="plz-serif italic">not</span> DM&apos;d.
+                <p className="text-[14px] font-semibold text-plz-body">
+                  Plazzaa <span className="text-plz-grey">for Merchants</span>
+                </p>
+                <h1 className="mt-4 text-hero text-plz-ink" style={{ textWrap: 'balance' }}>
+                  Bookings shouldn&apos;t live in your{' '}
+                  <span className="plz-serif italic text-plz-blue">DMs.</span>
                 </h1>
-                <p className="mt-6 max-w-[46ch] text-lead text-plz-ink/75">
-                  One Plazzaa link where customers see your services, pick a time that is
-                  actually free, and pay you by transfer.
+                <p className="mt-5 max-w-[48ch] text-lead text-plz-body">
+                  Create one simple booking link where customers can choose your services,
+                  pick an available time, and book.
                 </p>
 
                 <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                   <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
-                    <Link to="/signup" className="plz-btn plz-btn-ink w-full sm:w-auto">
+                    <Link to="/signup" className="plz-btn plz-btn-primary w-full sm:w-auto">
                       Create your booking link
                       <ArrowRight size={16} />
                     </Link>
                   </motion.div>
                   <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
-                    <a
-                      href="#how"
-                      className="plz-btn w-full border border-plz-ink/20 bg-white/70 text-plz-ink hover:border-plz-ink sm:w-auto"
-                    >
+                    <a href="#how" className="plz-btn plz-btn-quiet w-full sm:w-auto">
                       See how it works
                     </a>
                   </motion.div>
                 </div>
 
-                <p className="mt-6 text-[14px] text-plz-ink/70">
-                  Free while you set up · Customers pay you directly
+                <p className="mt-6 text-[14px] text-plz-body">
+                  Free while you set up · Customers pay you directly by transfer
                 </p>
               </motion.div>
 
-              <div className="lg:col-span-6">
-                <DMCollapse />
+              <div className="relative lg:col-span-6">
+                <p className="plz-script absolute -top-2 left-0 z-[2] hidden text-[24px] leading-tight text-plz-ink/70 lg:block">
+                  Wellness
+                  <br />
+                  Builds a
+                  <br />
+                  Brighter You
+                </p>
+                <div className="lg:pl-28">
+                  <DMCollapse />
+                </div>
               </div>
             </div>
           </section>
 
-          {/* -------------------------------------------------- how it works */}
-          <section id="how" className="py-18 md:py-30">
+          {/* ------------------------------------------------ dashboard preview */}
+          <section className="bg-[#F6F8FE] pb-16 md:pb-24">
             <div className="plz-edge">
               <Reveal>
-                <h2 className="mx-auto max-w-[20ch] text-center text-h2 text-plz-ink" style={{ textWrap: 'balance' }}>
-                  How it works
+                <DashboardMock />
+                <p className="mt-3 text-center text-[13px] text-plz-body">
+                  A preview of the merchant dashboard
+                </p>
+              </Reveal>
+            </div>
+          </section>
+
+          {/* -------------------------------------------------- how it works */}
+          <section id="how" className="py-18 md:py-24">
+            <div className="plz-edge">
+              <Reveal>
+                <h2 className="mx-auto max-w-[22ch] text-center text-h2 text-plz-ink" style={{ textWrap: 'balance' }}>
+                  From enquiry to <span className="plz-serif italic text-plz-blue">confirmed</span>.
                 </h2>
               </Reveal>
 
-              <div className="mt-14 flex flex-col gap-16 md:mt-18 md:gap-24">
+              <div className="mt-14 flex flex-col gap-16 md:mt-16 md:gap-20">
                 {STEPS.map((step, index) => {
                   const Mock = step.mock;
                   const flipped = index % 2 === 1;
                   return (
-                    <div
-                      key={step.title}
-                      className="grid items-center gap-8 md:grid-cols-12 md:gap-14"
-                    >
+                    <div key={step.title} className="grid items-center gap-8 md:grid-cols-12 md:gap-12">
                       <Reveal
                         y={30}
-                        className={
-                          'md:col-span-5 ' + (flipped ? 'md:order-2 md:col-start-8' : 'md:order-1')
-                        }
+                        className={'md:col-span-5 ' + (flipped ? 'md:order-2 md:col-start-8' : 'md:order-1')}
                       >
                         <span className="text-[14px] font-semibold text-plz-blue">
                           Step {index + 1}
@@ -187,14 +180,9 @@ export default function ForBusiness() {
                       <Reveal
                         y={38}
                         delay={0.08}
-                        className={
-                          'md:col-span-6 ' + (flipped ? 'md:order-1 md:col-start-1' : 'md:order-2 md:col-start-7')
-                        }
+                        className={'md:col-span-6 ' + (flipped ? 'md:order-1 md:col-start-1' : 'md:order-2 md:col-start-7')}
                       >
-                        <motion.div
-                          whileHover={{ y: -4 }}
-                          transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-                        >
+                        <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 320, damping: 26 }}>
                           <Mock />
                         </motion.div>
                       </Reveal>
@@ -205,16 +193,15 @@ export default function ForBusiness() {
             </div>
           </section>
 
-          {/* ------------------------------------------------ capability row */}
-          <section className="bg-plz-surface py-18 md:py-30">
+          {/* ------------------------------------------------ capability cards */}
+          <section className="bg-plz-surface py-18 md:py-24">
             <div className="plz-edge">
               <Reveal>
                 <h2 className="max-w-[24ch] text-h2 text-plz-ink" style={{ textWrap: 'balance' }}>
                   The details that stop double bookings.
                 </h2>
               </Reveal>
-
-              <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 md:mt-14">
+              <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {CARDS.map((card, index) => (
                   <Reveal key={card.title} delay={index * 0.06}>
                     <motion.article
@@ -232,8 +219,8 @@ export default function ForBusiness() {
           </section>
 
           {/* ------------------------------------------- one link everywhere */}
-          <section className="relative overflow-hidden bg-plz-ink py-18 text-white md:py-30">
-            <div className="plz-edge grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+          <section className="relative overflow-hidden bg-plz-ink py-18 text-white md:py-24">
+            <div className="plz-edge grid items-center gap-12 lg:grid-cols-12 lg:gap-14">
               <Reveal className="lg:col-span-6">
                 <h2 className="text-h2 text-white" style={{ textWrap: 'balance' }}>
                   Your customers already know where to find you.
@@ -260,27 +247,30 @@ export default function ForBusiness() {
 
               <Reveal delay={0.1} className="lg:col-span-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <HoverImage
+                  <motion.img
+                    whileHover={{ scale: 1.03 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 24 }}
                     src={images.salonOwner}
                     alt="A salon owner sectioning a client's hair for braids in Lagos"
-                    caption="Hair & braiding"
-                    meta="Books 40 slots a week"
-                    ratio="aspect-[4/5]"
+                    loading="lazy"
+                    className="aspect-[4/5] w-full rounded-visual object-cover"
                   />
                   <div className="flex flex-col gap-4 pt-8">
-                    <HoverImage
+                    <motion.img
+                      whileHover={{ scale: 1.03 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 24 }}
                       src={images.nailStudio}
                       alt="A nail technician finishing a gel manicure"
-                      caption="Nails"
-                      meta="Gel manicure · 45 mins"
-                      ratio="aspect-square"
+                      loading="lazy"
+                      className="aspect-square w-full rounded-visual object-cover"
                     />
-                    <HoverImage
+                    <motion.img
+                      whileHover={{ scale: 1.03 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 24 }}
                       src={images.restaurantKitchen}
                       alt="A cook plating during service in a Lagos restaurant kitchen"
-                      caption="Restaurants"
-                      meta="Tables, not phone calls"
-                      ratio="aspect-square"
+                      loading="lazy"
+                      className="aspect-square w-full rounded-visual object-cover"
                     />
                   </div>
                 </div>
@@ -289,12 +279,12 @@ export default function ForBusiness() {
           </section>
 
           {/* ------------------------------------------------------- trades */}
-          <section className="py-18 md:py-30">
+          <section className="py-18 md:py-24">
             <div className="plz-edge">
               <Reveal>
                 <h2 className="text-center text-h3 text-plz-ink">Built for appointment trades</h2>
               </Reveal>
-              <div className="mx-auto mt-10 grid max-w-[900px] grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="mx-auto mt-9 grid max-w-[900px] grid-cols-2 gap-3 sm:grid-cols-3">
                 {merchantTrades.map((trade, index) => {
                   const Icon = TRADE_ICONS[trade.id] || Hotel;
                   return (
@@ -314,17 +304,22 @@ export default function ForBusiness() {
             </div>
           </section>
 
-          {/* ------------------------------------------- coming soon: market */}
-          <section className="pb-18 md:pb-30">
+          {/* --------------------------------------------- coming soon: market */}
+          <section className="pb-18 md:pb-24">
             <div className="plz-edge">
-              <div className="overflow-hidden rounded-visual bg-plz-lavender">
+              <div className="relative overflow-hidden rounded-visual bg-plz-lavender">
+                <p className="plz-script absolute right-6 top-6 hidden text-right text-[22px] leading-tight text-plz-ink/50 lg:block">
+                  More People
+                  <br />
+                  More Possibilities
+                </p>
                 <div className="grid gap-10 p-8 md:grid-cols-12 md:p-14">
                   <Reveal className="md:col-span-6">
                     <span className="inline-flex rounded-full bg-white px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-plz-ink">
                       Coming soon
                     </span>
                     <h2 className="mt-5 max-w-[22ch] text-h2 text-plz-ink" style={{ textWrap: 'balance' }}>
-                      Today, manage your bookings. Tomorrow, get found.
+                      Today, manage your bookings. Tomorrow, get discovered too.
                     </h2>
                     <p className="mt-5 max-w-[48ch] text-lead text-plz-body">
                       We are building the Plazzaa marketplace, where customers search by what
@@ -347,13 +342,13 @@ export default function ForBusiness() {
 
                   <Reveal delay={0.1} className="md:col-span-6">
                     <div className="grid grid-cols-3 gap-2.5">
-                      {venues.slice(0, 9).map((venue) => (
+                      {Object.values(images).slice(0, 9).map((src, i) => (
                         <motion.img
-                          key={venue.id}
-                          src={venue.image}
-                          alt={venue.name}
+                          key={i}
+                          src={src}
+                          alt=""
                           loading="lazy"
-                          whileHover={{ scale: 1.04 }}
+                          whileHover={{ scale: 1.05 }}
                           transition={{ type: 'spring', stiffness: 320, damping: 24 }}
                           className="aspect-square w-full rounded-[10px] object-cover"
                         />
@@ -366,7 +361,7 @@ export default function ForBusiness() {
           </section>
 
           {/* -------------------------------------------------------- close */}
-          <section className="plz-edge pb-24 md:pb-30">
+          <section className="plz-edge pb-24 md:pb-28">
             <Reveal>
               <div className="flex flex-col items-start justify-between gap-8 rounded-visual bg-plz-ink p-8 text-white md:flex-row md:items-end md:p-14">
                 <h2 className="max-w-[18ch] text-h2 text-white" style={{ textWrap: 'balance' }}>
@@ -380,20 +375,28 @@ export default function ForBusiness() {
                     </Link>
                   </motion.div>
                   <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
-                    <Link
-                      to="/login"
-                      className="plz-btn w-full border border-white/25 text-white hover:border-white sm:w-auto"
-                    >
+                    <Link to="/login" className="plz-btn w-full border border-white/25 text-white hover:border-white sm:w-auto">
                       Log in
                     </Link>
                   </motion.div>
                 </div>
               </div>
             </Reveal>
+
+            <div className="mt-8 flex flex-col gap-2 border-t border-plz-line pt-6 sm:flex-row sm:items-baseline sm:justify-between">
+              <p className="text-[20px] font-bold tracking-[-0.03em] text-plz-ink">
+                Plazzaa
+                <span className="ml-3 text-[13px] font-semibold uppercase tracking-[0.1em] text-plz-body">
+                  A brighter way for businesses
+                </span>
+              </p>
+              <p className="text-[13px] tracking-[0.02em] text-plz-grey">
+                People &nbsp;·&nbsp; Places &nbsp;·&nbsp; Possibilities
+              </p>
+            </div>
           </section>
         </main>
 
-        <SiteFooter />
         <GatewayBar />
       </div>
     </SmoothScroll>

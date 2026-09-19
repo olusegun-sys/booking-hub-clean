@@ -1,67 +1,39 @@
 import { Link } from 'react-router-dom';
 
-const COLUMNS = [
-  {
-    title: 'Discover',
-    links: [
-      { label: 'Places', to: '/explore' },
-      { label: 'Experiences', to: '/explore#experiences' },
-      { label: 'Offers', to: '/explore#offers' },
-      { label: 'Plan with a budget', to: '/explore#budget' }
-    ]
-  },
-  {
-    title: 'For business',
-    links: [
-      { label: 'How it works', to: '/business#how' },
-      { label: 'Create your booking link', to: '/signup' },
-      { label: 'Log in', to: '/login' }
-    ]
-  },
-  {
-    title: 'Cities',
-    links: [
-      { label: 'Lagos', to: '/explore' },
-      { label: 'Abuja', to: '/explore' }
-    ]
-  }
-];
-
+/**
+ * The quiet end of the page, in the brand's own words rather than a sitemap:
+ * a wordmark, a line, and the three words that run through the Plazzaa
+ * material. Real links live in the navigation and the sticky gateway.
+ */
 export default function SiteFooter() {
   return (
-    <footer className="border-t border-plz-line bg-white pb-30 pt-16 md:pb-22 md:pt-18">
-      <div className="plz-edge">
-        <div className="grid gap-10 md:grid-cols-12">
-          <div className="md:col-span-5">
-            <p className="text-[21px] font-bold tracking-[-0.03em] text-plz-ink">Plazzaa</p>
-            <p className="mt-3 max-w-[38ch] text-[15px] text-plz-body">
-              One link where customers can see what a business offers, pick a time that is
-              actually free, and book it.
-            </p>
-          </div>
+    <footer className="border-t border-plz-line bg-white pb-28 pt-10 md:pb-24">
+      <div className="plz-edge flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[22px] font-bold tracking-[-0.03em] text-plz-ink">Plazzaa</p>
+          <p className="mt-1 text-[14px] text-plz-body">More places. Brighter days.</p>
+        </div>
 
-          {COLUMNS.map((column) => (
-            <nav key={column.title} className="md:col-span-2" aria-label={column.title}>
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-plz-grey">
-                {column.title}
-              </h2>
-              <ul className="mt-4 flex flex-col gap-3">
-                {column.links.map((link) => (
-                  <li key={link.label}>
-                    <Link to={link.to} className="text-[15px] text-plz-body hover:text-plz-ink">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+        <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+          {[
+            { to: '/explore', label: 'Discover' },
+            { to: '/explore#experiences', label: 'Experiences' },
+            { to: '/business', label: 'For business' },
+            { to: '/login', label: 'Log in' }
+          ].map((link) => (
+            <Link
+              key={link.label}
+              to={link.to}
+              className="text-[14px] text-plz-body transition-colors duration-micro ease-plz hover:text-plz-ink"
+            >
+              {link.label}
+            </Link>
           ))}
-        </div>
+        </nav>
 
-        <div className="mt-14 flex flex-col gap-2 border-t border-plz-line pt-6 text-[14px] text-plz-grey sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Plazzaa. Built in Lagos.</p>
-          <p>Payments happen between you and the business.</p>
-        </div>
+        <p className="text-[13px] tracking-[0.02em] text-plz-grey">
+          People &nbsp;·&nbsp; Places &nbsp;·&nbsp; Possibilities
+        </p>
       </div>
     </footer>
   );
