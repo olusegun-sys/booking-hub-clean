@@ -6,7 +6,7 @@
 import React from 'react';
 import { Toaster } from 'react-hot-toast';
 import './styles.css';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import HomePage from './HomePage';
 import BusinessLogin from './BusinessLogin';
 import BusinessDashboard from './BusinessDashboard';
@@ -153,8 +153,8 @@ function App() {
       React.createElement(Route, { path: '/', element: React.createElement(Landing, null) }),
       React.createElement(Route, { path: '/explore', element: React.createElement(Explore, null) }),
       React.createElement(Route, { path: '/business', element: React.createElement(ForBusiness, null) }),
-      React.createElement(Route, { path: '/hotels', element: React.createElement(HomePage, null) }),
-      React.createElement(Route, { path: '/become-host', element: React.createElement(HostLanding, null) }),
+      React.createElement(Route, { path: '/hotels', element: React.createElement(Navigate, { to: '/explore', replace: true }) }),
+      React.createElement(Route, { path: '/become-host', element: React.createElement(Navigate, { to: '/business', replace: true }) }),
       React.createElement(Route, { path: '/signup', element: React.createElement(BusinessSignup, null) }),
       React.createElement(Route, { path: '/login', element: React.createElement(PlazzaaLogin, null) }),
       React.createElement(Route, { path: '/dashboard', element: React.createElement(DashboardPage, null) }),

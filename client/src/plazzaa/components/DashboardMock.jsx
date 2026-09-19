@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import PlazzaaLogo from './PlazzaaLogo';
 import {
   BarChart3, Bell, CalendarDays, Check, ChevronRight, Copy, Filter, HelpCircle,
   LayoutDashboard, Link2, Search, Settings, Share2, SlidersHorizontal, Users, Wrench
@@ -90,11 +91,8 @@ export default function DashboardMock({ className = '' }) {
         {/* ------------------------------------------------------------ rail */}
         <aside className="hidden w-[188px] shrink-0 flex-col justify-between border-r border-plz-line bg-white py-5 lg:flex">
           <div>
-            <div className="flex items-center gap-2 px-5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-plz-blue text-[14px] font-bold text-white">
-                P
-              </span>
-              <span className="text-[17px] font-bold tracking-[-0.03em] text-plz-ink">Plazzaa</span>
+            <div className="flex items-center px-5">
+              <PlazzaaLogo size={22} />
             </div>
 
             <nav className="mt-6 flex flex-col gap-1 px-3">

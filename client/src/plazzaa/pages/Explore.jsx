@@ -11,6 +11,7 @@ import GatewayBar from '../components/GatewayBar';
 import { images, venues, venueById, naira, nairaShort } from '../lib/data';
 import { EASE } from '../lib/motion';
 
+import PlazzaaLogo from '../components/PlazzaaLogo';
 const CATEGORIES = [
   { id: 'food', label: 'Restaurants', icon: Utensils },
   { id: 'spa', label: 'Spa', icon: Sparkles },
@@ -488,11 +489,9 @@ export default function Explore() {
           {/* ------------------------------------------------------------ footer */}
           <section className="plz-edge mt-16 border-t border-plz-line pt-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-              <p className="text-[20px] font-bold tracking-[-0.03em] text-plz-ink">
-                Plazzaa
-                <span className="ml-3 text-[14px] font-normal text-plz-body">
-                  More places. Brighter days.
-                </span>
+              <p className="flex flex-wrap items-center gap-3">
+                <PlazzaaLogo size={26} />
+                <span className="text-[14px] text-plz-body">More places. Brighter days.</span>
               </p>
               <p className="text-[13px] tracking-[0.02em] text-plz-grey">
                 People &nbsp;·&nbsp; Places &nbsp;·&nbsp; Possibilities

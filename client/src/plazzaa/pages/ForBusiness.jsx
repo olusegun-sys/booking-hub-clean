@@ -11,6 +11,7 @@ import {
 import { images, merchantTrades } from '../lib/data';
 import { EASE } from '../lib/motion';
 
+import PlazzaaLogo from '../components/PlazzaaLogo';
 const STEPS = [
   {
     title: 'Add your services.',
@@ -48,6 +49,41 @@ const CARDS = [
   { title: 'Holds that expire', body: 'An unpaid booking releases its slot automatically, so your Saturday is never blocked by someone who vanished.', tone: 'bg-plz-cream' },
   { title: 'Per-service links', body: 'Send bridal makeup to one client and a quick manicure to another. Same page, different front door.', tone: 'bg-plz-blue-wash' },
   { title: 'Blocked afternoons', body: 'Going to a wedding? Block it once and nobody can book into it.', tone: 'bg-white border border-plz-line' }
+];
+
+// Carried over from the retired Booking Hub page so the commercial terms stay
+// in one place. Two line items are marked as not yet live, because the V1
+// product does not ship staff accounts or advanced analytics.
+const PLANS = [
+  {
+    name: 'Free',
+    price: '₦0',
+    cadence: '/month',
+    note: 'Everything you need to take your first bookings.',
+    features: ['50 bookings per month', 'Your booking link', 'Dashboard and bookings list', 'Email support'],
+    cta: 'Start free',
+    featured: false
+  },
+  {
+    name: 'Starter',
+    price: '₦30,000',
+    cadence: '/month',
+    note: 'For a shop that is booking most days.',
+    features: ['100 bookings per month', 'Everything in Free', 'Email notifications', 'Priority email support', 'Staff accounts'],
+    soon: ['Staff accounts'],
+    cta: 'Choose Starter',
+    featured: true
+  },
+  {
+    name: 'Pro',
+    price: '₦50,000',
+    cadence: '/month',
+    note: 'For a diary that is full and needs to stay that way.',
+    features: ['Unlimited bookings', 'Everything in Starter', 'Custom branding on your booking page', 'Support on email and WhatsApp', 'Advanced analytics'],
+    soon: ['Advanced analytics'],
+    cta: 'Choose Pro',
+    featured: false
+  }
 ];
 
 function Reveal({ children, delay = 0, y = 26, className = '' }) {
@@ -298,6 +334,103 @@ export default function ForBusiness() {
             </div>
           </section>
 
+
+          {/* ------------------------------------------------------- pricing */}
+          <section id="pricing" className="bg-plz-surface py-20 md:py-30">
+            <div className="plz-edge">
+              <Reveal>
+                <div className="mx-auto max-w-[620px] text-center">
+                  <h2 className="text-h2 text-plz-ink" style={{ textWrap: 'balance' }}>
+                    Start free. Pay when it&apos;s working.
+                  </h2>
+                  <p className="mt-4 text-lead text-plz-body">
+                    Every plan includes your booking link, your services and availability, and
+                    manual payment validation.
+                  </p>
+                </div>
+              </Reveal>
+
+              <div className="mx-auto mt-12 grid max-w-[1080px] gap-4 md:grid-cols-3 md:mt-16">
+                {PLANS.map((plan, index) => (
+                  <Reveal key={plan.name} delay={index * 0.07}>
+                    <motion.article
+                      whileHover={{ y: -6 }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+                      className={
+                        'flex h-full flex-col rounded-visual p-7 ' +
+                        (plan.featured
+                          ? 'bg-plz-ink text-white ring-1 ring-plz-ink'
+                          : 'border border-plz-line bg-white')
+                      }
+                    >
+                      {plan.featured && (
+                        <span className="mb-4 inline-flex w-fit rounded-full bg-plz-yellow px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-plz-ink">
+                          Most chosen
+                        </span>
+                      )}
+
+                      <h3 className={'text-h4 ' + (plan.featured ? 'text-white' : 'text-plz-ink')}>
+                        {plan.name}
+                      </h3>
+                      <p className="mt-3 flex items-baseline gap-1">
+                        <span className={'text-[38px] font-semibold leading-none tracking-[-0.03em] ' + (plan.featured ? 'text-white' : 'text-plz-ink')}>
+                          {plan.price}
+                        </span>
+                        <span className={'text-[14px] ' + (plan.featured ? 'text-white/60' : 'text-plz-body')}>
+                          {plan.cadence}
+                        </span>
+                      </p>
+                      <p className={'mt-3 text-[14px] ' + (plan.featured ? 'text-white/70' : 'text-plz-body')}>
+                        {plan.note}
+                      </p>
+
+                      <ul className="mt-6 flex flex-1 flex-col gap-3">
+                        {plan.features.map((feature) => {
+                          const notYet = (plan.soon || []).includes(feature);
+                          return (
+                            <li key={feature} className="flex items-start gap-2.5">
+                              <Check
+                                size={16}
+                                strokeWidth={2.5}
+                                className={'mt-0.5 shrink-0 ' + (plan.featured ? 'text-plz-yellow' : 'text-plz-blue')}
+                              />
+                              <span className={'text-[15px] ' + (plan.featured ? 'text-white/85' : 'text-plz-body')}>
+                                {feature}
+                                {notYet && (
+                                  <span className={'ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ' + (plan.featured ? 'bg-white/15 text-white/70' : 'bg-plz-surface text-plz-body')}>
+                                    Coming soon
+                                  </span>
+                                )}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+
+                      <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className="mt-8">
+                        <Link
+                          to="/signup"
+                          className={
+                            'plz-btn w-full ' +
+                            (plan.featured
+                              ? 'plz-btn-primary'
+                              : 'border border-plz-line-strong text-plz-ink hover:border-plz-ink')
+                          }
+                        >
+                          {plan.cta}
+                        </Link>
+                      </motion.div>
+                    </motion.article>
+                  </Reveal>
+                ))}
+              </div>
+
+              <p className="mt-8 text-center text-[14px] text-plz-body">
+                Customers always pay you directly by transfer. Plazzaa never touches their money.
+              </p>
+            </div>
+          </section>
+
           {/* --------------------------------------------- coming soon: market */}
           <section className="pb-20 md:pb-30">
             <div className="plz-edge">
@@ -378,9 +511,9 @@ export default function ForBusiness() {
             </Reveal>
 
             <div className="mt-8 flex flex-col gap-2 border-t border-plz-line pt-6 sm:flex-row sm:items-baseline sm:justify-between">
-              <p className="text-[20px] font-bold tracking-[-0.03em] text-plz-ink">
-                Plazzaa
-                <span className="ml-3 text-[13px] font-semibold uppercase tracking-[0.1em] text-plz-body">
+              <p className="flex flex-wrap items-center gap-3">
+                <PlazzaaLogo size={26} />
+                <span className="text-[13px] font-semibold uppercase tracking-[0.1em] text-plz-body">
                   A brighter way for businesses
                 </span>
               </p>

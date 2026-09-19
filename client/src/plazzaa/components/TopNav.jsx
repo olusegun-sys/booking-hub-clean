@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 import { EASE } from '../lib/motion';
 
+import PlazzaaLogo from './PlazzaaLogo';
 const LINKS = [
   { to: '/explore', label: 'Discover' },
   { to: '/explore#experiences', label: 'Experiences' },
@@ -48,10 +49,10 @@ export default function TopNav({ tone = 'light' }) {
       <div className="plz-edge flex h-[64px] min-w-0 items-center justify-between gap-3 md:h-[76px]">
         <Link
           to="/"
-          className="text-[19px] font-bold tracking-[-0.03em] text-plz-ink md:text-[21px]"
+          className="flex items-center"
           aria-label="Plazzaa home"
         >
-          Plazzaa
+          <PlazzaaLogo size={26} />
         </Link>
 
         <nav className="hidden items-center gap-9 md:flex" aria-label="Main">

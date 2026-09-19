@@ -5,6 +5,7 @@ import { ChevronDown, MapPin, Menu, Search, X } from 'lucide-react';
 import { cities } from '../lib/data';
 import { EASE } from '../lib/motion';
 
+import PlazzaaLogo from './PlazzaaLogo';
 const LINKS = [
   { to: '/explore', label: 'Discover', match: '/explore' },
   { to: '/explore#experiences', label: 'Experiences' },
@@ -32,8 +33,8 @@ export default function ExploreNav({ city, setCity }) {
   return (
     <header className="sticky top-0 z-40 border-b border-plz-line bg-white/95 backdrop-blur-sm">
       <div className="plz-edge flex h-[64px] items-center gap-6 md:h-[72px]">
-        <Link to="/" className="shrink-0 text-[20px] font-bold tracking-[-0.03em] text-plz-ink">
-          Plazzaa
+        <Link to="/" className="shrink-0" aria-label="Plazzaa home">
+          <PlazzaaLogo size={26} />
         </Link>
 
         <nav className="hidden min-w-0 items-center gap-7 md:flex" aria-label="Marketplace">

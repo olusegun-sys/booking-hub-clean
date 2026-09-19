@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 
+import PlazzaaLogo from './PlazzaaLogo';
 /**
  * The quiet end of the page, in the brand's own words rather than a sitemap:
  * a wordmark, a line, and the three words that run through the Plazzaa
@@ -10,7 +11,7 @@ export default function SiteFooter() {
     <footer className="border-t border-plz-line bg-white pb-28 pt-10 md:pb-24">
       <div className="plz-edge flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[22px] font-bold tracking-[-0.03em] text-plz-ink">Plazzaa</p>
+          <PlazzaaLogo size={28} />
           <p className="mt-1 text-[14px] text-plz-body">More places. Brighter days.</p>
         </div>
 

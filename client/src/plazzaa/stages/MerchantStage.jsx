@@ -183,8 +183,19 @@ function Scene({ progress }) {
               style={{ opacity: dashOpacity, scale: dashScale }}
               className="absolute inset-0 z-[6] flex items-center justify-center"
             >
-              <div className="w-[min(96%,640px)]">
-                <DashboardMock compact />
+              <div className="w-[min(96%,620px)]">
+                {/* A product shot, not a squeezed responsive layout: the screen
+                    renders at its real desktop width and is scaled down as a
+                    whole, then cropped and faded like a photograph of it. */}
+                <div className="relative h-[290px] overflow-hidden rounded-[18px] lg:h-[368px]">
+                  <div className="w-[1120px] origin-top-left scale-[0.553]">
+                    <DashboardMock />
+                  </div>
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-plz-ink via-plz-ink/70 to-transparent"
+                  />
+                </div>
                 <p className="mt-3 text-center text-[12px] text-white/55">
                   Merchant dashboard preview
                 </p>

@@ -6,6 +6,7 @@ import API_BASE from '../../config';
 import { images } from '../lib/data';
 import { EASE } from '../lib/motion';
 
+import PlazzaaLogo from '../components/PlazzaaLogo';
 /**
  * Merchant sign-in.
  *
@@ -66,8 +67,8 @@ export default function Login() {
         {/* ------------------------------------------------------------ form */}
         <div className="flex flex-col px-5 py-8 sm:px-10 lg:px-16 xl:px-24">
           <div className="flex items-center justify-between">
-            <Link to="/" className="text-[20px] font-bold tracking-[-0.03em] text-plz-ink">
-              Plazzaa
+            <Link to="/" aria-label="Plazzaa home">
+              <PlazzaaLogo size={26} />
             </Link>
             <Link
               to="/"
