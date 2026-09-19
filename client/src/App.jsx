@@ -23,6 +23,7 @@ import './plazzaa/plazzaa.css';
 import Landing from './plazzaa/pages/Landing';
 import Explore from './plazzaa/pages/Explore';
 import ForBusiness from './plazzaa/pages/ForBusiness';
+import PlazzaaLogin from './plazzaa/pages/Login';
 
 var _useState = React.useState;
 var _useEffect = React.useEffect;
@@ -155,7 +156,7 @@ function App() {
       React.createElement(Route, { path: '/hotels', element: React.createElement(HomePage, null) }),
       React.createElement(Route, { path: '/become-host', element: React.createElement(HostLanding, null) }),
       React.createElement(Route, { path: '/signup', element: React.createElement(BusinessSignup, null) }),
-      React.createElement(Route, { path: '/login', element: React.createElement(LoginPage, null) }),
+      React.createElement(Route, { path: '/login', element: React.createElement(PlazzaaLogin, null) }),
       React.createElement(Route, { path: '/dashboard', element: React.createElement(DashboardPage, null) }),
       React.createElement(Route, { path: '/book/:businessSlug', element: React.createElement(UnifiedBookingPage, null) }),
       React.createElement(Route, { path: '/owner/:businessId/properties', element: React.createElement(OwnerPropertiesPage, null) }),

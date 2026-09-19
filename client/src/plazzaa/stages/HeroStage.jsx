@@ -35,22 +35,22 @@ import useMediaQuery from '../lib/useMediaQuery';
 // hard against the edges and bleed off them. Index 0 is the focal image — the
 // one that later leaves the grid and opens across the screen.
 const SCENE_DESKTOP = [
-  { id: 'kofa', x: 0.10, y: 0.33, w: 262, ratio: 'aspect-[4/5]', focal: true },
-  { id: 'suya', x: 0.245, y: 0.19, w: 176, ratio: 'aspect-square' },
-  { id: 'ilaje', x: 0.085, y: 0.75, w: 250, ratio: 'aspect-[3/2]' },
-  { id: 'ile', x: 0.27, y: 0.82, w: 170, ratio: 'aspect-[4/5]' },
-  { id: 'ruwa', x: 0.90, y: 0.30, w: 240, ratio: 'aspect-[4/5]' },
-  { id: 'maitama-sky', x: 0.745, y: 0.18, w: 200, ratio: 'aspect-[3/2]' },
-  { id: 'court24', x: 0.925, y: 0.75, w: 230, ratio: 'aspect-[3/2]' },
-  { id: 'adio', x: 0.715, y: 0.855, w: 175, ratio: 'aspect-square' }
+  { id: 'kofa', x: 0.115, y: 0.34, w: 188, ratio: 'aspect-[4/5]', focal: true },
+  { id: 'suya', x: 0.255, y: 0.20, w: 128, ratio: 'aspect-square' },
+  { id: 'ilaje', x: 0.10, y: 0.755, w: 180, ratio: 'aspect-[3/2]' },
+  { id: 'ile', x: 0.265, y: 0.83, w: 124, ratio: 'aspect-[4/5]' },
+  { id: 'ruwa', x: 0.885, y: 0.315, w: 174, ratio: 'aspect-[4/5]' },
+  { id: 'maitama-sky', x: 0.745, y: 0.195, w: 146, ratio: 'aspect-[3/2]' },
+  { id: 'court24', x: 0.905, y: 0.755, w: 168, ratio: 'aspect-[3/2]' },
+  { id: 'adio', x: 0.735, y: 0.845, w: 128, ratio: 'aspect-square' }
 ];
 
 // Phones carry the same choreography with four prints and shorter travel.
 const SCENE_MOBILE = [
-  { id: 'kofa', x: 0.26, y: 0.21, w: 150, ratio: 'aspect-[4/5]', focal: true },
-  { id: 'ruwa', x: 0.82, y: 0.26, w: 124, ratio: 'aspect-[4/5]' },
-  { id: 'ilaje', x: 0.20, y: 0.82, w: 148, ratio: 'aspect-[3/2]' },
-  { id: 'maitama-sky', x: 0.82, y: 0.80, w: 126, ratio: 'aspect-square' }
+  { id: 'kofa', x: 0.27, y: 0.215, w: 112, ratio: 'aspect-[4/5]', focal: true },
+  { id: 'ruwa', x: 0.80, y: 0.26, w: 96, ratio: 'aspect-[4/5]' },
+  { id: 'ilaje', x: 0.22, y: 0.815, w: 116, ratio: 'aspect-[3/2]' },
+  { id: 'maitama-sky', x: 0.80, y: 0.80, w: 100, ratio: 'aspect-square' }
 ];
 
 // Supporting prints gather on a ring behind the focal image rather than

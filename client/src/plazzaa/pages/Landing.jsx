@@ -40,7 +40,7 @@ export default function Landing() {
         </main>
 
         <SiteFooter />
-        <GatewayBar />
+        <GatewayBar revealAfter="#hero" />
       </div>
     </SmoothScroll>
   );

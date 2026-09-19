@@ -4,7 +4,6 @@ import { ArrowRight, Check, Scissors, Sparkles, Hand, Brush, Utensils, Hotel } f
 import SmoothScroll from '../lib/SmoothScroll';
 import TopNav from '../components/TopNav';
 import GatewayBar from '../components/GatewayBar';
-import DMCollapse from '../components/DMCollapse';
 import DashboardMock from '../components/DashboardMock';
 import {
   ServicesMock, AvailabilityMock, LinkMock, BookingMock, ValidateMock
@@ -81,27 +80,27 @@ export default function ForBusiness() {
 
         <main className="pt-[64px] md:pt-[76px]">
           {/* ---------------------------------------------------------- hero */}
-          <section className="relative overflow-hidden bg-[#F6F8FE]">
-            <div className="plz-edge relative grid items-center gap-10 py-14 lg:grid-cols-12 lg:gap-12 lg:py-20">
+          <section className="bg-white pt-16 md:pt-24">
+            <div className="plz-edge">
               <motion.div
-                initial={{ opacity: 0, y: 22 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.65, ease: EASE }}
-                className="lg:col-span-6"
+                className="mx-auto max-w-[760px] text-center"
               >
-                <p className="text-[14px] font-semibold text-plz-body">
-                  Plazzaa <span className="text-plz-grey">for Merchants</span>
+                <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-plz-body">
+                  Plazzaa for merchants
                 </p>
-                <h1 className="mt-4 text-hero text-plz-ink" style={{ textWrap: 'balance' }}>
+                <h1 className="mt-6 text-hero text-plz-ink" style={{ textWrap: 'balance' }}>
                   Bookings shouldn&apos;t live in your{' '}
                   <span className="plz-serif italic text-plz-blue">DMs.</span>
                 </h1>
-                <p className="mt-5 max-w-[48ch] text-lead text-plz-body">
-                  Create one simple booking link where customers can choose your services,
-                  pick an available time, and book.
+                <p className="mx-auto mt-6 max-w-[54ch] text-lead text-plz-body">
+                  Create one simple booking link where customers choose your services, pick an
+                  available time, and book.
                 </p>
 
-                <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
                     <Link to="/signup" className="plz-btn plz-btn-primary w-full sm:w-auto">
                       Create your booking link
@@ -115,40 +114,35 @@ export default function ForBusiness() {
                   </motion.div>
                 </div>
 
-                <p className="mt-6 text-[14px] text-plz-body">
+                <p className="mt-7 text-[14px] text-plz-body">
                   Free while you set up · Customers pay you directly by transfer
                 </p>
               </motion.div>
-
-              <div className="relative lg:col-span-6">
-                <p className="plz-script absolute -top-2 left-0 z-[2] hidden text-[24px] leading-tight text-plz-ink/70 lg:block">
-                  Wellness
-                  <br />
-                  Builds a
-                  <br />
-                  Brighter You
-                </p>
-                <div className="lg:pl-28">
-                  <DMCollapse />
-                </div>
-              </div>
             </div>
           </section>
 
-          {/* ------------------------------------------------ dashboard preview */}
-          <section className="bg-[#F6F8FE] pb-16 md:pb-24">
-            <div className="plz-edge">
-              <Reveal>
+          {/* --------------------------------------- the product, as the hero */}
+          <section className="relative bg-white pb-20 pt-14 md:pb-28 md:pt-18">
+            {/* a soft field behind the screen so it sits in the page rather than on it */}
+            <div className="absolute inset-x-0 bottom-0 top-[22%] bg-[#F6F8FE]" aria-hidden="true" />
+            <div className="plz-edge relative">
+              <motion.div
+                initial={{ opacity: 0, y: 34 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-8%' }}
+                transition={{ duration: 0.8, ease: EASE }}
+                className="mx-auto max-w-[1180px]"
+              >
                 <DashboardMock />
-                <p className="mt-3 text-center text-[13px] text-plz-body">
-                  A preview of the merchant dashboard
-                </p>
-              </Reveal>
+              </motion.div>
+              <p className="mt-5 text-center text-[13px] text-plz-body">
+                Your dashboard: every booking, its payment state, and the link that brought it in.
+              </p>
             </div>
           </section>
 
           {/* -------------------------------------------------- how it works */}
-          <section id="how" className="py-18 md:py-24">
+          <section id="how" className="py-20 md:py-30">
             <div className="plz-edge">
               <Reveal>
                 <h2 className="mx-auto max-w-[22ch] text-center text-h2 text-plz-ink" style={{ textWrap: 'balance' }}>
@@ -156,7 +150,7 @@ export default function ForBusiness() {
                 </h2>
               </Reveal>
 
-              <div className="mt-14 flex flex-col gap-16 md:mt-16 md:gap-20">
+              <div className="mt-16 flex flex-col gap-20 md:mt-20 md:gap-28">
                 {STEPS.map((step, index) => {
                   const Mock = step.mock;
                   const flipped = index % 2 === 1;
@@ -194,7 +188,7 @@ export default function ForBusiness() {
           </section>
 
           {/* ------------------------------------------------ capability cards */}
-          <section className="bg-plz-surface py-18 md:py-24">
+          <section className="bg-plz-surface py-20 md:py-30">
             <div className="plz-edge">
               <Reveal>
                 <h2 className="max-w-[24ch] text-h2 text-plz-ink" style={{ textWrap: 'balance' }}>
@@ -219,7 +213,7 @@ export default function ForBusiness() {
           </section>
 
           {/* ------------------------------------------- one link everywhere */}
-          <section className="relative overflow-hidden bg-plz-ink py-18 text-white md:py-24">
+          <section className="relative overflow-hidden bg-plz-ink py-20 text-white md:py-30">
             <div className="plz-edge grid items-center gap-12 lg:grid-cols-12 lg:gap-14">
               <Reveal className="lg:col-span-6">
                 <h2 className="text-h2 text-white" style={{ textWrap: 'balance' }}>
@@ -279,7 +273,7 @@ export default function ForBusiness() {
           </section>
 
           {/* ------------------------------------------------------- trades */}
-          <section className="py-18 md:py-24">
+          <section className="py-20 md:py-30">
             <div className="plz-edge">
               <Reveal>
                 <h2 className="text-center text-h3 text-plz-ink">Built for appointment trades</h2>
@@ -305,7 +299,7 @@ export default function ForBusiness() {
           </section>
 
           {/* --------------------------------------------- coming soon: market */}
-          <section className="pb-18 md:pb-24">
+          <section className="pb-20 md:pb-30">
             <div className="plz-edge">
               <div className="relative overflow-hidden rounded-visual bg-plz-lavender">
                 <p className="plz-script absolute right-6 top-6 hidden text-right text-[22px] leading-tight text-plz-ink/50 lg:block">
