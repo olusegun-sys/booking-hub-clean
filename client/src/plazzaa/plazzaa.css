@@ -61,7 +61,11 @@
     line-height: inherit;
     color: inherit;
     background: none;
-    border: 0;
+    /* `0 solid`, not `0`: the bare form also sets border-style to none, and no
+       Tailwind utility sets border-style, so a `border border-plz-line` on a
+       control would compute to nothing at all. Leaving the style in place lets
+       the utilities decide the width. */
+    border: 0 solid #E4E4E7;
     border-radius: 0;
     padding: 0;
     margin: 0;
@@ -80,7 +84,7 @@
     font-size: inherit;
     color: #18181B;
     background: transparent;
-    border: 0;
+    border: 0 solid #E4E4E7;
     border-radius: 0;
     padding: 0;
     width: auto;
@@ -237,33 +241,15 @@
     object-fit: cover;
   }
 
-  /* The legacy stylesheet restyles every control on the page:
-       button, .btn        -> inline-flex, its own padding, radius and font
-       input, textarea     -> its own padding, 1.5px border, width:100%
-     Inside Plazzaa these are composed from utilities instead, so the legacy
-     baseline has to be handed back. The `html` prefix puts this at two element
-     selectors (0,0,2): enough to beat those bare element rules, and still less
-     than any single utility class (0,1,0), so every Tailwind class written on a
-     control continues to win. Deliberately not !important for that reason. */
-  html :where(.plz-root) button,
-  html :where(.plz-root) input,
-  html :where(.plz-root) textarea,
-  html :where(.plz-root) select {
-    font: inherit;
-    color: inherit;
-    padding: 0;
-    border: none;
-    border-radius: 0;
-    background: none;
-    line-height: inherit;
-    text-align: inherit;
-    width: auto;
-    transition: none;
-  }
-
+  /* The base layer above already neutralises the legacy padding, border and
+     font on controls. What it does not cover is `button, .btn { display:
+     inline-flex }` from the legacy sheet, which turned a stat card's stacked
+     contents into a row. The `html` prefix puts this at two element selectors
+     (0,0,2): enough to beat that bare element rule, still less than any single
+     utility class (0,1,0), so a `flex` written on a button continues to win. */
   html :where(.plz-root) button {
     display: inline-block;
-    cursor: pointer;
+    text-align: inherit;
     gap: 0;
   }
 
