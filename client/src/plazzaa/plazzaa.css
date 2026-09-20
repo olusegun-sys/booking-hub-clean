@@ -237,6 +237,49 @@
     object-fit: cover;
   }
 
+  /* The legacy stylesheet restyles every control on the page:
+       button, .btn        -> inline-flex, its own padding, radius and font
+       input, textarea     -> its own padding, 1.5px border, width:100%
+     Inside Plazzaa these are composed from utilities instead, so the legacy
+     baseline has to be handed back. The `html` prefix puts this at two element
+     selectors (0,0,2): enough to beat those bare element rules, and still less
+     than any single utility class (0,1,0), so every Tailwind class written on a
+     control continues to win. Deliberately not !important for that reason. */
+  html :where(.plz-root) button,
+  html :where(.plz-root) input,
+  html :where(.plz-root) textarea,
+  html :where(.plz-root) select {
+    font: inherit;
+    color: inherit;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    line-height: inherit;
+    text-align: inherit;
+    width: auto;
+    transition: none;
+  }
+
+  html :where(.plz-root) button {
+    display: inline-block;
+    cursor: pointer;
+    gap: 0;
+  }
+
+  /* The legacy sheet also enforces
+       @media (max-width: 768px) { button { min-height: 44px !important } }
+     which stretched a 24px-tall toggle switch into a circle. Plazzaa's controls
+     size themselves (h-9/h-10/h-11 buttons, an explicit switch), so hand that
+     back too — !important is needed only because the rule being undone used it,
+     and the extra element selector is what wins the tie. */
+  @media (max-width: 768px) {
+    html :where(.plz-root) button,
+    html :where(.plz-root) .btn {
+      min-height: 0 !important;
+    }
+  }
+
   /* Horizontal card rails (marketplace rows) */
   .plz-rail {
     display: flex;

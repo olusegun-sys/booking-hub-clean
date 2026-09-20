@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import HomePage from './HomePage';
 import BusinessLogin from './BusinessLogin';
 import BusinessDashboard from './BusinessDashboard';
+import MerchantDashboard from './plazzaa/dashboard/MerchantDashboard';
 import UnifiedBookingPage from './UnifiedBookingPage';
 import OwnerPropertiesPage from './OwnerPropertiesPage';
 import AdminDashboard from './AdminDashboard';
@@ -157,7 +158,8 @@ function App() {
       React.createElement(Route, { path: '/become-host', element: React.createElement(Navigate, { to: '/business', replace: true }) }),
       React.createElement(Route, { path: '/signup', element: React.createElement(BusinessSignup, null) }),
       React.createElement(Route, { path: '/login', element: React.createElement(PlazzaaLogin, null) }),
-      React.createElement(Route, { path: '/dashboard', element: React.createElement(DashboardPage, null) }),
+      React.createElement(Route, { path: '/dashboard', element: React.createElement(MerchantDashboard, null) }),
+      React.createElement(Route, { path: '/dashboard/legacy', element: React.createElement(DashboardPage, null) }),
       React.createElement(Route, { path: '/book/:businessSlug', element: React.createElement(UnifiedBookingPage, null) }),
       React.createElement(Route, { path: '/owner/:businessId/properties', element: React.createElement(OwnerPropertiesPage, null) }),
       React.createElement(Route, { path: '/admin', element: React.createElement(AdminRoute, null) })
