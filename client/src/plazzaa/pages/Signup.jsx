@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2 } from 'lucide-react';
 import API_BASE from '../../config';
-import { images, merchantTrades } from '../lib/data';
+import { images } from '../lib/data';
 import { EASE } from '../lib/motion';
 import PlazzaaLogo from '../components/PlazzaaLogo';
+import TradePicker from '../components/TradePicker';
+import AccountCreated from '../components/AccountCreated';
 
 /**
  * Merchant sign-up.
@@ -49,6 +51,7 @@ export default function Signup() {
   const [step, setStep] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [created, setCreated] = useState(null);
   const [formError, setFormError] = useState('');
   const [errors, setErrors] = useState({});
 
@@ -110,10 +113,11 @@ export default function Signup() {
       .then((response) => response.json())
       .then((data) => {
         if (data.success && data.business) {
-          // Registration signs the merchant in, so go straight to setup.
+          // Registration signs the merchant in; the confirmation plays, then
+          // hands over to the dashboard.
           if (data.token) localStorage.setItem('auth_token', data.token);
           localStorage.setItem('currentBusiness', JSON.stringify(data.business));
-          window.location.href = '/dashboard';
+          setCreated(data.business);
           return;
         }
         setFormError(data.error || 'We could not create your account. Please try again.');
@@ -126,6 +130,15 @@ export default function Signup() {
   };
 
   const next = () => { if (validate(0)) { setStep(1); setFormError(''); } };
+
+  if (created) {
+    return (
+      <AccountCreated
+        businessName={created.name}
+        onDone={() => { window.location.href = '/dashboard'; }}
+      />
+    );
+  }
 
   return (
     <div className="plz-root min-h-screen bg-white">
@@ -201,31 +214,13 @@ export default function Signup() {
 
                     <div>
                       <Label>What do you do?</Label>
-                      <div className="mt-2.5 flex flex-wrap gap-2">
-                        {merchantTrades.map((trade) => {
-                          const active = form.businessType === trade.id;
-                          return (
-                            <motion.button
-                              key={trade.id}
-                              type="button"
-                              whileTap={{ scale: 0.97 }}
-                              onClick={() => {
-                                setForm((f) => ({ ...f, businessType: trade.id }));
-                                setErrors((p) => ({ ...p, businessType: '' }));
-                              }}
-                              aria-pressed={active}
-                              className={
-                                'rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors duration-micro ease-plz ' +
-                                (active
-                                  ? 'border-plz-blue bg-plz-blue text-white'
-                                  : 'border-plz-line bg-white text-plz-body hover:border-plz-line-strong hover:text-plz-ink')
-                              }
-                            >
-                              {trade.label}
-                            </motion.button>
-                          );
-                        })}
-                      </div>
+                      <TradePicker
+                        value={form.businessType}
+                        onChange={(id) => {
+                          setForm((f) => ({ ...f, businessType: id }));
+                          setErrors((p) => ({ ...p, businessType: '' }));
+                        }}
+                      />
                       <FieldError>{errors.businessType}</FieldError>
                     </div>
 

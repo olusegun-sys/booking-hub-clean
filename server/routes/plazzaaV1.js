@@ -15,6 +15,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { buildSlots } = require('../services/availabilityService');
+const createV1Store = require('../services/v1Store');
 
 const DEFAULT_HOLD_MINUTES = 30;
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
@@ -97,27 +98,16 @@ module.exports = function createPlazzaaV1Router(deps) {
   // Shared helpers
   // ----------------------------------------------------------
 
+  // Reads and writes the V1 entities, over the real tables when the migration
+  // has been applied and over the legacy ones when it has not.
+  const store = createV1Store(supabase);
+
   async function expireStaleBookings() {
-    const { error } = await supabase.rpc('expire_stale_bookings');
-    if (error) console.error('[Plazzaa V1] expire sweep failed:', error.message);
-  }
-
-  async function uniqueServiceSlug(businessId, name, ignoreServiceId) {
-    const base = slugify(name) || 'service';
-    const { data } = await supabase
-      .from('services')
-      .select('id, slug')
-      .eq('business_id', businessId);
-
-    const taken = (data || [])
-      .filter(function (row) { return row.id !== ignoreServiceId; })
-      .map(function (row) { return row.slug; });
-
-    if (taken.indexOf(base) === -1) return base;
-    for (let n = 2; n < 500; n++) {
-      if (taken.indexOf(base + '-' + n) === -1) return base + '-' + n;
+    try {
+      await store.expireStale();
+    } catch (err) {
+      console.error('[Plazzaa V1] expire sweep failed:', err.message);
     }
-    return base + '-' + Date.now();
   }
 
   async function findBusinessBySlug(slug) {
@@ -131,13 +121,7 @@ module.exports = function createPlazzaaV1Router(deps) {
   }
 
   async function getBankAccount(businessId) {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .select('bank_name, account_number, account_name, updated_at')
-      .eq('business_id', businessId)
-      .maybeSingle();
-    if (error) throw error;
-    return data;
+    return store.getBankAccount(businessId);
   }
 
   // ----------------------------------------------------------
@@ -145,13 +129,8 @@ module.exports = function createPlazzaaV1Router(deps) {
   // ----------------------------------------------------------
 
   router.get('/businesses/:businessId/services', authenticateBusiness, wrap(async function (req, res) {
-    const { data, error } = await supabase
-      .from('services')
-      .select(SERVICE_FIELDS)
-      .eq('business_id', req.params.businessId)
-      .order('created_at', { ascending: true });
-    if (error) throw error;
-    res.json({ success: true, services: data || [] });
+    const services = await store.listServices(req.params.businessId);
+    res.json({ success: true, services: services });
   }));
 
   router.post('/businesses/:businessId/services', authenticateBusiness, wrap(async function (req, res) {
@@ -166,23 +145,16 @@ module.exports = function createPlazzaaV1Router(deps) {
     const capacity = body.capacity === undefined ? 1 : parseInt(body.capacity, 10);
     if (!Number.isFinite(capacity) || capacity <= 0) return fail(res, 400, 'Capacity must be at least 1');
 
-    const { data, error } = await supabase
-      .from('services')
-      .insert({
-        business_id: businessId,
-        name: String(body.name).trim(),
-        description: body.description ? String(body.description).trim() : null,
-        price: price,
-        duration_minutes: duration,
-        capacity: capacity,
-        slug: await uniqueServiceSlug(businessId, body.name),
-        is_active: body.is_active === undefined ? true : Boolean(body.is_active)
-      })
-      .select(SERVICE_FIELDS)
-      .single();
-    if (error) throw error;
+    const service = await store.createService(businessId, {
+      name: String(body.name).trim(),
+      description: body.description ? String(body.description).trim() : null,
+      price: price,
+      duration_minutes: duration,
+      capacity: capacity,
+      is_active: body.is_active === undefined ? true : Boolean(body.is_active)
+    });
 
-    res.status(201).json({ success: true, service: data });
+    res.status(201).json({ success: true, service: service });
   }));
 
   router.put('/businesses/:businessId/services/:serviceId', authenticateBusiness, wrap(async function (req, res) {
@@ -193,7 +165,6 @@ module.exports = function createPlazzaaV1Router(deps) {
     if (body.name !== undefined) {
       if (!String(body.name).trim()) return fail(res, 400, 'Service name cannot be empty');
       patch.name = String(body.name).trim();
-      patch.slug = await uniqueServiceSlug(businessId, body.name, req.params.serviceId);
     }
     if (body.description !== undefined) patch.description = body.description ? String(body.description).trim() : null;
     if (body.price !== undefined) {
@@ -213,53 +184,20 @@ module.exports = function createPlazzaaV1Router(deps) {
     }
     if (body.is_active !== undefined) patch.is_active = Boolean(body.is_active);
 
-    const { data, error } = await supabase
-      .from('services')
-      .update(patch)
-      .eq('id', req.params.serviceId)
-      .eq('business_id', businessId)
-      .select(SERVICE_FIELDS)
-      .maybeSingle();
-    if (error) throw error;
-    if (!data) return fail(res, 404, 'Service not found');
+    delete patch.updated_at;
+    const service = await store.updateService(businessId, req.params.serviceId, patch);
+    if (!service) return fail(res, 404, 'Service not found');
 
-    res.json({ success: true, service: data });
+    res.json({ success: true, service: service });
   }));
 
   router.delete('/businesses/:businessId/services/:serviceId', authenticateBusiness, wrap(async function (req, res) {
     const serviceId = req.params.serviceId;
 
-    // A service with live bookings is deactivated, never deleted,
-    // so existing customers keep their booking history.
-    const { data: live, error: liveError } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('service_id', serviceId)
-      .in('status', ACTIVE_STATUSES)
-      .limit(1);
-    if (liveError) throw liveError;
-
-    if (live && live.length) {
-      const { data, error } = await supabase
-        .from('services')
-        .update({ is_active: false, updated_at: new Date().toISOString() })
-        .eq('id', serviceId)
-        .eq('business_id', req.params.businessId)
-        .select(SERVICE_FIELDS)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return fail(res, 404, 'Service not found');
-      return res.json({ success: true, deactivated: true, service: data });
-    }
-
-    const { error } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', serviceId)
-      .eq('business_id', req.params.businessId);
-    if (error) throw error;
-
-    res.json({ success: true, deleted: true });
+    // A service with bookings is deactivated, never deleted, so existing
+    // customers keep their booking history.
+    const result = await store.deleteService(req.params.businessId, serviceId);
+    res.json({ success: true, ...result });
   }));
 
   // ----------------------------------------------------------
@@ -281,20 +219,13 @@ module.exports = function createPlazzaaV1Router(deps) {
     if (!/^\d{10}$/.test(accountNumber)) return fail(res, 400, 'Account number must be 10 digits');
     if (!accountName) return fail(res, 400, 'Account name is required');
 
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .upsert({
-        business_id: req.params.businessId,
-        bank_name: bankName,
-        account_number: accountNumber,
-        account_name: accountName,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'business_id' })
-      .select('bank_name, account_number, account_name, updated_at')
-      .single();
-    if (error) throw error;
+    const account = await store.saveBankAccount(req.params.businessId, {
+      bank_name: bankName,
+      account_number: accountNumber,
+      account_name: accountName
+    });
 
-    res.json({ success: true, bankAccount: data });
+    res.json({ success: true, bankAccount: account });
   }));
 
   // ----------------------------------------------------------
@@ -355,20 +286,11 @@ module.exports = function createPlazzaaV1Router(deps) {
   // ----------------------------------------------------------
 
   router.get('/businesses/:businessId/blocked-slots', authenticateBusiness, wrap(async function (req, res) {
-    let query = supabase
-      .from('availability')
-      .select('id, business_id, service_id, start_datetime, end_datetime, reason, is_available')
-      .eq('business_id', req.params.businessId)
-      .eq('is_available', false)
-      .not('start_datetime', 'is', null)
-      .order('start_datetime', { ascending: true });
-
-    if (req.query.from) query = query.gte('start_datetime', new Date(req.query.from).toISOString());
-    if (req.query.to) query = query.lte('start_datetime', new Date(req.query.to).toISOString());
-
-    const { data, error } = await query;
-    if (error) throw error;
-    res.json({ success: true, blockedSlots: data || [] });
+    const blockedSlots = await store.listBlockedSlots(req.params.businessId, {
+      from: req.query.from,
+      to: req.query.to
+    });
+    res.json({ success: true, blockedSlots: blockedSlots });
   }));
 
   router.post('/businesses/:businessId/blocked-slots', authenticateBusiness, wrap(async function (req, res) {
@@ -381,33 +303,18 @@ module.exports = function createPlazzaaV1Router(deps) {
     }
     if (end <= start) return fail(res, 400, 'The end time must be after the start time');
 
-    const { data, error } = await supabase
-      .from('availability')
-      .insert({
-        business_id: req.params.businessId,
-        service_id: body.service_id || null,
-        date: start.toISOString().slice(0, 10),
-        start_time: start.toISOString().slice(11, 19),
-        end_time: end.toISOString().slice(11, 19),
-        start_datetime: start.toISOString(),
-        end_datetime: end.toISOString(),
-        is_available: false,
-        reason: body.reason ? String(body.reason).trim() : null
-      })
-      .select('id, business_id, service_id, start_datetime, end_datetime, reason')
-      .single();
-    if (error) throw error;
+    const blockedSlot = await store.blockSlot(req.params.businessId, {
+      service_id: body.service_id || null,
+      start_datetime: start.toISOString(),
+      end_datetime: end.toISOString(),
+      reason: body.reason ? String(body.reason).trim() : null
+    });
 
-    res.status(201).json({ success: true, blockedSlot: data });
+    res.status(201).json({ success: true, blockedSlot: blockedSlot });
   }));
 
   router.delete('/businesses/:businessId/blocked-slots/:id', authenticateBusiness, wrap(async function (req, res) {
-    const { error } = await supabase
-      .from('availability')
-      .delete()
-      .eq('id', req.params.id)
-      .eq('business_id', req.params.businessId);
-    if (error) throw error;
+    await store.unblockSlot(req.params.businessId, req.params.id);
     res.json({ success: true, deleted: true });
   }));
 
@@ -418,9 +325,9 @@ module.exports = function createPlazzaaV1Router(deps) {
   router.get('/businesses/:businessId/setup-status', authenticateBusiness, wrap(async function (req, res) {
     const businessId = req.params.businessId;
 
-    const [businessResult, servicesResult, hoursResult, account] = await Promise.all([
+    const [businessResult, activeServices, hoursResult, account] = await Promise.all([
       supabase.from('businesses').select('id, name, slug').eq('id', businessId).maybeSingle(),
-      supabase.from('services').select('id').eq('business_id', businessId).eq('is_active', true).limit(1),
+      store.listServices(businessId, { activeOnly: true }),
       supabase.from('operating_hours').select('id').eq('business_id', businessId).eq('is_closed', false).limit(1),
       getBankAccount(businessId)
     ]);
@@ -429,7 +336,7 @@ module.exports = function createPlazzaaV1Router(deps) {
     if (!businessResult.data) return fail(res, 404, 'Business not found');
 
     const checks = {
-      has_active_service: Boolean(servicesResult.data && servicesResult.data.length),
+      has_active_service: activeServices.length > 0,
       has_opening_hours: Boolean(hoursResult.data && hoursResult.data.length),
       has_bank_account: Boolean(account),
       has_slug: Boolean(businessResult.data.slug)
@@ -452,21 +359,10 @@ module.exports = function createPlazzaaV1Router(deps) {
   router.get('/businesses/:businessId/bookings', authenticateBusiness, wrap(async function (req, res) {
     await expireStaleBookings();
 
-    let query = supabase
-      .from('bookings')
-      .select(BOOKING_FIELDS + ', services ( id, name, duration_minutes, price )')
-      .eq('business_id', req.params.businessId)
-      .order('start_datetime', { ascending: false, nullsFirst: false })
-      .limit(parseInt(req.query.limit, 10) || 200);
-
-    if (req.query.status) query = query.in('status', String(req.query.status).split(','));
-    if (req.query.from) query = query.gte('start_datetime', new Date(req.query.from).toISOString());
-    if (req.query.to) query = query.lte('start_datetime', new Date(req.query.to).toISOString());
-
-    const { data, error } = await query;
-    if (error) throw error;
-
-    const bookings = data || [];
+    const bookings = await store.listBookings(req.params.businessId, {
+      status: req.query.status,
+      limit: parseInt(req.query.limit, 10) || 200
+    });
     res.json({
       success: true,
       bookings: bookings,
@@ -478,26 +374,32 @@ module.exports = function createPlazzaaV1Router(deps) {
   }));
 
   router.post('/businesses/:businessId/bookings/:reference/validate', authenticateBusiness, wrap(async function (req, res) {
-    const businessId = req.params.businessId;
+    const result = await store.validateBooking(req.params.businessId, req.params.reference);
 
-    const { data: booking, error } = await supabase.rpc('validate_booking', {
-      p_business_id: businessId,
-      p_reference: req.params.reference
-    });
-    if (error) throw error;
+    if (result.notFound) return fail(res, 404, 'Booking not found');
+    if (result.invalid) {
+      return fail(res, 409, 'This booking cannot be validated while it is ' + result.booking.status + '.');
+    }
+    if (result.alreadyConfirmed) {
+      return res.json({ success: true, alreadyConfirmed: true, booking: result.booking });
+    }
 
-    const [businessResult, serviceResult] = await Promise.all([
-      supabase.from('businesses').select(PUBLIC_BUSINESS_FIELDS + ', email').eq('id', businessId).maybeSingle(),
-      booking.service_id
-        ? supabase.from('services').select(SERVICE_FIELDS).eq('id', booking.service_id).maybeSingle()
-        : Promise.resolve({ data: null })
-    ]);
+    const booking = result.booking;
 
-    // The customer is told once, when the merchant confirms the money arrived.
-    if (typeof email.sendBookingValidated === 'function') {
-      email.sendBookingValidated(booking, businessResult.data, serviceResult.data).catch(function (err) {
-        console.error('[Plazzaa V1] confirmation email failed:', err.message);
-      });
+    // Tell the customer, but never fail the merchant's action over an email.
+    try {
+      const service = booking.service_id
+        ? await store.getService(req.params.businessId, booking.service_id)
+        : null;
+      const { data: business } = await supabase
+        .from('businesses').select('name, slug, phone, address, city')
+        .eq('id', req.params.businessId).maybeSingle();
+      if (emailService && emailService.sendBookingValidated) {
+        emailService.sendBookingValidated({ booking: booking, service: service, business: business })
+          .catch(function (err) { console.error('[Plazzaa V1] validated email failed:', err.message); });
+      }
+    } catch (err) {
+      console.error('[Plazzaa V1] validated email skipped:', err.message);
     }
 
     res.json({ success: true, booking: booking });
@@ -511,29 +413,15 @@ module.exports = function createPlazzaaV1Router(deps) {
     const business = await findBusinessBySlug(req.params.slug);
     if (!business) return fail(res, 404, 'Business not found');
 
-    const { data: services, error } = await supabase
-      .from('services')
-      .select('id, name, description, price, duration_minutes, capacity, slug')
-      .eq('business_id', business.id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: true });
-    if (error) throw error;
-
-    res.json({ success: true, business: business, services: services || [] });
+    const services = await store.listServices(business.id, { activeOnly: true });
+    res.json({ success: true, business: business, services: services });
   }));
 
   router.get('/public/businesses/:slug/services/:serviceSlug', wrap(async function (req, res) {
     const business = await findBusinessBySlug(req.params.slug);
     if (!business) return fail(res, 404, 'Business not found');
 
-    const { data: service, error } = await supabase
-      .from('services')
-      .select('id, name, description, price, duration_minutes, capacity, slug')
-      .eq('business_id', business.id)
-      .eq('slug', req.params.serviceSlug)
-      .eq('is_active', true)
-      .maybeSingle();
-    if (error) throw error;
+    const service = await store.getServiceBySlug(business.id, req.params.serviceSlug, { activeOnly: true });
     if (!service) return fail(res, 404, 'Service not found');
 
     res.json({ success: true, business: business, service: service });
@@ -546,14 +434,7 @@ module.exports = function createPlazzaaV1Router(deps) {
     const business = await findBusinessBySlug(req.params.slug);
     if (!business) return fail(res, 404, 'Business not found');
 
-    const { data: service, error: serviceError } = await supabase
-      .from('services')
-      .select('id, name, price, duration_minutes, capacity, slug')
-      .eq('business_id', business.id)
-      .eq('slug', req.params.serviceSlug)
-      .eq('is_active', true)
-      .maybeSingle();
-    if (serviceError) throw serviceError;
+    const service = await store.getServiceBySlug(business.id, req.params.serviceSlug, { activeOnly: true });
     if (!service) return fail(res, 404, 'Service not found');
 
     await expireStaleBookings();
@@ -567,32 +448,18 @@ module.exports = function createPlazzaaV1Router(deps) {
         .from('operating_hours')
         .select('day_of_week, open_time, close_time, is_closed')
         .eq('business_id', business.id),
-      supabase
-        .from('availability')
-        .select('service_id, start_datetime, end_datetime, is_available')
-        .eq('business_id', business.id)
-        .eq('is_available', false)
-        .gte('start_datetime', windowStart)
-        .lte('start_datetime', windowEnd),
-      supabase
-        .from('bookings')
-        .select('start_datetime, status')
-        .eq('service_id', service.id)
-        .in('status', ACTIVE_STATUSES)
-        .gte('start_datetime', windowStart)
-        .lte('start_datetime', windowEnd)
+      store.listBlockedSlots(business.id, { from: windowStart, to: windowEnd }),
+      store.bookingsForService(service.id, windowStart, windowEnd)
     ]);
 
     if (hoursResult.error) throw hoursResult.error;
-    if (blockedResult.error) throw blockedResult.error;
-    if (bookingsResult.error) throw bookingsResult.error;
 
     const result = buildSlots({
       date: date,
       service: service,
       hours: hoursResult.data,
-      blocked: blockedResult.data,
-      bookings: bookingsResult.data
+      blocked: blockedResult,
+      bookings: bookingsResult
     });
 
     res.json({ success: true, service: service, availability: result });
@@ -629,32 +496,29 @@ module.exports = function createPlazzaaV1Router(deps) {
     }
     if (!business) return fail(res, 404, 'Business not found');
 
-    let serviceId = body.service_id;
-    if (!serviceId) {
-      const { data: service, error } = await supabase
-        .from('services')
-        .select('id')
-        .eq('business_id', business.id)
-        .eq('slug', body.service_slug)
-        .eq('is_active', true)
-        .maybeSingle();
-      if (error) throw error;
-      if (!service) return fail(res, 404, 'Service not found');
-      serviceId = service.id;
-    }
+    const service = body.service_id
+      ? await store.getService(business.id, body.service_id)
+      : await store.getServiceBySlug(business.id, body.service_slug, { activeOnly: true });
+    if (!service) return fail(res, 404, 'Service not found');
 
-    const { data: booking, error: bookingError } = await supabase.rpc('create_service_booking', {
-      p_business_id: business.id,
-      p_service_id: serviceId,
-      p_start: start.toISOString(),
-      p_reference: bookingReference(),
-      p_customer_name: String(body.customer_name).trim(),
-      p_customer_email: String(body.customer_email).trim(),
-      p_customer_whatsapp: String(body.customer_whatsapp).trim(),
-      p_notes: body.notes ? String(body.notes).trim() : null,
-      p_hold_minutes: holdMinutes()
-    });
-    if (bookingError) throw bookingError;
+    let booking;
+    try {
+      booking = await store.createBooking({
+        business: business,
+        service: service,
+        start_datetime: start.toISOString(),
+        customer_name: String(body.customer_name).trim(),
+        customer_email: String(body.customer_email).trim(),
+        customer_whatsapp: String(body.customer_whatsapp).trim(),
+        special_requests: (body.special_requests || body.notes)
+          ? String(body.special_requests || body.notes).trim()
+          : null,
+        holdMinutes: holdMinutes()
+      });
+    } catch (err) {
+      if (err.status === 409) return fail(res, 409, err.message);
+      throw err;
+    }
 
     const bankAccount = await getBankAccount(business.id);
 
@@ -673,12 +537,7 @@ module.exports = function createPlazzaaV1Router(deps) {
   router.get('/public/bookings/:reference', wrap(async function (req, res) {
     await expireStaleBookings();
 
-    const { data: booking, error } = await supabase
-      .from('bookings')
-      .select(BOOKING_FIELDS + ', services ( id, name, duration_minutes, price )')
-      .eq('booking_reference', req.params.reference)
-      .maybeSingle();
-    if (error) throw error;
+    const booking = await store.getBookingByReference(req.params.reference);
     if (!booking) return fail(res, 404, 'Booking not found');
 
     const [businessResult, bankAccount] = await Promise.all([
@@ -700,36 +559,20 @@ module.exports = function createPlazzaaV1Router(deps) {
   router.post('/public/bookings/:reference/mark-paid', wrap(async function (req, res) {
     await expireStaleBookings();
 
-    const { data: booking, error } = await supabase
-      .from('bookings')
-      .update({
-        status: 'awaiting_validation',
-        payment_marked_at: new Date().toISOString(),
-        // The slot is held until the merchant decides
-        expires_at: null
-      })
-      .eq('booking_reference', req.params.reference)
-      .eq('status', 'payment_pending')
-      .select(BOOKING_FIELDS)
-      .maybeSingle();
-    if (error) throw error;
+    const result = await store.markPaid(req.params.reference);
 
-    if (!booking) {
-      const { data: current } = await supabase
-        .from('bookings')
-        .select('status')
-        .eq('booking_reference', req.params.reference)
-        .maybeSingle();
-
-      if (!current) return fail(res, 404, 'Booking not found');
-      if (current.status === 'awaiting_validation') {
-        return res.json({ success: true, alreadyMarked: true, status: current.status });
-      }
-      if (current.status === 'expired') {
+    if (result.notFound) return fail(res, 404, 'Booking not found');
+    if (result.alreadyMarked) {
+      return res.json({ success: true, alreadyMarked: true, booking: result.booking, status: result.booking.status });
+    }
+    if (result.invalid) {
+      if (result.booking.status === 'expired') {
         return fail(res, 409, 'This booking expired before payment was confirmed. Please book again.', { code: 'EXPIRED' });
       }
       return fail(res, 409, 'This booking can no longer be updated', { code: 'WRONG_STATUS' });
     }
+
+    const booking = result.booking;
 
     const { data: business } = await supabase
       .from('businesses')
