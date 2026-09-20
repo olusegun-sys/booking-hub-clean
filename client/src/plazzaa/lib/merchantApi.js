@@ -65,6 +65,9 @@ export const api = {
   deleteService: (id, serviceId) =>
     call(v1(id, `/services/${serviceId}`), { method: 'DELETE' }),
 
+  uploadServiceImage: (id, fileName, fileData) =>
+    call(v1(id, '/service-image'), { method: 'POST', body: { fileName, fileData } }),
+
   // --- availability -------------------------------------------------------
   hours: (id) => call(v1(id, '/business-hours')),
   saveHours: (id, hours) => call(v1(id, '/business-hours'), { method: 'PUT', body: { hours } }),

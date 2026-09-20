@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.services (
   duration_minutes integer NOT NULL DEFAULT 60 CHECK (duration_minutes > 0),
   capacity         integer NOT NULL DEFAULT 1 CHECK (capacity > 0),
   slug             text NOT NULL,
+  image_url        text,
   is_active        boolean NOT NULL DEFAULT true,
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now(),

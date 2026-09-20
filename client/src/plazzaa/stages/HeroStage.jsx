@@ -132,6 +132,7 @@ function HeroScene({ progress }) {
           viewport={{ width, height }}
           index={index}
           hovered={hovered}
+          hoveredSpot={hovered === null ? null : layout[hovered]}
           onHover={setHovered}
           interactive={interactive}
           reduce={reduce}
@@ -170,7 +171,9 @@ function HeroScene({ progress }) {
 
       {/* ------------------------------------------------------- the question */}
       <motion.div
-        className="absolute inset-0 z-[6] flex flex-col items-center justify-center px-5 text-center"
+        // The headline sits above the prints, so it must not swallow their hover.
+        // Its buttons re-enable pointer events on themselves.
+        className="pointer-events-none absolute inset-0 z-[6] flex flex-col items-center justify-center px-5 text-center"
         style={{ opacity: headOpacity, scale: headScale, y: headY }}
       >
         <h1 className="max-w-[12ch] text-hero text-plz-ink" style={{ textWrap: 'balance' }}>

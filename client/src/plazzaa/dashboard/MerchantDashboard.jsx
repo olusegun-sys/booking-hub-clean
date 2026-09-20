@@ -203,15 +203,27 @@ export default function MerchantDashboard() {
       ? window.location.origin + '/book/' + business.slug
       : '';
 
-  const copyLink = async () => {
-    if (!bookingUrl) return;
+  const copyText = async (text, message) => {
+    if (!text) return;
     try {
-      await navigator.clipboard.writeText(bookingUrl);
-      say('Booking link copied.');
+      await navigator.clipboard.writeText(text);
+      say(message);
     } catch {
-      say(bookingUrl, 'ok');
+      say(text, 'ok');
     }
   };
+
+  const copyLink = () => copyText(bookingUrl, 'Booking link copied.');
+
+  /** A link that opens straight on one service, skipping the menu. */
+  const serviceLink = (service) =>
+    bookingUrl && service.slug ? bookingUrl + '/s/' + service.slug : '';
+
+  const copyServiceLink = (service) =>
+    copyText(serviceLink(service), `Link to “${service.name}” copied.`);
+
+  const uploadImage = (fileName, fileData) =>
+    api.uploadServiceImage(businessId, fileName, fileData).then((r) => r.url);
 
   /* ---------------------------------------------------------- navigation */
 
@@ -455,6 +467,11 @@ export default function MerchantDashboard() {
                     bankAccount={bankAccount}
                     loading={loading}
                     busy={busy}
+                    setup={setup}
+                    bookingUrl={bookingUrl}
+                    onCopyLink={copyLink}
+                    onCopyServiceLink={copyServiceLink}
+                    onUploadImage={uploadImage}
                     onCreateService={createService}
                     onUpdateService={updateService}
                     onDeleteService={deleteService}

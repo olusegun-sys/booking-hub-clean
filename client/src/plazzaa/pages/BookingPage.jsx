@@ -8,6 +8,7 @@ import {
 import API_BASE from '../../config';
 import PlazzaaLogo from '../components/PlazzaaLogo';
 import { EASE } from '../lib/motion';
+import BookingCelebration from '../components/BookingCelebration';
 
 /**
  * The merchant's public booking page — what a customer sees behind the link.
@@ -120,7 +121,7 @@ const FIELD =
 /* ------------------------------------------------------------------- screen */
 
 export default function BookingPage() {
-  const { businessSlug } = useParams();
+  const { businessSlug, serviceSlug } = useParams();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -141,6 +142,7 @@ export default function BookingPage() {
   const [submitError, setSubmitError] = useState('');
 
   const [booking, setBooking] = useState(null);
+  const [celebrate, setCelebrate] = useState(false);
   const [bankAccount, setBankAccount] = useState(null);
   const [marking, setMarking] = useState(false);
   const [copied, setCopied] = useState('');
@@ -155,6 +157,12 @@ export default function BookingPage() {
         if (cancelled) return;
         setBusiness(data.business || null);
         setServices(data.services || []);
+
+        // A link that names a service skips the menu and opens on its times.
+        if (serviceSlug) {
+          const match = (data.services || []).find((s) => s.slug === serviceSlug);
+          if (match) { setService(match); setStep(1); }
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -163,7 +171,7 @@ export default function BookingPage() {
         setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [businessSlug]);
+  }, [businessSlug, serviceSlug]);
 
   /* ------------------------------------------------------------ availability */
 
@@ -226,6 +234,7 @@ export default function BookingPage() {
         setBankAccount(data.bankAccount);
         setStep(3);
         setSubmitting(false);
+        setCelebrate(true);
         window.scrollTo({ top: 0 });
       })
       .catch((err) => {
@@ -294,6 +303,16 @@ export default function BookingPage() {
   }
 
   /* ---------------------------------------------------------- 4. payment */
+
+  if (celebrate && booking) {
+    return (
+      <BookingCelebration
+        businessName={business.name}
+        serviceName={service ? service.name : ''}
+        onDone={() => setCelebrate(false)}
+      />
+    );
+  }
 
   if (step === 3 && booking) {
     const confirmed = booking.status === 'confirmed';
@@ -499,8 +518,13 @@ export default function BookingPage() {
                       onClick={() => chooseService(s)}
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.995 }}
-                      className={CARD + ' flex w-full items-center gap-4 p-5 text-left hover:border-plz-line-strong hover:shadow-lift'}
+                      className={CARD + ' flex w-full items-center gap-4 p-4 text-left hover:border-plz-line-strong hover:shadow-lift sm:p-5'}
                     >
+                      {s.image_url && (
+                        <span className="relative hidden h-[84px] w-[112px] shrink-0 overflow-hidden rounded-[10px] bg-plz-surface sm:block">
+                          <img src={s.image_url} alt="" className="plz-fill" />
+                        </span>
+                      )}
                       <span className="min-w-0 flex-1">
                         <span className="block text-[15px] font-semibold text-plz-ink">{s.name}</span>
                         {s.description && (

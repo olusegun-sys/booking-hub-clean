@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Building2, Clock, Landmark, Pencil, Plus, Trash2, Users, Wrench, X
+  Building2, Check, Clock, Copy, ImagePlus, Landmark, Link2, Loader2, Pencil,
+  Plus, Share2, Trash2, Users, Wrench, X
 } from 'lucide-react';
 import { DAYS, naira } from '../lib/merchantApi';
 import {
@@ -18,13 +19,105 @@ import {
 
 /* ------------------------------------------------------------ service form */
 
-function ServiceForm({ initial, busy, onSave, onCancel }) {
+/** A photograph for one service: picked locally, uploaded, kept as a URL. */
+function ImageField({ value, onChange, onUpload }) {
+  const inputRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const choose = (event) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('That image is over 5MB. Try a smaller one.');
+      return;
+    }
+
+    setError('');
+    setBusy(true);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      onUpload(file.name, reader.result)
+        .then((url) => { onChange(url); setBusy(false); })
+        .catch((err) => { setError(err.message || 'That upload did not work.'); setBusy(false); });
+    };
+    reader.onerror = () => { setError('Could not read that file.'); setBusy(false); };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div>
+      <span className="block text-[13px] font-semibold text-plz-ink">Photo</span>
+
+      <div className="mt-2 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => inputRef.current && inputRef.current.click()}
+          disabled={busy}
+          className="relative flex h-[76px] w-[104px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-dashed border-plz-line-strong bg-white transition-colors duration-micro ease-plz hover:border-plz-blue disabled:opacity-60"
+        >
+          {value ? (
+            <img src={value} alt="" className="plz-fill" />
+          ) : busy ? (
+            <Loader2 size={18} className="animate-spin text-plz-body" />
+          ) : (
+            <ImagePlus size={18} className="text-plz-grey" />
+          )}
+          {value && busy && (
+            <span className="absolute inset-0 flex items-center justify-center bg-white/70">
+              <Loader2 size={18} className="animate-spin text-plz-body" />
+            </span>
+          )}
+        </button>
+
+        <div className="min-w-0">
+          <p className="text-[13px] text-plz-body">
+            {value ? 'Customers see this on your booking page.' : 'Optional, but it sells the service.'}
+          </p>
+          <div className="mt-1.5 flex gap-3">
+            <button
+              type="button"
+              onClick={() => inputRef.current && inputRef.current.click()}
+              className="text-[13px] font-semibold text-plz-blue hover:underline"
+            >
+              {value ? 'Replace' : 'Upload a photo'}
+            </button>
+            {value && (
+              <button
+                type="button"
+                onClick={() => onChange(null)}
+                className="text-[13px] font-medium text-plz-body hover:text-[#C0395A]"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {error && <p className="mt-1.5 text-[12px] text-[#C0395A]">{error}</p>}
+        </div>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={choose}
+        className="hidden"
+      />
+    </div>
+  );
+}
+
+function ServiceForm({ initial, busy, onSave, onCancel, onUpload }) {
   const [form, setForm] = useState(() => ({
     name: initial?.name || '',
     description: initial?.description || '',
     price: initial?.price != null ? String(initial.price) : '',
     duration_minutes: initial?.duration_minutes != null ? String(initial.duration_minutes) : '60',
-    capacity: initial?.capacity != null ? String(initial.capacity) : '1'
+    capacity: initial?.capacity != null ? String(initial.capacity) : '1',
+    image_url: initial?.image_url || null
   }));
   const [errors, setErrors] = useState({});
 
@@ -47,7 +140,8 @@ function ServiceForm({ initial, busy, onSave, onCancel }) {
       description: form.description.trim() || null,
       price: Number(form.price),
       duration_minutes: parseInt(form.duration_minutes, 10),
-      capacity: parseInt(form.capacity, 10)
+      capacity: parseInt(form.capacity, 10),
+      image_url: form.image_url || null
     });
   };
 
@@ -130,6 +224,14 @@ function ServiceForm({ initial, busy, onSave, onCancel }) {
               placeholder="1"
             />
           </Field>
+
+          <div className="sm:col-span-2">
+            <ImageField
+              value={form.image_url}
+              onChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
+              onUpload={onUpload}
+            />
+          </div>
         </div>
 
         <div className="mt-5 flex gap-2.5">
@@ -146,11 +248,13 @@ function ServiceForm({ initial, busy, onSave, onCancel }) {
 /* ------------------------------------------------------------------ screen */
 
 export default function BookingSetup({
-  business, services, hours, bankAccount, loading, busy,
+  business, services, hours, bankAccount, loading, busy, setup,
+  bookingUrl, onCopyLink, onCopyServiceLink, onUploadImage,
   onCreateService, onUpdateService, onDeleteService,
   onSaveHours, onSaveBank
 }) {
   const [editing, setEditing] = useState(null);   // service id, or 'new'
+  const [copied, setCopied] = useState(null);     // service id whose link was copied
   const [draftHours, setDraftHours] = useState(null);
   const [bank, setBank] = useState(null);
   const [bankErrors, setBankErrors] = useState({});
@@ -219,6 +323,41 @@ export default function BookingSetup({
             <Badge tone="bg-plz-surface text-plz-body">/{business.slug}</Badge>
           )}
         </div>
+
+        {/* The link lives here as well as on the dashboard: this is the screen
+            a merchant is on when they finish setting up and want to share it. */}
+        <div className="mt-5 border-t border-plz-line pt-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <Link2 size={15} className="text-plz-blue" />
+              <span className="text-[14px] font-semibold text-plz-ink">Your booking link</span>
+            </span>
+            {setup && (
+              <Badge
+                dot
+                tone={setup.ready ? 'bg-[#EAF7EF] text-[#1B7F43]' : 'bg-[#FEF8E7] text-[#B0840F]'}
+              >
+                {setup.ready ? 'Live' : 'Not live yet'}
+              </Badge>
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2.5">
+            <span className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-plz-line bg-plz-surface/50 px-3 py-2.5">
+              <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-plz-ink">
+                {bookingUrl ? bookingUrl.replace(/^https?:\/\//, '') : 'Not published yet'}
+              </span>
+            </span>
+            <Button size="sm" onClick={onCopyLink} disabled={!bookingUrl}>
+              <Copy size={14} />
+              Copy link
+            </Button>
+          </div>
+
+          <p className="mt-2.5 text-[12px] text-plz-body">
+            This link shows everything you offer. Each service below also has a link of its own.
+          </p>
+        </div>
       </Card>
 
       {/* ------------------------------------------------------------ services */}
@@ -260,6 +399,16 @@ export default function BookingSetup({
             {(services || []).map((service) => (
               <li key={service.id}>
                 <div className="flex flex-wrap items-center gap-3 px-5 py-4">
+                  {service.image_url ? (
+                    <span className="relative h-[52px] w-[70px] shrink-0 overflow-hidden rounded-[9px] bg-plz-surface">
+                      <img src={service.image_url} alt="" className="plz-fill" />
+                    </span>
+                  ) : (
+                    <span className="flex h-[52px] w-[70px] shrink-0 items-center justify-center rounded-[9px] bg-plz-surface">
+                      <ImagePlus size={16} className="text-plz-grey" />
+                    </span>
+                  )}
+
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-[14px] font-semibold text-plz-ink">{service.name}</p>
@@ -283,6 +432,29 @@ export default function BookingSetup({
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={!bookingUrl || !service.is_active}
+                      onClick={() => {
+                        onCopyServiceLink(service);
+                        setCopied(service.id);
+                        setTimeout(() => setCopied(null), 2000);
+                      }}
+                      title={
+                        service.is_active
+                          ? 'Copy a link straight to this service'
+                          : 'Show this service to share its link'
+                      }
+                    >
+                      {copied === service.id
+                        ? <Check size={14} className="text-[#1B7F43]" />
+                        : <Share2 size={14} />}
+                      <span className="hidden sm:inline">
+                        {copied === service.id ? 'Copied' : 'Link'}
+                      </span>
+                    </Button>
+
                     <Toggle
                       on={Boolean(service.is_active)}
                       onChange={(on) => onUpdateService(service.id, { is_active: on })}
@@ -312,6 +484,7 @@ export default function BookingSetup({
                   {editing === service.id && (
                     <ServiceForm
                       initial={service}
+                      onUpload={onUploadImage}
                       busy={busy === 'service'}
                       onCancel={() => setEditing(null)}
                       onSave={(patch) =>
@@ -329,6 +502,7 @@ export default function BookingSetup({
           {editing === 'new' && (
             <ServiceForm
               busy={busy === 'service'}
+              onUpload={onUploadImage}
               onCancel={() => setEditing(null)}
               onSave={(service) => onCreateService(service).then(() => setEditing(null))}
             />

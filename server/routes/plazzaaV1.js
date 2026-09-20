@@ -151,6 +151,7 @@ module.exports = function createPlazzaaV1Router(deps) {
       price: price,
       duration_minutes: duration,
       capacity: capacity,
+      image_url: body.image_url ? String(body.image_url).trim() : null,
       is_active: body.is_active === undefined ? true : Boolean(body.is_active)
     });
 
@@ -183,6 +184,9 @@ module.exports = function createPlazzaaV1Router(deps) {
       patch.capacity = capacity;
     }
     if (body.is_active !== undefined) patch.is_active = Boolean(body.is_active);
+    if (body.image_url !== undefined) {
+      patch.image_url = body.image_url ? String(body.image_url).trim() : null;
+    }
 
     delete patch.updated_at;
     const service = await store.updateService(businessId, req.params.serviceId, patch);
@@ -198,6 +202,43 @@ module.exports = function createPlazzaaV1Router(deps) {
     // customers keep their booking history.
     const result = await store.deleteService(req.params.businessId, serviceId);
     res.json({ success: true, ...result });
+  }));
+
+
+  // ----------------------------------------------------------
+  // Merchant: a photograph for a service
+  // ----------------------------------------------------------
+
+  router.post('/businesses/:businessId/service-image', authenticateBusiness, wrap(async function (req, res) {
+    const body = req.body || {};
+    const match = String(body.fileData || '').match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+    if (!match) return fail(res, 400, 'Send the image as a base64 data URL');
+
+    const mimeType = match[1];
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowed.indexOf(mimeType) === -1) {
+      return fail(res, 400, 'Images must be JPEG, PNG or WEBP');
+    }
+
+    const buffer = Buffer.from(match[2], 'base64');
+    if (buffer.length > 5 * 1024 * 1024) return fail(res, 400, 'Images must be under 5MB');
+
+    const safeName = String(body.fileName || 'service')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .slice(-60);
+    const path = 'service-images/' + req.params.businessId + '/' +
+      Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '-' + safeName;
+
+    const { error: uploadError } = await supabase.storage
+      .from('venue-images')
+      .upload(path, buffer, { contentType: mimeType, cacheControl: '3600', upsert: false });
+    if (uploadError) {
+      console.error('[Plazzaa V1] service image upload failed:', uploadError.message);
+      return fail(res, 500, 'Could not upload that image. Please try again.');
+    }
+
+    const { data } = supabase.storage.from('venue-images').getPublicUrl(path);
+    res.status(201).json({ success: true, url: data.publicUrl });
   }));
 
   // ----------------------------------------------------------

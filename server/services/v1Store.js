@@ -53,6 +53,7 @@ function roomToService(row) {
     duration_minutes: Number(meta.duration_minutes) || 60,
     capacity: Number(row.capacity) || 1,
     slug: meta.slug || slugify(row.name),
+    image_url: meta.image_url || (Array.isArray(row.images) && row.images[0]) || null,
     is_active: row.status !== 'inactive',
     created_at: row.created_at,
     updated_at: meta.updated_at || row.created_at
@@ -68,10 +69,12 @@ function serviceToRoom(businessId, service, slug) {
     base_price: service.price,
     capacity: service.capacity,
     status: service.is_active === false ? 'inactive' : 'active',
+    images: service.image_url ? [service.image_url] : [],
     features: {
       plazzaa: {
         duration_minutes: service.duration_minutes,
         slug: slug,
+        image_url: service.image_url || null,
         updated_at: new Date().toISOString()
       }
     }
@@ -230,9 +233,10 @@ module.exports = function createV1Store(supabase) {
     const slug = await uniqueSlug(businessId, service.name);
 
     if (await usingNativeTables()) {
+      const { image_url, ...rest } = service;
       const { data, error } = await supabase
         .from('services')
-        .insert({ business_id: businessId, ...service, slug: slug })
+        .insert({ business_id: businessId, ...rest, image_url: image_url || null, slug: slug })
         .select('*')
         .single();
       if (error) throw error;
@@ -275,10 +279,12 @@ module.exports = function createV1Store(supabase) {
       base_price: merged.price,
       capacity: merged.capacity,
       status: merged.is_active === false ? 'inactive' : 'active',
+      images: merged.image_url ? [merged.image_url] : [],
       features: {
         plazzaa: {
           duration_minutes: merged.duration_minutes,
           slug: slug,
+          image_url: merged.image_url || null,
           updated_at: new Date().toISOString()
         }
       }

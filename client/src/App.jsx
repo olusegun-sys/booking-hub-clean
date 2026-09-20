@@ -164,6 +164,7 @@ function App() {
       React.createElement(Route, { path: '/dashboard', element: React.createElement(MerchantDashboard, null) }),
       React.createElement(Route, { path: '/dashboard/legacy', element: React.createElement(DashboardPage, null) }),
       React.createElement(Route, { path: '/book/:businessSlug', element: React.createElement(PlazzaaBookingPage, null) }),
+      React.createElement(Route, { path: '/book/:businessSlug/s/:serviceSlug', element: React.createElement(PlazzaaBookingPage, null) }),
       React.createElement(Route, { path: '/book/:businessSlug/legacy', element: React.createElement(UnifiedBookingPage, null) }),
       React.createElement(Route, { path: '/owner/:businessId/properties', element: React.createElement(OwnerPropertiesPage, null) }),
       React.createElement(Route, { path: '/admin', element: React.createElement(AdminRoute, null) })

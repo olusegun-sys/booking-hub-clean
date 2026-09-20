@@ -8,9 +8,13 @@ import { step, mix } from '../lib/phase';
  *
  * Scroll drives where it is: at rest, gathered around the focal image, then
  * thrown back out past the camera. Pointer drives how it feels: the print under
- * the cursor lifts, scales and tilts toward you while its neighbours step back
- * and dim — the Telescope move, where the scene reacts as a whole instead of
- * each card animating on its own.
+ * the cursor lifts, scales and tilts toward you, and every other print is
+ * physically pushed away from it — the Telescope move, where the scene parts
+ * around the cursor instead of each card animating on its own.
+ *
+ * The push is radial and falls off with distance, so near neighbours swing
+ * wide and far ones barely register. That gradient is what reads as one
+ * connected scene rather than a grid of independent hover states.
  *
  * Scroll transforms live on the outer element and pointer transforms on the
  * inner one, so the two never overwrite each other.
@@ -23,6 +27,7 @@ export default function HeroPrint({
   viewport,
   index,
   hovered,
+  hoveredSpot,
   onHover,
   interactive,
   reduce,
@@ -79,6 +84,22 @@ export default function HeroPrint({
   const isHovered = hovered === index;
   const isDimmed = hovered !== null && hovered !== index;
 
+  // How far this print is shoved aside by whichever one is being hovered.
+  // Distance is measured in viewport pixels between the two rest positions;
+  // the falloff is exponential so the effect is local, not global.
+  const push = (() => {
+    if (reduce || !isDimmed || !hoveredSpot) return { x: 0, y: 0 };
+
+    const dx = restX - hoveredSpot.x * viewport.width;
+    const dy = restY - hoveredSpot.y * viewport.height;
+    const distance = Math.hypot(dx, dy) || 1;
+
+    const reach = Math.max(viewport.width, viewport.height) * 0.42;
+    const strength = Math.exp(-distance / reach) * (viewport.width < 768 ? 26 : 54);
+
+    return { x: (dx / distance) * strength, y: (dy / distance) * strength };
+  })();
+
   const onPointerMove = (event) => {
     if (reduce || !interactive || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
@@ -117,11 +138,12 @@ export default function HeroPrint({
         onTouchStart={() => interactive && onHover(index)}
         onTouchEnd={release}
         animate={{
-          scale: isHovered ? 1.07 : isDimmed ? 0.95 : 1,
-          opacity: isDimmed ? 0.45 : 1,
-          y: isHovered ? -8 : 0
+          x: push.x,
+          y: push.y + (isHovered ? -10 : 0),
+          scale: isHovered ? 1.08 : isDimmed ? 0.94 : 1,
+          opacity: isDimmed ? 0.5 : 1
         }}
-        transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+        transition={{ type: 'spring', stiffness: 210, damping: 24, mass: 0.7 }}
       >
         <motion.div
           className="relative overflow-hidden rounded-visual bg-plz-surface"
