@@ -1,5 +1,7 @@
 ﻿// FILE: client/src/HomePage.jsx
-// UPDATED 19 Sept 2026: Categories changed to Stays/Food/Others (group-based search)
+// UPDATED 19 Sept 2026: Categories Stays/Food/Others (group-based search)
+// UPDATED 20 Sept 2026: Plazzaa logo + text rebrand
+// UPDATED 20 Sept 2026: Logo shrunk + P icon recolored to indigo via mask-image
 // Book Now routes to /book/{slug} so all business types work via UnifiedBookingPage
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -30,7 +32,7 @@ import DestinationCards from './components/DestinationCards';
 import PopularStays from './components/PopularStays';
 import API_BASE from './config';
 
-// Brand colors - consistent indigo theme
+// Brand colors — still indigo until the full palette swap (Tuesday)
 const brandIndigo = '#4F46E5';
 const brandIndigoLight = '#6366F1';
 const brandIndigoDark = '#4338CA';
@@ -47,7 +49,7 @@ const categoryGroups = {
   others: ['sports', 'spa', 'beauty_salon', 'activity_place']
 };
 
-// Hero images for each group (first URL per category from provided list)
+// Hero images for each group (first URL per category)
 const heroImages = {
   stays: 'https://www.savoydubai.com/wp-content/uploads/sites/183/2022/09/Savoy-Suites-Master-Bedroom-2BR-1-2200x1200.jpg',
   food: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSS0klqKVCFMw_l2R1UnjsXzmvozatheQZ5dekGoBFyX1oFdK3HXtX7qvs&s=10',
@@ -186,8 +188,6 @@ function HomePage() {
 
     setLoading(true);
     try {
-      // WHY: Send comma-separated business types for the selected group.
-      // Backend expands this into an IN query.
       const typesForGroup = categoryGroups[selectedCategory] || [];
       const categoryParam = typesForGroup.join(',');
 
@@ -210,7 +210,6 @@ function HomePage() {
           showError(`No results found in ${location}`);
         }
         
-        // Scroll to results
         setTimeout(() => {
           const resultsElement = document.getElementById('results-section');
           if (resultsElement) {
@@ -225,7 +224,7 @@ function HomePage() {
     setLoading(false);
   };
 
-  // Handle search with explicit location parameter (for destination cards)
+  // Handle search with explicit location parameter
   const handleSearchWithLocation = async (searchLocation) => {
     if (!searchLocation || !searchLocation.trim()) {
       showError('Please enter a location');
@@ -271,9 +270,6 @@ function HomePage() {
   };
 
   // WHY: Every "Book Now" click routes to the UnifiedBookingPage.
-  // That page handles ALL business types (hotel, apartment, restaurant,
-  // spa, sports, event_hall, etc.) via its own business-type-aware config.
-  // Routing through it avoids duplicating logic and prevents blank pages.
   const handleDirectBook = (business) => {
     navigate(`/book/${business.slug}`);
   };
@@ -359,16 +355,39 @@ function HomePage() {
     gap: isDesktop ? '16px' : '8px'
   };
 
+  // Logo: Plazzaa "P" icon (recolored to indigo via CSS mask) + "Plazzaa" text
   const logoStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    fontSize: isDesktop ? '24px' : '18px',
-    fontWeight: '700',
-    color: brandIndigo,
-    letterSpacing: '-0.01em',
     cursor: 'pointer',
     flexShrink: 0
+  };
+
+  // WHY: mask-image uses the PNG's shape as a stencil, then fills it
+  // with whatever CSS color we want. This lets us use the same PNG asset
+  // but render the P in indigo (#4F46E5) instead of the baked-in blue.
+  const logoImgStyle = {
+    height: isDesktop ? '28px' : '24px',
+    width: isDesktop ? '28px' : '24px',
+    backgroundColor: brandIndigo,
+    WebkitMaskImage: 'url(/plazzaa-icon-1.png)',
+    maskImage: 'url(/plazzaa-icon-1.png)',
+    WebkitMaskSize: 'contain',
+    maskSize: 'contain',
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+    WebkitMaskPosition: 'center',
+    maskPosition: 'center',
+    display: 'block',
+    flexShrink: 0
+  };
+
+  const logoTextStyle = {
+    fontSize: isDesktop ? '20px' : '17px',
+    fontWeight: '800',
+    color: brandIndigo,
+    letterSpacing: '-0.02em'
   };
 
   const headerButtonsStyle = {
@@ -490,7 +509,6 @@ function HomePage() {
     display: isDesktop ? 'block' : 'none'
   });
 
-  // Trust Badges
   const trustBadgesStyle = {
     display: 'flex',
     justifyContent: 'center',
@@ -508,7 +526,6 @@ function HomePage() {
     color: '#666'
   };
 
-  // Search Card
   const searchCardStyle = {
     background: 'white',
     borderRadius: '20px',
@@ -568,7 +585,6 @@ function HomePage() {
     transition: 'all 0.2s ease'
   };
 
-  // Results Section
   const resultsHeaderStyle = {
     display: 'flex',
     justifyContent: 'space-between',
@@ -656,7 +672,6 @@ function HomePage() {
     transition: 'all 0.2s ease'
   };
 
-  // Features Section
   const featuresGridStyle = {
     display: 'grid',
     gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
@@ -698,8 +713,13 @@ function HomePage() {
     // Header
     React.createElement('div', { style: headerStyle },
       React.createElement('div', { style: logoStyle, onClick: () => window.location.reload() },
-        React.createElement(Building2, { size: isDesktop ? 24 : 18, color: brandIndigo }),
-        React.createElement('span', null, 'BookingHub')  // NOTE: logo swap comes later from Emmanuel's file
+        // WHY: div with mask-image — renders the P shape filled with indigo.
+        React.createElement('div', { 
+          style: logoImgStyle,
+          role: 'img',
+          'aria-label': 'Plazzaa'
+        }),
+        React.createElement('span', { style: logoTextStyle }, 'Plazzaa')
       ),
       React.createElement('div', { style: headerButtonsStyle },
         React.createElement('button', 
@@ -830,7 +850,6 @@ function HomePage() {
     // Search Card
     React.createElement('div', { style: searchCardStyle },
       React.createElement('div', { style: formGridStyle },
-        // Location Input
         React.createElement('div', { style: inputWrapperStyle },
           React.createElement(MapPin, { size: 14, style: inputIconStyle }),
           React.createElement('input', { 
@@ -845,7 +864,6 @@ function HomePage() {
           })
         ),
         
-        // STAYS - Check-in
         selectedCategory === 'stays' && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Calendar, { size: 14, style: inputIconStyle }),
           React.createElement('input', { 
@@ -858,7 +876,6 @@ function HomePage() {
           })
         ),
         
-        // STAYS - Check-out
         selectedCategory === 'stays' && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Calendar, { size: 14, style: inputIconStyle }),
           React.createElement('input', { 
@@ -871,7 +888,6 @@ function HomePage() {
           })
         ),
         
-        // STAYS - Guests
         selectedCategory === 'stays' && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Users, { size: 14, style: inputIconStyle }),
           React.createElement('select', { 
@@ -887,7 +903,6 @@ function HomePage() {
           )
         ),
         
-        // FOOD / OTHERS - single date
         (selectedCategory === 'food' || selectedCategory === 'others') && React.createElement('div', { style: inputWrapperStyle },
           React.createElement(Calendar, { size: 14, style: inputIconStyle }),
           React.createElement('input', { 
@@ -901,7 +916,6 @@ function HomePage() {
           })
         ),
         
-        // Search Button
         React.createElement('button', { 
           onClick: handleSearch, 
           disabled: loading, 
@@ -931,7 +945,6 @@ function HomePage() {
       )
     ),
 
-    // Destination Cards Section
     React.createElement(DestinationCards, {
       onSelectLocation: (location) => {
         setLocation(location);
@@ -939,7 +952,6 @@ function HomePage() {
       }
     }),
 
-    // Popular Stays Section
     React.createElement(PopularStays, {
       onSelectHotel: (hotel) => {
         if (hotel && hotel.location) {
@@ -949,7 +961,6 @@ function HomePage() {
       }
     }),
 
-    // Results Section
     results.length > 0 && React.createElement('div', { id: 'results-section' },
       React.createElement('div', { style: resultsHeaderStyle },
         React.createElement('div', null,
@@ -961,7 +972,6 @@ function HomePage() {
       )
     ),
 
-    // Loading Skeletons
     loading && React.createElement('div', { style: resultsGridStyle },
       [1, 2, 3].map(i => 
         React.createElement('div', { key: i, style: { ...resultCardStyle, cursor: 'default' } },
@@ -979,10 +989,8 @@ function HomePage() {
       )
     ),
 
-    // Results Grid
     !loading && results.length > 0 && React.createElement('div', { style: resultsGridStyle },
       results.map((business, index) => {
-        // WHY: Resolve display label + icon for this specific business_type.
         const display = businessTypeDisplay[business.business_type] || { label: 'Business', icon: Building2 };
         const TypeIcon = display.icon;
 
@@ -999,16 +1007,13 @@ function HomePage() {
               e.currentTarget.style.boxShadow = 'none'; 
             }
           },
-          // Image
           React.createElement('img', { 
             src: getBusinessImage(business.business_type, index), 
             alt: business.name, 
             style: resultImageStyle 
           }),
           
-          // Content
           React.createElement('div', { style: resultContentStyle },
-            // Header with name and rating
             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' } },
               React.createElement('div', null,
                 React.createElement('h3', { style: resultNameStyle }, business.name),
@@ -1019,7 +1024,6 @@ function HomePage() {
                   )
                 )
               ),
-              // Rating
               React.createElement('div', { style: { textAlign: 'right' } },
                 React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' } },
                   React.createElement(Star, { size: 12, fill: '#f5a623', color: '#f5a623' }),
@@ -1030,18 +1034,15 @@ function HomePage() {
               )
             ),
             
-            // Location
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', color: '#888', fontSize: '12px', marginBottom: '10px' } },
               React.createElement(MapPin, { size: 12 }),
               React.createElement('span', null, `${business.city || 'Lagos'}, ${business.state || 'Lagos'}`)
             ),
             
-            // Description
             React.createElement('p', { style: { color: '#888', fontSize: '12px', lineHeight: '1.4', marginBottom: '14px' } },
               business.description ? business.description.substring(0, 70) + '...' : 'Experience premium hospitality and comfort.'
             ),
             
-            // Action Buttons
             React.createElement('div', { style: { display: 'flex', gap: '10px' } },
               React.createElement('button', { 
                 onClick: () => handleDirectBook(business), 
@@ -1066,7 +1067,6 @@ function HomePage() {
       })
     ),
 
-    // No Results
     !loading && results.length === 0 && location && React.createElement('div', { style: { textAlign: 'center', padding: '60px 20px' } },
       React.createElement(Search, { size: 48, color: '#ccc', style: { marginBottom: '16px' } }),
       React.createElement('h3', { style: { fontSize: '18px', fontWeight: '500', color: '#1a1a1a', marginBottom: '8px' } }, 'No results found'),
@@ -1081,7 +1081,6 @@ function HomePage() {
       )
     ),
 
-    // Features Section
     !loading && results.length === 0 && !location && React.createElement('div', { style: featuresGridStyle },
       React.createElement('div', { style: featureItemStyle },
         React.createElement('div', { style: featureIconStyle }, 
@@ -1113,7 +1112,6 @@ function HomePage() {
       )
     ),
 
-    // Business Login Modal
     showBusinessLogin && React.createElement(BusinessLogin, { 
       onClose: () => setShowBusinessLogin(false) 
     })

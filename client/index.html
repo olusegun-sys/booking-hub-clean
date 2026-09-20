@@ -2,15 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <!-- Favicon: Plazzaa icon (white P on blue background) -->
+    <link rel="icon" type="image/png" href="/plazzaa-favicon.png" />
+    <link rel="apple-touch-icon" href="/plazzaa-favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Booking Hub - Book Your Perfect Space</title>
-    
-    <!-- Google Fonts: Plus Jakarta Sans (Inspired by Nigerian Property Center) -->
+    <title>Plazzaa - Bookings For Businesses</title>
+
+    <!-- Fonts:
+         Mail Sans Roman is the Plazzaa brand font, but it is a paid Monotype
+         font that requires .woff2 files. Until those are provided by design
+         and placed in /public/fonts/, the app falls back to Plus Jakarta Sans,
+         which is very close in character. Add @font-face rules below once the
+         font files are available. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <!-- Global CSS -->
     <style>
       /* ============================================
@@ -27,13 +34,14 @@
 
       :root {
         /* ============================================
-           TYPOGRAPHY - Plus Jakarta Sans (Primary)
+           TYPOGRAPHY — Mail Sans Roman (brand) with
+           Plus Jakarta Sans fallback while fonts are pending.
            ============================================ */
-        --font-primary: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --font-primary: 'Mail Sans Roman', 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-        
+
         /* ============================================
-           COLOR SYSTEM - Inspired by Nigerian Property Center
+           COLOR SYSTEM
            ============================================ */
         /* Neutrals */
         --neutral-0: #ffffff;
@@ -48,63 +56,64 @@
         --neutral-700: #252a40;
         --neutral-800: #1a1f36;
         --neutral-900: #0f142a;
-        
-        /* Primary - Indigo (Booking Hub Brand) */
+
+        /* Primary — indigo for now; Tuesday's palette swap will move
+           these to Plazzaa blue #2563EB. */
         --primary: #4F46E5;
         --primary-hover: #4338CA;
         --primary-light: #EEF2FF;
         --primary-foreground: #ffffff;
-        
-        /* Secondary - Warm Orange (Accent) */
+
+        /* Secondary — Warm Orange (Accent) */
         --secondary: #F59E0B;
         --secondary-hover: #D97706;
         --secondary-light: #FFFBEB;
-        
+
         /* Success - Green */
         --success: #10B981;
         --success-hover: #059669;
         --success-light: #D1FAE5;
-        
+
         /* Danger - Red */
         --danger: #EF4444;
         --danger-hover: #DC2626;
         --danger-light: #FEE2E2;
-        
+
         /* Warning - Amber */
         --warning: #F59E0B;
         --warning-light: #FEF3C7;
-        
+
         /* Backgrounds & Surfaces */
         --background: var(--neutral-0);
         --surface-1: var(--neutral-25);
         --surface-2: var(--neutral-50);
         --card: var(--neutral-0);
-        
+
         /* Foreground */
         --foreground: var(--neutral-600);
         --foreground-strong: var(--neutral-800);
         --foreground-muted: var(--neutral-500);
         --muted-foreground: var(--neutral-400);
         --muted-foreground-2: var(--neutral-300);
-        
+
         /* Borders */
         --border: var(--neutral-100);
         --border-strong: var(--neutral-200);
-        
+
         /* Shadows */
         --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
         --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
         --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
         --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
         --shadow-glow-primary: 0 4px 20px rgba(79, 70, 229, 0.3);
-        
+
         /* Border Radius */
         --radius-sm: 8px;
         --radius-md: 12px;
         --radius-lg: 16px;
         --radius-xl: 24px;
         --radius-full: 9999px;
-        
+
         /* Spacing */
         --spacing-xs: 4px;
         --spacing-sm: 8px;
@@ -113,12 +122,12 @@
         --spacing-xl: 32px;
         --spacing-2xl: 48px;
         --spacing-3xl: 64px;
-        
+
         /* Transitions */
         --transition-fast: 150ms ease;
         --transition-normal: 250ms ease;
         --transition-slow: 350ms ease;
-        
+
         /* Z-Index Scale */
         --z-dropdown: 100;
         --z-sticky: 200;
@@ -523,17 +532,17 @@
         h2 { font-size: 2.5rem; }
         h3 { font-size: 1.75rem; }
         h4 { font-size: 1.375rem; }
-        
+
         .grid-cols-md-2 { grid-template-columns: 1fr 1fr; }
         .grid-cols-md-3 { grid-template-columns: 1fr 1fr 1fr; }
-        
+
         .p-md-lg { padding: var(--spacing-xl); }
       }
 
       /* Desktop: 1024px and up */
       @media (min-width: 1024px) {
         h1 { font-size: 3.5rem; }
-        
+
         .grid-cols-lg-2 { grid-template-columns: 1fr 1fr; }
         .grid-cols-lg-3 { grid-template-columns: 1fr 1fr 1fr; }
         .grid-cols-lg-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }

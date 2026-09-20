@@ -3,7 +3,8 @@
 // UPDATED 19 Sept 2026: 6 new slideshow images added (13 total)
 // UPDATED 19 Sept 2026: Staff Management card → Instant Notifications
 // UPDATED 19 Sept 2026: Footer email → hello@myplazzaa.com
-// NOTE: Brand name still "BookingHub" — logo swap pending from Emmanuel
+// UPDATED 20 Sept 2026: Plazzaa logo + brand rebrand
+// UPDATED 20 Sept 2026: Logo shrunk + P icon recolored to indigo via mask-image
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -150,17 +151,38 @@ function HostLanding() {
     padding: isDesktop ? '20px 0' : '16px 0'
   };
 
+  // WHY: simplified wrapper — the mask div carries the icon, the
+  // "Plazzaa" text sits next to it with its own style.
   const logoStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    fontSize: isDesktop ? '24px' : '20px',
-    fontWeight: '800',
-    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
+    gap: '8px',
     cursor: 'pointer'
+  };
+
+  // WHY: mask-image renders the P in indigo (#4F46E5) instead of the
+  // baked-in Plazzaa blue. Consistent with the rest of the theme.
+  const logoImgStyle = {
+    height: isDesktop ? '28px' : '24px',
+    width: isDesktop ? '28px' : '24px',
+    backgroundColor: '#4F46E5',
+    WebkitMaskImage: 'url(/plazzaa-icon-1.png)',
+    maskImage: 'url(/plazzaa-icon-1.png)',
+    WebkitMaskSize: 'contain',
+    maskSize: 'contain',
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+    WebkitMaskPosition: 'center',
+    maskPosition: 'center',
+    display: 'block',
+    flexShrink: 0
+  };
+
+  const logoTextStyle = {
+    fontSize: isDesktop ? '20px' : '17px',
+    fontWeight: '800',
+    color: '#4F46E5',
+    letterSpacing: '-0.02em'
   };
 
   const backButtonStyle = {
@@ -248,9 +270,14 @@ function HostLanding() {
               React.createElement(ArrowLeft, { size: 16 }),
               'Back to Home'
             ),
+            // Plazzaa logo (indigo P via mask + "Plazzaa" text side by side)
             React.createElement('div', { style: logoStyle, onClick: goBackToHome },
-              React.createElement(Building2, { size: isDesktop ? 28 : 24, color: '#4f46e5' }),
-              React.createElement('span', null, 'BookingHub')
+              React.createElement('div', { 
+                style: logoImgStyle,
+                role: 'img',
+                'aria-label': 'Plazzaa'
+              }),
+              React.createElement('span', { style: logoTextStyle }, 'Plazzaa')
             )
           ),
           React.createElement('div', { style: desktopNavStyle },
@@ -447,7 +474,7 @@ function HostLanding() {
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: { textAlign: 'center', marginBottom: '48px' } },
           React.createElement('h2', { style: { fontSize: isDesktop ? '36px' : '28px', fontWeight: '700', marginBottom: '16px', color: '#0f172a' } }, 'Trusted by Nigerian businesses'),
-          React.createElement('p', { style: { fontSize: isDesktop ? '18px' : '16px', color: '#475569' } }, 'Join 200+ Nigerian businesses already using Booking Hub')
+          React.createElement('p', { style: { fontSize: isDesktop ? '18px' : '16px', color: '#475569' } }, 'Join 200+ Nigerian businesses already using Plazzaa')
         ),
         React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr', gap: '32px' } },
           // Testimonial 1
@@ -633,9 +660,13 @@ function HostLanding() {
       React.createElement('div', { style: containerStyle },
         React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr', gap: isDesktop ? '40px' : '32px', marginBottom: '40px' } },
           React.createElement('div', null,
+            // White wordmark logo (dark background — no mask needed, PNG is already white)
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' } },
-              React.createElement(Building2, { size: 24, color: '#818cf8' }),
-              React.createElement('span', { style: { fontSize: '18px', fontWeight: '800', color: 'white' } }, 'BookingHub')
+              React.createElement('img', { 
+                src: '/plazzaa-logo-white.png', 
+                alt: 'Plazzaa', 
+                style: { height: '24px', width: 'auto', display: 'block' } 
+              })
             ),
             React.createElement('p', { style: { fontSize: '13px', color: '#94a3b8', lineHeight: '1.6' } }, 'The booking platform built for Nigerian businesses.')
           ),
@@ -664,7 +695,7 @@ function HostLanding() {
           )
         ),
         React.createElement('div', { style: { borderTop: '1px solid #1e293b', paddingTop: '24px', textAlign: 'center', fontSize: '12px', color: '#64748b' } },
-          React.createElement('p', null, '© 2026 Booking Hub. All rights reserved. Built for Nigerian businesses.')
+          React.createElement('p', null, '© 2026 Plazzaa. All rights reserved. Built for Nigerian businesses.')
         )
       )
     )
