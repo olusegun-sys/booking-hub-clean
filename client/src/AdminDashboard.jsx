@@ -1,6 +1,8 @@
 ﻿// client/src/AdminDashboard.jsx
 // =============================================
 // ADMIN DASHBOARD - FIXED TOKEN KEY
+// UPDATED 21 Sept 2026: Reads 'admin_token' first, falls back to legacy keys.
+//   Only clears 'admin_token' on 401 — leaves business session intact.
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -28,11 +30,13 @@ function AdminDashboard({ admin, onLogout }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
   // ============================================================
-  // HELPER: Get token from multiple possible storage keys
+  // HELPER: Get admin token
   // ============================================================
+  // WHY: Admin sessions live under 'admin_token'. Legacy keys are
+  // still read as fallback for sessions started before the fix.
   const getToken = function() {
-    return localStorage.getItem('auth_token') || 
-           localStorage.getItem('admin_token') || 
+    return localStorage.getItem('admin_token') ||
+           localStorage.getItem('auth_token') || 
            localStorage.getItem('token');
   };
 
@@ -64,7 +68,6 @@ function AdminDashboard({ admin, onLogout }) {
       console.error('[AdminDashboard] No token found - redirecting to login');
       setError('Session expired. Please login again.');
       setLoading(false);
-      // Redirect to admin login after 2 seconds
       setTimeout(() => {
         window.location.href = '/admin';
       }, 2000);
@@ -79,9 +82,10 @@ function AdminDashboard({ admin, onLogout }) {
       .then(res => {
         console.log('[AdminDashboard] Response status:', res.status);
         if (res.status === 401) {
-          // Token might be expired - clear and redirect
-          localStorage.removeItem('auth_token');
+          // WHY: Clear ONLY the admin token. Do NOT touch the business
+          // token — the business session may still be valid.
           localStorage.removeItem('admin_token');
+          localStorage.removeItem('auth_token');
           localStorage.removeItem('token');
           throw new Error('Session expired. Please login again.');
         }

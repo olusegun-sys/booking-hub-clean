@@ -2,11 +2,11 @@
 // =============================================
 // PREMIUM BUSINESS DASHBOARD - 2026 LUXURY DESIGN
 // Glass-morphism, gradients, animations, premium UX
-// UPDATED: Event business type support with "Venue" labels
-// UPDATED: Removed Staff tab from navigation
-// UPDATED: Fixed sidebar alignment - left-aligned items with proper icon spacing
-// UPDATED: Added prominent Booking Link card on Overview tab
-// UPDATED: Removed subtitle text from Booking Link card
+// UPDATED 21 Sept 2026: Full business type config (restaurant, spa, salon,
+//   nails, car-wash, café, apartment, event_hall, etc.)
+// UPDATED 21 Sept 2026: Reads/writes 'business_token' scoped key
+// UPDATED 21 Sept 2026: Shorter type labels — Sports (not "Sports Facility"),
+//   Events (not "Event Venue"), Salon, Nails, Activities
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -19,7 +19,9 @@ import {
   Sparkle, Gem, Rocket, Infinity as InfinityIcon, Shield, Award,
   Copy, Check, ArrowRight, Wallet, Building, Phone, Mail,
   PartyPopper, Music, Cake, Briefcase, Gift, GlassWater,
-  Link as LinkIcon
+  Link as LinkIcon,
+  // WHY: icons for the extra business types now supported
+  Utensils, Coffee, Scissors, Car, Dumbbell
 } from 'lucide-react';
 import RoomPage from './RoomPage';
 import BookingsManager from './BookingsManager';
@@ -134,7 +136,11 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   // ============================================================
   // TOKEN & BUSINESS ID
   // ============================================================
-  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+  // WHY: Read from 'business_token' first (scoped key), then fall back to
+  // legacy 'auth_token'/'token' for sessions started before the fix.
+  const token = localStorage.getItem('business_token')
+             || localStorage.getItem('auth_token')
+             || localStorage.getItem('token');
   const businessId = business?.id || localStorage.getItem('businessId');
 
   // ============================================================
@@ -372,7 +378,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       reference: reference,
       bankName: 'GTBank',
       accountNumber: '0123456789',
-      accountName: 'Booking Hub Limited'
+      accountName: 'Plazzaa Limited'
     });
   }
 
@@ -392,7 +398,9 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
 
     setIsProcessing(true);
     try {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('business_token')
+                 || localStorage.getItem('auth_token')
+                 || localStorage.getItem('token');
       if (!token) {
         alert('Please login again.');
         return;
@@ -442,61 +450,153 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   }
 
   // ============================================================
-  // BUSINESS TYPE LABELS
+  // BUSINESS TYPE CONFIG
   // ============================================================
-  function getBusinessTypeLabels() {
-    const type = business?.business_type;
-    if (type === 'hotel') {
-      return { 
-        singular: 'Room', 
-        plural: 'Rooms', 
+  // WHY: Single source of truth for every business_type we support.
+  // Labels are kept short so the header reads cleanly even when the
+  // business name already contains the type word (e.g. "Peak Sports"
+  // next to "Sports"). Case-insensitive lookup means "Sports",
+  // "sports", and "  SPORTS  " all match. Both car_wash spellings
+  // are supported because production data has used both.
+  function getBusinessTypeConfig() {
+    const raw = business?.business_type;
+    const type = (raw || '').toString().toLowerCase().trim();
+
+    const configs = {
+      // ---------- STAYS ----------
+      hotel: {
+        label: 'Hotel',
+        singular: 'Room', plural: 'Rooms',
         action: 'Add Room',
-        icon: Hotel,
-        iconColor: '#4f46e5'
-      };
-    } else if (type === 'sports') {
-      return { 
-        singular: 'Court', 
-        plural: 'Courts', 
-        action: 'Add Court',
-        icon: Trophy,
-        iconColor: '#059669'
-      };
-    } else if (type === 'event') {
-      return { 
-        singular: 'Venue', 
-        plural: 'Venues', 
+        icon: Hotel, iconColor: '#4f46e5'
+      },
+      apartment: {
+        label: 'Apartment',
+        singular: 'Apartment', plural: 'Apartments',
+        action: 'Add Apartment',
+        icon: Building2, iconColor: '#4f46e5'
+      },
+      event_hall: {
+        label: 'Event Hall',
+        singular: 'Hall', plural: 'Halls',
+        action: 'Add Hall',
+        icon: PartyPopper, iconColor: '#d97706'
+      },
+      event: {
+        label: 'Events',
+        singular: 'Venue', plural: 'Venues',
         action: 'Add Venue',
-        icon: Sparkles,
-        iconColor: '#d97706'
-      };
-    }
-    return { 
-      singular: 'Item', 
-      plural: 'Items', 
-      action: 'Add Item',
-      icon: Building2,
-      iconColor: '#4f46e5'
+        icon: Sparkles, iconColor: '#d97706'
+      },
+
+      // ---------- FOOD ----------
+      restaurant: {
+        label: 'Restaurant',
+        singular: 'Menu Item', plural: 'Menu & Services',
+        action: 'Add Menu Item',
+        icon: Utensils, iconColor: '#ea580c'
+      },
+      diner: {
+        label: 'Diner',
+        singular: 'Menu Item', plural: 'Menu & Services',
+        action: 'Add Menu Item',
+        icon: Utensils, iconColor: '#ea580c'
+      },
+      cafe: {
+        label: 'Café',
+        singular: 'Item', plural: 'Menu & Services',
+        action: 'Add Item',
+        icon: Coffee, iconColor: '#b45309'
+      },
+      other_food: {
+        label: 'Food',
+        singular: 'Item', plural: 'Menu & Services',
+        action: 'Add Item',
+        icon: Utensils, iconColor: '#ea580c'
+      },
+
+      // ---------- OTHERS ----------
+      sports: {
+        label: 'Sports',
+        singular: 'Court', plural: 'Courts',
+        action: 'Add Court',
+        icon: Trophy, iconColor: '#059669'
+      },
+      spa: {
+        label: 'Spa',
+        singular: 'Service', plural: 'Services',
+        action: 'Add Service',
+        icon: Sparkles, iconColor: '#0891b2'
+      },
+      beauty_salon: {
+        label: 'Salon',
+        singular: 'Service', plural: 'Services',
+        action: 'Add Service',
+        icon: Scissors, iconColor: '#db2777'
+      },
+      // Legacy value present in production data
+      salon: {
+        label: 'Salon',
+        singular: 'Service', plural: 'Services',
+        action: 'Add Service',
+        icon: Scissors, iconColor: '#db2777'
+      },
+      nails: {
+        label: 'Nails',
+        singular: 'Service', plural: 'Services',
+        action: 'Add Service',
+        icon: Sparkle, iconColor: '#db2777'
+      },
+      // Support both hyphen and no-hyphen variants
+      car_wash: {
+        label: 'Car Wash',
+        singular: 'Service', plural: 'Services',
+        action: 'Add Service',
+        icon: Car, iconColor: '#0ea5e9'
+      },
+      'car-wash': {
+        label: 'Car Wash',
+        singular: 'Service', plural: 'Services',
+        action: 'Add Service',
+        icon: Car, iconColor: '#0ea5e9'
+      },
+      carwash: {
+        label: 'Car Wash',
+        singular: 'Service', plural: 'Services',
+        action: 'Add Service',
+        icon: Car, iconColor: '#0ea5e9'
+      },
+      activity_place: {
+        label: 'Activities',
+        singular: 'Activity', plural: 'Activities',
+        action: 'Add Activity',
+        icon: Dumbbell, iconColor: '#7c3aed'
+      }
     };
+
+    return configs[type] || {
+      label: 'Business',
+      singular: 'Item', plural: 'Items',
+      action: 'Add Item',
+      icon: Building2, iconColor: '#4f46e5'
+    };
+  }
+
+  // Wrapper kept so existing call sites don't need to change
+  function getBusinessTypeLabels() {
+    return getBusinessTypeConfig();
   }
 
   const typeLabels = getBusinessTypeLabels();
   const TypeIcon = typeLabels.icon;
 
   function getBusinessTypeIcon() {
-    const type = business?.business_type;
-    if (type === 'hotel') return React.createElement(Hotel, { size: 14 });
-    if (type === 'sports') return React.createElement(Trophy, { size: 14 });
-    if (type === 'event') return React.createElement(PartyPopper, { size: 14 });
-    return React.createElement(Building2, { size: 14 });
+    const config = getBusinessTypeConfig();
+    return React.createElement(config.icon, { size: 14 });
   }
 
   function getBusinessTypeLabel() {
-    const type = business?.business_type;
-    if (type === 'hotel') return 'Hotel';
-    if (type === 'sports') return 'Sports Facility';
-    if (type === 'event') return 'Event Venue';
-    return 'Business';
+    return getBusinessTypeConfig().label;
   }
 
   function getCurrentTier() {
@@ -520,12 +620,17 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   };
 
   const handleLogout = () => {
+    // WHY: Clear ONLY the business token — do not touch 'admin_token'.
+    // This keeps the admin session alive if the same user is logged in
+    // as both.
+    localStorage.removeItem('business_token');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentBusiness');
+
     if (onLogout) {
       onLogout();
     } else {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('token');
-      localStorage.removeItem('currentBusiness');
       window.location.href = '/login';
     }
   };
@@ -564,7 +669,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     const labels = getBusinessTypeLabels();
     const Icon = labels.icon;
     const currentTierData = getCurrentTier();
-    const isEvent = business?.business_type === 'event';
     
     return React.createElement('div', null,
       // Error message if any
@@ -602,7 +706,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           boxShadow: '0 20px 60px rgba(79, 70, 229, 0.3)'
         }
       },
-        // Background decorative elements
         React.createElement('div', {
           style: {
             position: 'absolute',
@@ -745,7 +848,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           overflow: 'hidden'
         }
       },
-        // Decorative top accent
         React.createElement('div', {
           style: {
             position: 'absolute',
@@ -756,7 +858,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             background: 'linear-gradient(90deg, #4f46e5, #7c3aed, #6366f1)'
           }
         }),
-        // Header row
         React.createElement('div', {
           style: {
             display: 'flex',
@@ -789,7 +890,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             }
           }, 'Your Booking Link')
         ),
-        // URL row
         React.createElement('div', {
           style: {
             display: 'flex',
@@ -882,7 +982,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           marginBottom: '24px' 
         } 
       },
-        // Revenue
         React.createElement('div', { 
           style: { 
             background: 'white',
@@ -906,7 +1005,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           ),
           React.createElement('p', { style: { fontSize: isDesktop ? '12px' : '11px', color: '#94a3b8', marginTop: '6px' } }, 'Lifetime revenue')
         ),
-        // Bookings
         React.createElement('div', { 
           style: { 
             background: 'white',
@@ -928,7 +1026,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           React.createElement('h2', { style: { fontSize: isDesktop ? '24px' : '20px', fontWeight: '700', color: '#0f172a', margin: 0 } }, bookings.length),
           React.createElement('p', { style: { fontSize: isDesktop ? '12px' : '11px', color: '#94a3b8', marginTop: '6px' } }, 'Total bookings received')
         ),
-        // Venues/Rooms
         React.createElement('div', { 
           style: { 
             background: 'white',
@@ -950,7 +1047,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           React.createElement('h2', { style: { fontSize: isDesktop ? '24px' : '20px', fontWeight: '700', color: '#0f172a', margin: 0 } }, rooms.length),
           React.createElement('p', { style: { fontSize: isDesktop ? '12px' : '11px', color: '#94a3b8', marginTop: '6px' } }, 'Total ' + labels.plural.toLowerCase())
         ),
-        // Usage
         React.createElement('div', { 
           style: { 
             background: 'white',

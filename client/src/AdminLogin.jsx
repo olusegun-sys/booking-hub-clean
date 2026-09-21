@@ -34,7 +34,9 @@ function AdminLogin({ onLogin }) {
       
       if (data.success) {
         if (data.token) {
-          localStorage.setItem('auth_token', data.token);
+          // WHY: Admin token stored under 'admin_token' — separate from the
+          // business token so logging into a business doesn't overwrite this.
+          localStorage.setItem('admin_token', data.token);
         }
         localStorage.setItem('admin', JSON.stringify(data.admin));
         if (onLogin) onLogin(data.admin);

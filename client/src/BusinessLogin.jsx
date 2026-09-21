@@ -1,6 +1,6 @@
 ﻿// FILE: client/src/BusinessLogin.jsx
-// UPDATED: Removed Staff tab - Owner login only
-// Professional UI matching BusinessSignup design
+// UPDATED 21 Sept 2026: Business token stored under 'business_token' (separate
+// from admin token to prevent session collisions)
 
 import React from 'react';
 import { Building2, X, LogIn, Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
@@ -65,7 +65,9 @@ var BusinessLogin = function (props) {
       .then(function (data) {
         if (data.success && data.business) {
           if (data.token) {
-            localStorage.setItem('auth_token', data.token);
+            // WHY: Business token stored under 'business_token' — separate
+            // from admin token, so the two sessions never clobber each other.
+            localStorage.setItem('business_token', data.token);
           }
           localStorage.setItem('currentBusiness', JSON.stringify(data.business));
           window.location.href = '/dashboard';
