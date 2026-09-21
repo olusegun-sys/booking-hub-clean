@@ -6,7 +6,7 @@ import API_BASE from '../../config';
 import { images } from '../lib/data';
 import { EASE } from '../lib/motion';
 import PlazzaaLogo from '../components/PlazzaaLogo';
-import TradePicker from '../components/TradePicker';
+import BusinessTypeModal from '../components/BusinessTypeModal';
 import AccountCreated from '../components/AccountCreated';
 
 /**
@@ -49,6 +49,7 @@ function FieldError({ children }) {
 
 export default function Signup() {
   const [step, setStep] = useState(0);
+  const [typeModalOpen, setTypeModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(null);
@@ -213,9 +214,11 @@ export default function Signup() {
                     </div>
 
                     <div>
-                      <Label>What do you do?</Label>
-                      <TradePicker
+                      <Label>Business type</Label>
+                      <BusinessTypeModal
                         value={form.businessType}
+                        open={typeModalOpen}
+                        onOpenChange={setTypeModalOpen}
                         onChange={(id) => {
                           setForm((f) => ({ ...f, businessType: id }));
                           setErrors((p) => ({ ...p, businessType: '' }));
