@@ -3,6 +3,9 @@
 // DEPLOY TO RENDER: Replace your server.js with this
 // UPDATED (19 Sept 2026): Email calls now surface { success: false } failures
 // UPDATED (19 Sept 2026): Search route supports comma-separated business types (group search)
+// UPDATED (22 Sept 2026): /api/businesses now returns rooms[] and filters is_active=true
+//                        WHY: homepage needs the business's own uploaded image (logo or
+//                        primary item image), and only approved+active businesses should show.
 
 // ============================================================
 // LOAD ENVIRONMENT VARIABLES FROM server/.env
@@ -286,14 +289,20 @@ app.get('/api/supabase-test', async function(req, res) {
 // PUBLIC BUSINESS ROUTES
 // ============================================================
 
+// >>> CHANGED 22 Sept 2026: /api/businesses now joins rooms and requires is_active=true
+// WHY: The homepage needs each business's own uploaded image (logo_url or the
+// primary image on their first item). Nested select brings rooms along in one
+// request instead of N+1 fetches. is_active=true guards against any approved
+// but deactivated business leaking onto the public homepage.
 app.get('/api/businesses', async function(req, res) {
   try {
     const { data, error } = await supabase
       .from('businesses')
-      .select('*')
-      .eq('status', 'approved')
+      .select('*, rooms(id, images, name)')   // WHY: include rooms so homepage can use primary item image
+      .eq('status', 'approved')                // WHY: only vetted businesses
+      .eq('is_active', true)                   // WHY: also require active flag
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     res.json({ success: true, businesses: data });
   } catch (err) {
@@ -327,7 +336,7 @@ app.get('/api/businesses/search/category', async function(req, res) {
       .from('businesses')
       .select('*')
       .eq('status', 'approved');
-    
+
     // WHY: category can be a single type ("hotel") or a comma-separated
     // group ("hotel,apartment,event_hall"). Split and use .in() when multiple
     // so searches like "Stays" find hotels, apartments, and event halls.
@@ -339,13 +348,13 @@ app.get('/api/businesses/search/category', async function(req, res) {
         query = query.in('business_type', types);
       }
     }
-    
+
     if (location && location.trim()) {
       query = query.or('city.ilike.%' + location + '%,state.ilike.%' + location + '%');
     }
-    
+
     const { data, error } = await query;
-    
+
     if (error) throw error;
     res.json({ success: true, businesses: data });
   } catch (err) {
@@ -363,7 +372,7 @@ app.get('/api/businesses/slug/:slug', async function(req, res) {
       .eq('slug', slug)
       .eq('status', 'approved')
       .single();
-    
+
     if (error) throw error;
     res.json({ success: true, business: data });
   } catch {
@@ -405,7 +414,7 @@ app.get('/api/businesses/:businessId/rooms', async function(req, res) {
       .eq('business_id', businessId)
       .eq('status', 'available')
       .order('sort_order', { ascending: true });
-    
+
     if (error) throw error;
     res.json({ success: true, rooms: data });
   } catch {
@@ -422,7 +431,7 @@ app.get('/api/businesses/:businessId/gallery', async function(req, res) {
       .select('*')
       .eq('business_id', businessId)
       .order('sort_order', { ascending: true });
-    
+
     if (error) throw error;
     const total = data ? data.length : 0;
     res.json({
@@ -528,7 +537,7 @@ app.post('/api/businesses/register', async function(req, res) {
       .select('id')
       .eq('email', email)
       .single();
-    
+
     if (existingEmail) {
       return res.status(400).json({ success: false, error: 'A business with this email already exists.' });
     }
@@ -538,7 +547,7 @@ app.post('/api/businesses/register', async function(req, res) {
       .select('id')
       .eq('slug', slug)
       .single();
-    
+
     var hashedPassword = await bcrypt.hash(password, 10);
 
     var { data, error } = await supabase
@@ -568,14 +577,14 @@ app.post('/api/businesses/register', async function(req, res) {
       console.error('Registration DB error:', error);
       return res.status(500).json({ success: false, error: 'Registration failed: ' + error.message });
     }
-    
+
     // EMAIL: Welcome — now checks return value so failures are visible
     if (data) {
       sendWelcomeEmail(data)
         .then(function(result) { logEmailResult('Welcome (' + data.email + ')', result); })
         .catch(function(err) { console.error('[Email] ❌ Welcome threw an exception:', err); });
     }
-    
+
     res.json({ success: true, business: data, message: 'Business registered! A confirmation email has been sent.' });
   } catch (error) {
     console.error('Registration error:', error);
@@ -655,22 +664,22 @@ app.post('/api/staff/login', async function(req, res) {
       .eq('business_id', req.body.businessId)
       .eq('is_active', true)
       .single();
-    
+
     if (error || !data) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
-    
+
     var valid = false;
     if (data.password_hash) {
       valid = await bcrypt.compare(req.body.password, data.password_hash);
     } else if (data.password === req.body.password) {
       valid = true;
     }
-    
+
     if (!valid) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
-    
+
     var staff = removeSensitiveFields(data, 'password_hash', 'password');
     res.json({ success: true, staff: staff });
   } catch (error) {
@@ -689,7 +698,7 @@ app.get('/api/admin/businesses', authenticateAdmin, async function(req, res) {
       .from('businesses')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     res.json({ success: true, businesses: data });
   } catch (error) {
@@ -706,16 +715,16 @@ app.put('/api/admin/businesses/:id/status', authenticateAdmin, async function(re
       .eq('id', req.params.id)
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     // EMAIL: Approval — now checks return value so failures are visible
     if (req.body.status === 'approved' && data) {
       sendApprovalEmail(data)
         .then(function(result) { logEmailResult('Approval (' + data.email + ')', result); })
         .catch(function(err) { console.error('[Email] ❌ Approval threw an exception:', err); });
     }
-    
+
     res.json({ success: true, business: data });
   } catch (error) {
     console.error('Status update error:', error);
@@ -726,13 +735,13 @@ app.put('/api/admin/businesses/:id/status', authenticateAdmin, async function(re
 app.delete('/api/admin/businesses/:id', authenticateAdmin, async function(req, res) {
   try {
     var { id } = req.params;
-    
+
     var { data: business, error: findError } = await supabase
       .from('businesses')
       .select('id, name')
       .eq('id', id)
       .single();
-    
+
     if (findError || !business) {
       return res.status(404).json({ success: false, error: 'Business not found.' });
     }
@@ -746,7 +755,7 @@ app.delete('/api/admin/businesses/:id', authenticateAdmin, async function(req, r
 
     var { error } = await supabase.from('businesses').delete().eq('id', id);
     if (error) throw error;
-    
+
     res.json({ success: true, message: business.name + ' has been permanently deleted.' });
   } catch (error) {
     console.error('Delete business error:', error);
@@ -759,23 +768,23 @@ app.get('/api/admin/stats', authenticateAdmin, async function(req, res) {
     var { count: totalBusinesses } = await supabase
       .from('businesses')
       .select('*', { count: 'exact', head: true });
-    
+
     var { count: pendingBusinesses } = await supabase
       .from('businesses')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
-    
+
     var { count: totalBookings } = await supabase
       .from('bookings')
       .select('*', { count: 'exact', head: true });
-    
+
     var { data: revenueData } = await supabase
       .from('bookings')
       .select('total_amount')
       .eq('status', 'confirmed');
-    
+
     var totalRevenue = revenueData ? revenueData.reduce(function(sum, b) { return sum + parseFloat(b.total_amount); }, 0) : 0;
-    
+
     res.json({
       success: true,
       stats: {
@@ -798,21 +807,21 @@ app.get('/api/admin/stats', authenticateAdmin, async function(req, res) {
 app.get('/api/businesses/:businessId/can-book', async function(req, res) {
   try {
     const { businessId } = req.params;
-    
+
     const { data: business, error } = await supabase
       .from('businesses')
       .select('current_booking_count, booking_limit, subscription_status, name')
       .eq('id', businessId)
       .single();
-    
+
     if (error || !business) {
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
-    
+
     const canBook = business.current_booking_count < business.booking_limit;
     const remaining = Math.max(0, business.booking_limit - business.current_booking_count);
     const usage = Math.min(100, (business.current_booking_count / business.booking_limit) * 100);
-    
+
     res.json({
       success: true,
       data: {
@@ -834,22 +843,22 @@ app.get('/api/businesses/:businessId/can-book', async function(req, res) {
 app.get('/api/businesses/:businessId/subscription', authenticateBusiness, async function(req, res) {
   try {
     const { businessId } = req.params;
-    
+
     const { data: business, error } = await supabase
       .from('businesses')
       .select('booking_limit, current_booking_count, subscription_status, subscribed_at')
       .eq('id', businessId)
       .single();
-    
+
     if (error || !business) {
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
-    
+
     const limit = business.booking_limit || 50;
     const used = business.current_booking_count || 0;
     const remaining = Math.max(0, limit - used);
     const percentage = limit > 0 ? Math.round((used / limit) * 100) : 0;
-    
+
     res.json({
       success: true,
       data: {
@@ -871,13 +880,13 @@ app.post('/api/businesses/:businessId/upgrade-request', authenticateBusiness, as
   try {
     const { businessId } = req.params;
     const { plan, paymentReference, notes } = req.body;
-    
+
     if (!plan || !['starter', 'pro'].includes(plan)) {
       return res.status(400).json({ success: false, error: 'Invalid plan selected' });
     }
-    
+
     const ref = paymentReference || `UPG-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
-    
+
     const { data: upgrade, error } = await supabase
       .from('subscription_upgrades')
       .insert({
@@ -891,9 +900,9 @@ app.post('/api/businesses/:businessId/upgrade-request', authenticateBusiness, as
       })
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     res.json({
       success: true,
       data: {
@@ -919,37 +928,37 @@ app.post('/api/businesses/:businessId/upgrade-request', authenticateBusiness, as
 app.post('/api/admin/subscription/verify', authenticateAdmin, async function(req, res) {
   try {
     const { upgradeId } = req.body;
-    
+
     if (!upgradeId) {
       return res.status(400).json({ success: false, error: 'Upgrade ID is required' });
     }
-    
+
     const { data: upgrade, error: fetchError } = await supabase
       .from('subscription_upgrades')
       .select('*')
       .eq('id', upgradeId)
       .single();
-    
+
     if (fetchError || !upgrade) {
       return res.status(404).json({ success: false, error: 'Upgrade request not found' });
     }
-    
+
     if (upgrade.status !== 'pending') {
       return res.status(400).json({ success: false, error: 'Upgrade already processed' });
     }
-    
+
     await supabase
       .from('subscription_upgrades')
-      .update({ 
+      .update({
         status: 'approved',
         verified_at: new Date().toISOString(),
         verified_by: req.adminId
       })
       .eq('id', upgradeId);
-    
+
     const newLimit = upgrade.plan === 'starter' ? 100 : 999999;
     const newStatus = upgrade.plan === 'starter' ? 'starter' : 'pro';
-    
+
     const { data: business, error: updateError } = await supabase
       .from('businesses')
       .update({
@@ -961,9 +970,9 @@ app.post('/api/admin/subscription/verify', authenticateAdmin, async function(req
       .eq('id', upgrade.business_id)
       .select()
       .single();
-    
+
     if (updateError) throw updateError;
-    
+
     res.json({
       success: true,
       message: `Business upgraded to ${upgrade.plan} plan successfully`,
@@ -991,9 +1000,9 @@ app.get('/api/admin/pending-upgrades', authenticateAdmin, async function(req, re
       `)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
-    
+
     res.json({
       success: true,
       data: upgrades || []
@@ -1045,14 +1054,14 @@ app.put('/api/businesses/:id', authenticateBusiness, async function(req, res) {
     if (description !== undefined) updateData.description = description;
     if (website !== undefined) updateData.website = website;
     if (name !== undefined) updateData.name = name;
-    
+
     var { data, error } = await supabase
       .from('businesses')
       .update(updateData)
       .eq('id', req.params.id)
       .select()
       .single();
-    
+
     if (error) return res.status(500).json({ success: false, error: 'Database update failed.' });
     res.json({ success: true, business: data });
   } catch (error) {
@@ -1067,22 +1076,22 @@ app.put('/api/businesses/:id', authenticateBusiness, async function(req, res) {
 
 app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async function(req, res) {
   try {
-    var { 
-      name, type, capacity, price_per_night, description, 
+    var {
+      name, type, capacity, price_per_night, description,
       address, images, venue_description, sort_order,
-      property_type, bathrooms, parking_spaces, year_built, 
+      property_type, bathrooms, parking_spaces, year_built,
       furnishing_status, listing_status, features, amenities, area_guide
     } = req.body;
-    
+
     if (!name || name.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Room name is required.' });
     }
     if (!price_per_night || isNaN(price_per_night) || price_per_night <= 0) {
       return res.status(400).json({ success: false, error: 'A valid price is required.' });
     }
-    
+
     var imagesArray = Array.isArray(images) ? images : [];
-    
+
     var { data, error } = await supabase
       .from('rooms')
       .insert({
@@ -1110,12 +1119,12 @@ app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async
       })
       .select()
       .single();
-    
+
     if (error) {
       console.error('Create room error:', error);
       return res.status(500).json({ success: false, error: 'Failed to create room: ' + error.message });
     }
-    
+
     res.json({ success: true, room: data });
   } catch (error) {
     console.error('Create room error:', error);
@@ -1125,22 +1134,22 @@ app.post('/api/businesses/:businessId/rooms/create', authenticateBusiness, async
 
 app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async function(req, res) {
   try {
-    var { 
-      name, type, capacity, price_per_night, description, 
+    var {
+      name, type, capacity, price_per_night, description,
       address, images, venue_description, sort_order,
       property_type, bathrooms, parking_spaces, year_built,
       furnishing_status, listing_status, features, amenities, area_guide
     } = req.body;
-    
+
     if (!name || name.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Room name is required.' });
     }
     if (!price_per_night || isNaN(price_per_night) || parseFloat(price_per_night) <= 0) {
       return res.status(400).json({ success: false, error: 'A valid price is required.' });
     }
-    
+
     var imagesArray = Array.isArray(images) ? images : [];
-    
+
     var updateData = {
       name: name.trim(),
       type: type || 'Standard',
@@ -1162,7 +1171,7 @@ app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async
       amenities: Array.isArray(amenities) ? amenities : [],
       area_guide: Array.isArray(area_guide) ? area_guide : []
     };
-    
+
     var { data, error } = await supabase
       .from('rooms')
       .update(updateData)
@@ -1170,12 +1179,12 @@ app.put('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, async
       .eq('business_id', req.params.businessId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('Update room error:', error);
       return res.status(500).json({ success: false, error: 'Failed to update room: ' + error.message });
     }
-    
+
     res.json({ success: true, room: data });
   } catch (error) {
     console.error('Update room error:', error);
@@ -1190,12 +1199,12 @@ app.delete('/api/businesses/:businessId/rooms/:roomId', authenticateBusiness, as
       .delete()
       .eq('id', req.params.roomId)
       .eq('business_id', req.params.businessId);
-    
+
     if (error) {
       console.error('Delete room error:', error);
       return res.status(500).json({ success: false, error: 'Failed to delete room: ' + error.message });
     }
-    
+
     res.json({ success: true, message: 'Room deleted successfully.' });
   } catch (error) {
     console.error('Delete room error:', error);
@@ -1261,9 +1270,9 @@ app.post('/api/businesses/:businessId/rooms/:roomId/upload-image', authenticateB
 
     if (uploadError) {
       console.error('[Venue Upload] Storage error:', uploadError);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to upload image: ' + uploadError.message 
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to upload image: ' + uploadError.message
       });
     }
 
@@ -1286,9 +1295,9 @@ app.post('/api/businesses/:businessId/rooms/:roomId/upload-image', authenticateB
     if (updateError) {
       console.error('[Venue Upload] Update error:', updateError);
       await supabase.storage.from('venue-images').remove([filePath]);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to update venue with new image: ' + updateError.message 
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update venue with new image: ' + updateError.message
       });
     }
 
@@ -1303,9 +1312,9 @@ app.post('/api/businesses/:businessId/rooms/:roomId/upload-image', authenticateB
     });
   } catch (error) {
     console.error('[Venue Upload] Error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Something went wrong. Please try again.' 
+    res.status(500).json({
+      success: false,
+      error: 'Something went wrong. Please try again.'
     });
   }
 });
@@ -1343,7 +1352,7 @@ app.delete('/api/businesses/:businessId/rooms/:roomId/images', authenticateBusin
         const { error: deleteError } = await supabase.storage
           .from('venue-images')
           .remove([storagePath]);
-        
+
         if (deleteError) {
           console.log('[Venue Delete] Storage delete warning:', deleteError.message);
         } else {
@@ -1364,9 +1373,9 @@ app.delete('/api/businesses/:businessId/rooms/:roomId/images', authenticateBusin
       .single();
 
     if (updateError) {
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to update venue: ' + updateError.message 
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update venue: ' + updateError.message
       });
     }
 
@@ -1377,9 +1386,9 @@ app.delete('/api/businesses/:businessId/rooms/:roomId/images', authenticateBusin
     });
   } catch (error) {
     console.error('[Venue Delete] Error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Something went wrong. Please try again.' 
+    res.status(500).json({
+      success: false,
+      error: 'Something went wrong. Please try again.'
     });
   }
 });
@@ -1395,7 +1404,7 @@ app.get('/api/businesses/:businessId/bookings', authenticateBusiness, async func
       .select('*')
       .eq('business_id', req.params.businessId)
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     res.json({ success: true, bookings: data });
   } catch {
@@ -1413,7 +1422,7 @@ app.get('/api/businesses/:businessId/staff', authenticateBusiness, async functio
       .eq('business_id', req.params.businessId)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     res.json({ success: true, staff: data });
   } catch (error) {
@@ -1437,7 +1446,7 @@ app.post('/api/businesses/:businessId/staff', authenticateBusiness, async functi
       })
       .select()
       .single();
-    
+
     if (error) {
       if (error.code === '23505') {
         return res.status(400).json({ success: false, error: 'Email already exists' });
@@ -1445,7 +1454,7 @@ app.post('/api/businesses/:businessId/staff', authenticateBusiness, async functi
       console.error('Staff creation error:', error);
       throw error;
     }
-    
+
     var staff = removeSensitiveFields(data, 'password_hash', 'password');
     res.json({ success: true, staff: staff });
   } catch (error) {
@@ -1466,7 +1475,7 @@ app.put('/api/staff/:staffId', authenticateBusiness, async function(req, res) {
       .eq('id', req.params.staffId)
       .select()
       .single();
-    
+
     if (error) throw error;
     var staff = removeSensitiveFields(data, 'password_hash', 'password');
     res.json({ success: true, staff: staff });
@@ -1482,7 +1491,7 @@ app.delete('/api/staff/:staffId', authenticateBusiness, async function(req, res)
       .from('staff')
       .update({ is_active: false })
       .eq('id', req.params.staffId);
-    
+
     if (error) throw error;
     res.json({ success: true, message: 'Staff removed' });
   } catch (error) {
@@ -1499,7 +1508,7 @@ app.get('/api/businesses/:businessId/operating-hours', authenticateBusiness, asy
       .select('*')
       .eq('business_id', req.params.businessId)
       .order('day_of_week');
-    
+
     if (error) throw error;
     res.json({ success: true, operatingHours: data });
   } catch (error) {
@@ -1511,13 +1520,13 @@ app.get('/api/businesses/:businessId/operating-hours', authenticateBusiness, asy
 app.put('/api/businesses/:businessId/operating-hours', authenticateBusiness, async function(req, res) {
   try {
     await supabase.from('operating_hours').delete().eq('business_id', req.params.businessId);
-    
+
     if (req.body.operatingHours && req.body.operatingHours.length) {
       var { data, error } = await supabase
         .from('operating_hours')
         .insert(req.body.operatingHours.map(function(h) { return { ...h, business_id: req.params.businessId }; }))
         .select();
-      
+
       if (error) throw error;
       res.json({ success: true, operatingHours: data });
     } else {
@@ -1538,7 +1547,7 @@ app.get('/api/businesses/:businessId/blocked-dates', authenticateBusiness, async
       .eq('business_id', req.params.businessId)
       .eq('is_available', false)
       .order('date');
-    
+
     if (error) throw error;
     res.json({ success: true, blockedDates: data });
   } catch (error) {
@@ -1559,7 +1568,7 @@ app.post('/api/businesses/:businessId/block-date', authenticateBusiness, async f
       })
       .select()
       .single();
-    
+
     if (error) throw error;
     res.json({ success: true, blockedDate: data });
   } catch {
@@ -1575,7 +1584,7 @@ app.delete('/api/businesses/:businessId/block-date/:date', authenticateBusiness,
       .delete()
       .eq('business_id', req.params.businessId)
       .eq('date', req.params.date);
-    
+
     res.json({ success: true, message: 'Date unblocked' });
   } catch (error) {
     console.error('Unblock date error:', error);
@@ -1607,20 +1616,20 @@ app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness,
 app.get('/api/businesses/:businessId/booking-capacity', async function(req, res) {
   try {
     const { businessId } = req.params;
-    
+
     const { data: business, error } = await supabase
       .from('businesses')
       .select('current_booking_count, booking_limit, subscription_status, name')
       .eq('id', businessId)
       .single();
-    
+
     if (error || !business) {
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
-    
+
     const canBook = business.current_booking_count < business.booking_limit;
     const remaining = Math.max(0, business.booking_limit - business.current_booking_count);
-    
+
     res.json({
       success: true,
       canBook: canBook,
@@ -1681,9 +1690,9 @@ app.post('/api/bookings', async function(req, res) {
 
     if (currentCount >= limit) {
       console.log('[Booking] ⛔ Limit reached for:', business.name);
-      
+
       const remaining = limit - currentCount;
-      
+
       return res.status(403).json({
         success: false,
         error: 'Booking limit reached. Please upgrade your plan to continue accepting bookings.',
@@ -1745,8 +1754,8 @@ app.post('/api/bookings', async function(req, res) {
 
     if (error) {
       console.error('Supabase insert error:', error);
-      return res.status(500).json({ 
-        success: false, 
+      return res.status(500).json({
+        success: false,
         error: 'Database error: ' + error.message,
         details: error
       });
@@ -1796,9 +1805,9 @@ app.post('/api/bookings', async function(req, res) {
 
     const newCount = (bookingCount || 0) + 1;
     const remainingBookings = Math.max(0, limit - newCount);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       booking: {
         ...booking,
         room_name: roomName
@@ -1813,8 +1822,8 @@ app.post('/api/bookings', async function(req, res) {
     });
   } catch (error) {
     console.error('Booking error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Something went wrong. Please try again.',
       details: error.message
     });
@@ -1845,7 +1854,7 @@ app.post('/api/bookings/:reference/cancel', async function(req, res) {
       .eq('booking_reference', req.params.reference)
       .select()
       .single();
-    
+
     if (error) throw error;
     res.json({ success: true, booking: data });
   } catch (error) {
@@ -1862,14 +1871,14 @@ app.patch('/api/bookings/:id', async function(req, res) {
     if (payment_reference !== undefined) updateData.payment_reference = payment_reference;
     if (payment_status !== undefined) updateData.payment_status = payment_status;
     if (amount_paid !== undefined) updateData.amount_paid = amount_paid;
-    
+
     var { data, error } = await supabase
       .from('bookings')
       .update(updateData)
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
     res.json({ success: true, booking: data });
   } catch (error) {
@@ -1888,19 +1897,19 @@ app.post('/api/create-payment', async function(req, res) {
     if (!bookingReference) return res.status(400).json({ success: false, error: 'Booking reference is required.' });
     if (!email || !email.includes('@')) return res.status(400).json({ success: false, error: 'Valid email required.' });
     if (!amount || isNaN(amount) || amount <= 0) return res.status(400).json({ success: false, error: 'Valid amount required.' });
-    
+
     var { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('*')
       .eq('booking_reference', bookingReference)
       .single();
-    
+
     if (bookingError || !booking) return res.status(404).json({ success: false, error: 'Booking not found.' });
-    
+
     if (booking.payment_status === 'paid') {
       return res.status(400).json({ success: false, error: 'Booking already paid. Please contact support.' });
     }
-    
+
     var result = await initializePayment({ email: email, amount: amount, bookingReference: bookingReference });
     res.json({ success: true, authorization_url: result.authorization_url, reference: result.reference });
   } catch (error) {
@@ -1913,7 +1922,7 @@ app.post('/api/verify-payment', async function(req, res) {
   try {
     var { reference, bookingReference } = req.body;
     if (!reference) return res.status(400).json({ success: false, error: 'Payment reference is required.' });
-    
+
     var verification = await verifyPayment(reference);
     if (verification.success) {
       await supabase
@@ -1924,7 +1933,7 @@ app.post('/api/verify-payment', async function(req, res) {
           amount_paid: verification.amount / 100
         })
         .eq('booking_reference', bookingReference);
-      
+
       res.json({ success: true, message: 'Payment successful!', amountPaid: verification.amount / 100 });
     } else {
       res.json({ success: false, message: 'Payment verification failed.' });
@@ -2008,7 +2017,7 @@ app.post('/api/businesses/:businessId/gallery', authenticateBusiness, async func
       .from('business_gallery')
       .select('*', { count: 'exact', head: true })
       .eq('business_id', businessId);
-    
+
     if ((count || 0) >= 5) {
       return res.status(400).json({ error: 'Gallery is full. Maximum 5 images allowed.' });
     }
@@ -2019,7 +2028,7 @@ app.post('/api/businesses/:businessId/gallery', authenticateBusiness, async func
       .eq('business_id', businessId)
       .order('sort_order', { ascending: false })
       .limit(1);
-    
+
     var nextSortOrder = (lastImage && lastImage.length > 0) ? lastImage[0].sort_order + 1 : 0;
 
     var { data, error } = await supabase
@@ -2052,7 +2061,7 @@ app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness,
       .eq('id', imageId)
       .eq('business_id', businessId)
       .single();
-    
+
     if (!image) return res.status(404).json({ error: 'Image not found' });
 
     try {
@@ -2073,7 +2082,7 @@ app.delete('/api/businesses/:businessId/gallery/:imageId', authenticateBusiness,
       .select('id')
       .eq('business_id', businessId)
       .order('sort_order', { ascending: true });
-    
+
     if (remaining) {
       for (var i = 0; i < remaining.length; i++) {
         await supabase.from('business_gallery').update({ sort_order: i }).eq('id', remaining[i].id);
@@ -2092,7 +2101,7 @@ app.put('/api/businesses/:businessId/gallery/reorder', authenticateBusiness, asy
     var { businessId } = req.params;
     var { imageIds } = req.body;
     if (!Array.isArray(imageIds)) return res.status(400).json({ error: 'Invalid order data' });
-    
+
     for (var i = 0; i < imageIds.length; i++) {
       await supabase
         .from('business_gallery')
@@ -2100,7 +2109,7 @@ app.put('/api/businesses/:businessId/gallery/reorder', authenticateBusiness, asy
         .eq('id', imageIds[i])
         .eq('business_id', businessId);
     }
-    
+
     res.json({ success: true, message: 'Reordered' });
   } catch (err) {
     console.error('Reorder error:', err);
@@ -2122,7 +2131,7 @@ app.post('/api/businesses/generate-verification', authenticateBusiness, async fu
 
     var crypto = require('crypto');
     var verificationCode = crypto.randomBytes(12).toString('hex');
-    
+
     var expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
@@ -2140,15 +2149,15 @@ app.post('/api/businesses/generate-verification', authenticateBusiness, async fu
 
     if (error) {
       console.error('[DNS] Database error:', error);
-      
+
       if (error.message && error.message.includes('column') && error.message.includes('does not exist')) {
-        return res.status(500).json({ 
-          success: false, 
+        return res.status(500).json({
+          success: false,
           error: 'Database schema missing required columns. Please add: domain_verification_code, domain_verification_expires, domain_verified_at',
           details: error.message
         });
       }
-      
+
       throw error;
     }
 
@@ -2165,8 +2174,8 @@ app.post('/api/businesses/generate-verification', authenticateBusiness, async fu
     });
   } catch (error) {
     console.error('[DNS] Generate verification error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to generate verification code: ' + error.message
     });
   }
@@ -2259,8 +2268,8 @@ app.post('/api/businesses/check-verification', authenticateBusiness, async funct
 
   } catch (error) {
     console.error('[DNS] Check verification error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to verify domain. Please try again.',
       details: error.message
     });
@@ -2322,7 +2331,7 @@ async function ensureSubscriptionTable() {
       .from('subscription_upgrades')
       .select('id')
       .limit(1);
-    
+
     if (checkError && checkError.message.includes('does not exist')) {
       console.log('Please create subscription_upgrades table manually in Supabase SQL Editor.');
     } else {

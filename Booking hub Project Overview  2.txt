@@ -1,13 +1,17 @@
-﻿**Summary:** Full project overview update through **21 September 2026 (pre-demo)** — includes the business-type label fix (restaurant/spa/salon/nails/car-wash), scoped auth tokens (admin_token vs business_token), and everything else from 18–21 Sept. This is the pickup document for the next chat.
+﻿**Plain English summary:** Here's the full updated project overview — 22 September 2026 — carrying forward everything from the previous version, adding today's session (homepage real-businesses fix, backend `rooms` join, removal of the fake destination/popular-stays sections), and structured as a clean handoff document for the next chat.
+
+I've kept the format you established, folded in today's work, and added a "For the Next Chat: Pick Up Here" section that reflects the state of the code **right now** — after this session but before you've run the local test.
 
 ---
 
 # Plazzaa (formerly Booking Hub) — Complete Project Overview
-## MASTER UPDATE — 21 SEPTEMBER 2026 (PRE-DEMO)
+## MASTER UPDATE — 22 SEPTEMBER 2026 (POST-DEMO-DAY, PRE-HOMEPAGE-FIX-SHIP)
 
 ## 📋 Plain English Summary
 
-This document captures everything we've built — from the first line of code through the pre-demo sprint on 21 Sept. It's the single source of truth for the Plazzaa for Business platform. If this chat hits the limit, the next chat picks up here. Read it fully before writing any code.
+This document captures everything we've built — from the first line of code through the homepage data-integrity sprint on 22 September. It's the single source of truth for the Plazzaa for Business platform. If this chat hits the limit, the next chat picks up here. Read it fully before writing any code.
+
+**What changed since 21 September:** The homepage had fake businesses (hardcoded location cards + hardcoded "popular stays" + hardcoded stock images keyed by business_type). A UX designer working with Olusegun spotted this on 22 September. We designed and implemented a fix that removes all fake content and replaces it with a real "Available on Plazzaa" grid driven by `GET /api/businesses` — pulled from Supabase, filtered to `status='approved' AND is_active=true`, showing the actual image the business owner uploaded in their dashboard. **The code is written. Local testing is the next step.**
 
 ---
 
@@ -17,36 +21,44 @@ This document captures everything we've built — from the first line of code th
 
 **Plazzaa** (formerly Booking Hub) is a multi-tenant booking management platform for Nigerian businesses. Think of it as **"Shopify for bookings"** — not a marketplace like Booking.com, but a platform where each business gets their own branded booking page, accepts payments (Paystack or pay-at-venue), receives automated email notifications, and tracks all bookings in a real-time dashboard.
 
-**Now part of the Plazzaa ecosystem:** The platform is the "Plazzaa for Business" solution — a comprehensive business management tool. The product has been rebranded from **Booking Hub** to **Plazzaa** as of 18–21 Sept 2026.
+**Part of the Plazzaa ecosystem:** The platform is the "Plazzaa for Business" solution — a comprehensive business management tool. The product was rebranded from **Booking Hub** to **Plazzaa** on 18–21 September 2026.
 
 ### Major Strategic Pivot: From Hospitality-Only to Any Business Type
 
-As of the 14 Sept 2026 meeting, the platform serves three groups:
+As of the 14 September 2026 meeting, the platform serves three groups:
 
 - **Stays** — Hotels, apartments, event halls
 - **Food** — Restaurants, diners, cafés, catering, other food
 - **Others** — Sports facilities, spas, beauty salons, nail studios, car washes, activity places
 
-The dashboard, signup flow, landing page, emails, homepage, and booking page all adapt per business type via a **config-driven label system** (see "Business-Type-Aware System" below).
+The dashboard, signup flow, landing page, emails, homepage, and booking page all adapt per business type via a **config-driven label system**.
 
 ### Key Meeting Decisions
 
-**From 14 Sept 2026 meeting:**
-- ✅ Landing page prioritizes businesses and hosts — *shipped*
+**From 22 September 2026 meeting (Boss Terrence pivot):**
+- ✅ Strategic shift toward B2B software focus (consumer marketplace temporarily deprioritised)
+- ✅ Two-to-three-month free pilot setup for select businesses to build social proof
+- ✅ Free trial period of 30–60 days on paid subscription tiers
+- ✅ Target deployment: **Wednesday 24 September, worst-case Friday 26 September**
+- ✅ Emmanuel assigned to merge UI changes into `main`
+- ✅ Terrence to review platform once deployed and provide feedback
+- ⚠️ Note: no test environment yet — updates deploy directly live (Yannick)
+
+**From 14 September 2026 meeting:**
+- ✅ Landing page prioritises businesses and hosts — *shipped*
 - ✅ CTA change: "Start Free Trial" → **"Get Started"** — *shipped*
-- ✅ Business categories restructured: **Stays / Food / Others** — *shipped on HomePage + signup + emails + HostLanding*
-- ✅ "Rooms" tab renamed to **"Menu & Services"** (on RoomPage editor) — *shipped*
+- ✅ Business categories restructured: **Stays / Food / Others** — *shipped*
+- ✅ "Rooms" tab renamed to **"Menu & Services"** — *shipped*
 - ⏳ Guest count moved from booking page → booking confirmation only — *pending (Jeremiah)*
 - ⏳ Plazzaa business vetting standards — *deferred*
 
 **From earlier September meeting:**
-- **Iterate, don't rebuild**
-- **Independent B2B product**
-- **Pilot with 5-10 businesses**
-- **Launch deadline: 21 September 2026** — full demo for Mr. Terrence
-- **Per-booking fee model** — initial monetization
-- **Subscription tiers retained** — Free / Starter (₦30k) / Pro (₦50k)
-- **Staff feature removed** — files kept for future use
+- Iterate, don't rebuild
+- Independent B2B product
+- Pilot with 5–10 businesses
+- Per-booking fee model — initial monetisation
+- Subscription tiers retained — Free / Starter (₦30k) / Pro (₦50k)
+- Staff feature removed — files kept for future use
 
 ### The Problem We're Solving
 
@@ -75,8 +87,9 @@ Nigerian businesses struggle with:
 - ✅ **Broad business category support** (Stays / Food / Others) with group search
 - ✅ **Plazzaa brand identity live** — logo, favicon, tab title
 - ✅ **Responsive across all devices** — 375px mobile → 1280px+ desktop
-- ✅ **Complete business-type config** — 15+ types supported in dashboard (restaurant, diner, cafe, other_food, hotel, apartment, event_hall, event, sports, spa, beauty_salon, salon, nails, car_wash, activity_place)
+- ✅ **Complete business-type config** — 15+ types supported in dashboard
 - ✅ **Scoped auth tokens** — admin and business sessions no longer clobber each other
+- ✅ **🆕 Homepage shows only real, approved businesses** — no more hardcoded fake cards
 
 ---
 
@@ -91,7 +104,10 @@ Nigerian businesses struggle with:
 │  │ Homepage │  │   Admin  │  │ Business │  │ Unified  │  │
 │  │ (Stays/  │  │Dashboard │  │Dashboard │  │ Booking  │  │
 │  │ Food/    │  │          │  │(config)  │  │Page      │  │
-│  │ Others)  │  │          │  │          │  │          │  │
+│  │ Others,  │  │          │  │          │  │          │  │
+│  │ real     │  │          │  │          │  │          │  │
+│  │ approved │  │          │  │          │  │          │  │
+│  │ only 🆕) │  │          │  │          │  │          │  │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐                 │
 │  │  Owner   │  │ Business │  │  Menu &  │                 │
@@ -100,9 +116,6 @@ Nigerian businesses struggle with:
 │  ┌──────────┐  ┌──────────┐                                │
 │  │  Host    │  │ Signup   │                                │
 │  │ Landing  │  │ Flow     │                                │
-│  │(Stays/   │  │(Stays/   │                                │
-│  │Food/     │  │Food/     │                                │
-│  │Others)   │  │Others)   │                                │
 │  └──────────┘  └──────────┘                                │
 │  ┌────────────────────────────────────────────┐             │
 │  │ Plazzaa logo, favicon, tab title — LIVE    │             │
@@ -121,9 +134,11 @@ Nigerian businesses struggle with:
 │  │ Enhanced │  │  Item    │  │  Domain  │                 │
 │  │ Business │  │  Images  │  │   DNS    │                 │
 │  └──────────┘  └──────────┘  └──────────┘                 │
-│  ┌──────────┐                                               │
-│  │  Search  │  ← Group search (comma-separated types)       │
-│  └──────────┘                                               │
+│  ┌──────────┐  ┌─────────────────────┐                     │
+│  │  Search  │  │ /api/businesses 🆕  │                     │
+│  │  (group) │  │ now joins rooms +   │                     │
+│  │          │  │ filters is_active   │                     │
+│  └──────────┘  └─────────────────────┘                     │
 └────────────────────────┬────────────────────────────────────┘
                          │
                          ▼
@@ -153,13 +168,13 @@ Nigerian businesses struggle with:
 
 ### Data Flow — Booking
 
-1. **Customer** visits business booking page (`myplazzaa.com/book/{slug}` or custom domain)
+1. Customer visits business booking page (`myplazzaa.com/book/{slug}` or custom domain)
 2. Customer selects item/date → chooses payment method
-3. **Frontend** sends booking request to backend API
-4. **Backend** validates → creates booking in database → triggers email (business-type-aware)
-5. **If Paystack**: redirects to payment → verifies on callback → confirms booking
-6. **If Pay at Venue**: creates booking immediately → sends confirmation email
-7. **Business Owner** sees booking in dashboard → manages status
+3. Frontend sends booking request to backend API
+4. Backend validates → creates booking in database → triggers email (business-type-aware)
+5. If Paystack: redirects to payment → verifies on callback → confirms booking
+6. If Pay at Venue: creates booking immediately → sends confirmation email
+7. Business Owner sees booking in dashboard → manages status
 
 ### Data Flow — Business Search
 
@@ -169,7 +184,20 @@ Nigerian businesses struggle with:
    - `food` → `restaurant,diner,cafe,other_food`
    - `others` → `sports,spa,beauty_salon,activity_place`
 3. Backend splits into array, uses `.in('business_type', types)` when >1
-4. Results returned and rendered with group-aware images and labels
+4. Results returned and rendered with group-aware labels
+
+### Data Flow — Homepage "Available on Plazzaa" 🆕
+
+1. HomePage mounts → `useEffect` fires `GET /api/businesses`
+2. Backend queries `businesses` with nested `rooms(id, images, name)` select, filtered to `status='approved'` AND `is_active=true`
+3. Response contains each business + their rooms
+4. Frontend `resolveBusinessImage()` picks the image in this priority:
+   - `business.cover_image` (legacy)
+   - `business.logo_url` (what BusinessProfile writes today)
+   - `business.rooms[0].images[0]` (first item's primary image from RoomPage)
+   - `null` → neutral "No image yet" placeholder
+5. Card renders with real name, real area (`city, state`), real description (if set), correct business-type badge
+6. Click → `navigate('/book/{slug}')` — no location check, no toast
 
 ### Data Flow — Business Signup
 
@@ -179,8 +207,9 @@ Nigerian businesses struggle with:
 4. Backend creates `businesses` row with `status: 'pending'`
 5. `sendWelcomeEmail` fires (uses `bookings@myplazzaa.com` sender)
 6. Admin approves via dashboard → `sendApprovalEmail` fires with live booking link
+7. Business now visible on homepage's "Available on Plazzaa" grid 🆕
 
-### Data Flow — Auth (Scoped Tokens) 🆕
+### Data Flow — Auth (Scoped Tokens)
 
 **Before 21 Sept:** Both admin and business logins wrote to the same `auth_token` localStorage key. Logging into a business overwrote the admin token; logging out of a business wiped both.
 
@@ -192,28 +221,20 @@ Nigerian businesses struggle with:
 | Business | `business_token` | All other API routes |
 | Legacy fallback | `auth_token`, `token` | Read-only migration path |
 
-**Data flow:**
-1. Admin login → `AdminLogin.jsx` writes `localStorage.setItem('admin_token', data.token)`
-2. Business login → `BusinessLogin.jsx` writes `localStorage.setItem('business_token', data.token)`
-3. `AdminDashboard.jsx` reads `admin_token` first (fallback to legacy)
-4. `BusinessDashboard.jsx` reads `business_token` first (fallback to legacy)
-5. Logout clears only the scoped key it belongs to
-6. On 401, each dashboard clears only its own scoped key
-
 ### Business-Type-Aware System
 
 The core architectural pattern used across the platform: **one config map, keyed by `business_type`, drives all visible labels.**
 
 Five places this exists:
-- **`client/src/HomePage.jsx`** — `categoryGroups`, `businessTypeToGroup`, `businessTypeDisplay` maps
+- **`client/src/HomePage.jsx`** — `categoryGroups`, `businessTypeDisplay` maps
 - **`client/src/UnifiedBookingPage.jsx`** — `BOOKING_LABELS` config for the public booking page
 - **`client/src/HostLanding.jsx`** — hero/features/pricing copy adapted for all types
-- **`client/src/BusinessDashboard.jsx`** — `getBusinessTypeConfig()` covers 15+ types 🆕
+- **`client/src/BusinessDashboard.jsx`** — `getBusinessTypeConfig()` covers 15+ types
 - **`server/src/services/emailService.js`** — `BOOKING_EMAIL_LABELS` config for email templates
 
 Each map has an entry for every supported business type + a `_default` fallback for unknown types. Adding a new business type = adding an entry to each map. No if/else chains, no order bugs, no branches that silently fall through.
 
-**Full business types supported (as of 21 Sept):**
+**Full business types supported:**
 - **Stays:** `hotel`, `apartment`, `event_hall`, `event`
 - **Food:** `restaurant`, `diner`, `cafe`, `other_food`
 - **Others:** `sports`, `spa`, `beauty_salon`, `salon` (legacy), `nails`, `car_wash` / `car-wash` / `carwash`, `activity_place`
@@ -301,12 +322,12 @@ CREATE TABLE businesses (
   address TEXT,
   state VARCHAR(100),
   city VARCHAR(100),
-  logo_url TEXT,
-  cover_image TEXT,
+  logo_url TEXT,           -- ← primary image source (BusinessProfile writes here)
+  cover_image TEXT,        -- ← legacy field, still respected if set
   about_text TEXT,
   story_image TEXT,
   status VARCHAR(50) DEFAULT 'pending',  -- pending | approved | rejected
-  is_active BOOLEAN DEFAULT TRUE,
+  is_active BOOLEAN DEFAULT TRUE,        -- ← homepage filter uses this 🆕
   booking_limit INTEGER DEFAULT 50,
   current_booking_count INTEGER DEFAULT 0,
   subscription_status VARCHAR(50) DEFAULT 'free',  -- free | starter | pro
@@ -344,7 +365,7 @@ CREATE TABLE rooms (
   base_price DECIMAL(10,2),
   capacity INTEGER,
   amenities TEXT[],
-  images JSONB DEFAULT '[]'::jsonb,
+  images JSONB DEFAULT '[]'::jsonb,  -- ← first item's images[0] is homepage fallback 🆕
   status VARCHAR(50) DEFAULT 'available',
   type VARCHAR(50),
   address TEXT,
@@ -400,6 +421,10 @@ CREATE TABLE staff ( ... );
 - **`rooms` table is a misnomer** — it serves as the generic "items" table for every business type.
 - **`check_in_date` / `check_out_date`** are generic date fields — "the date of the booking" for every business type.
 - **`business_type`** drives the entire adaptive label system. Values must match exactly between `BusinessSignup.jsx`, `HomePage.jsx`, `UnifiedBookingPage.jsx`, `HostLanding.jsx`, `BusinessDashboard.jsx`, and `emailService.js`.
+- **Image fields explained:**
+  - `logo_url` — set by BusinessProfile, the current primary source
+  - `cover_image` — legacy, no longer written by any UI, but still selected and respected
+  - `rooms[].images[]` — per-item; the first is labelled "Primary" in RoomPage and is the homepage fallback
 
 ---
 
@@ -411,7 +436,7 @@ CREATE TABLE staff ( ... );
 
 | Name | Hex | Usage |
 |------|-----|-------|
-| **Primary Blue** | `#2563EB` | Logo, brand accents (current use: header text next to logo) |
+| **Primary Blue** | `#2563EB` | Logo, brand accents |
 | **Primary Yellow** | `#FFD166` | Future accents |
 | **Neutral Grey** | `#8E8E93` | Future muted text |
 | **Dark Charcoal** | `#1B1E28` | Future headings |
@@ -434,7 +459,7 @@ CREATE TABLE staff ( ... );
 | Warning Yellow | `#F59E0B` | Pending |
 | Danger Red | `#EF4444` | Errors, delete |
 
-**⚠️ Pending:** Full theme color swap from indigo `#4F46E5` to Plazzaa Blue `#2563EB`. Scheduled for **after Monday's demo**.
+**⚠️ Pending:** Full theme colour swap from indigo `#4F46E5` to Plazzaa Blue `#2563EB`. Scheduled for after the Wednesday/Friday deploy.
 
 ### Typography
 
@@ -459,22 +484,24 @@ CREATE TABLE staff ( ... );
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| Homepage | `HomePage.jsx` | **Stays/Food/Others cards, group search, hero per group, Plazzaa wordmark logo** |
-| Admin Login | `AdminLogin.jsx` | **Writes to `admin_token`** 🆕 |
-| Admin Dashboard | `AdminDashboard.jsx` | **Reads `admin_token`, scoped logout** 🆕 |
-| Business Login | `BusinessLogin.jsx` | **Writes to `business_token`** 🆕 |
-| Business Dashboard | `BusinessDashboard.jsx` | **Reads `business_token`, full 15+ type config, scoped logout** 🆕 |
+| Homepage | `HomePage.jsx` | **Stays/Food/Others cards, group search, hero per group, real "Available on Plazzaa" grid 🆕** |
+| Admin Login | `AdminLogin.jsx` | Writes to `admin_token` |
+| Admin Dashboard | `AdminDashboard.jsx` | Reads `admin_token`, scoped logout |
+| Business Login | `BusinessLogin.jsx` | Writes to `business_token` |
+| Business Dashboard | `BusinessDashboard.jsx` | Reads `business_token`, full 15+ type config, scoped logout |
 | Business Settings | `BusinessSettings.jsx` | Hours, blocked dates, custom domain, phones |
-| **Unified Booking Page** | `UnifiedBookingPage.jsx` | Business-type-aware public booking page + receipt |
+| Unified Booking Page | `UnifiedBookingPage.jsx` | Business-type-aware public booking page + receipt |
 | Owner Properties Page | `OwnerPropertiesPage.jsx` | Business info, stats, filter tabs |
 | Menu & Services | `RoomPage.jsx` | 6-tab editor (Basic, Details, Images, Features, Amenities, Area Guide) |
 | Bookings Manager | `BookingsManager.jsx` | View/update bookings |
-| Staff Management | `StaffManagement.jsx` | **Kept for future use — not accessible** |
-| Business Profile | `BusinessProfile.jsx` | Full edit |
+| Staff Management | `StaffManagement.jsx` | Kept for future use — not accessible |
+| Business Profile | `BusinessProfile.jsx` | Full edit, logo upload only |
 | UpgradePage | — | Full page upgrade flow |
-| **Host Landing Page** | `HostLanding.jsx` | Stays/Food/Others marketing, 13-image slideshow, Plazzaa wordmark |
+| Host Landing Page | `HostLanding.jsx` | Stays/Food/Others marketing, 13-image slideshow, Plazzaa wordmark |
 | Business Signup | `BusinessSignup.jsx` | 2-step flow, grouped dropdown |
-| API wrapper | `api.js` | **Scoped token manager (`admin` vs `business`)** 🆕 |
+| API wrapper | `api.js` | Scoped token manager (`admin` vs `business`) |
+| ~~DestinationCards~~ | ~~`components/DestinationCards.jsx`~~ | **REMOVED from HomePage render — hardcoded fake data 🆕** |
+| ~~PopularStays~~ | ~~`components/PopularStays.jsx`~~ | **REMOVED from HomePage render — hardcoded fake data 🆕** |
 
 ### Static Assets (`client/public/`)
 
@@ -508,9 +535,9 @@ POST   /api/admin/subscription/verify
 
 **Public business**
 ```
-GET    /api/businesses
+GET    /api/businesses                    ← now joins rooms + filters is_active=true 🆕
 GET    /api/businesses/featured
-GET    /api/businesses/search/category   ← supports comma-separated groups
+GET    /api/businesses/search/category    ← supports comma-separated groups
 GET    /api/businesses/slug/:slug
 GET    /api/domain-info
 GET    /api/businesses/:businessId/rooms
@@ -582,31 +609,28 @@ GET    /api/domain-info
 - Ref ID generation `BH-XXXXXXXX`
 
 ### 2. Authentication
-- **Scoped JWT tokens in localStorage** 🆕
+- Scoped JWT tokens in localStorage
   - `admin_token` for admin routes
   - `business_token` for business routes
   - Legacy `auth_token`/`token` fallback for migration
 - bcryptjs (10 rounds) password hashing
 - Role-based access (admin, owner)
 - Admin sessions (1 day), Business sessions (7 days)
-- **Sessions no longer clobber each other** 🆕
+- Sessions no longer clobber each other
 
 ### 3. Admin Dashboard
 - Stats overview, business management, approve/reject, delete
 - Subscription verification
 - Welcome + approval emails fire from here
-- **Reads `admin_token` first; only clears admin scope on 401** 🆕
+- Reads `admin_token` first; only clears admin scope on 401
 
 ### 4. Business Dashboard
 - Stats cards (items, bookings, revenue, usage)
-- **Copy Booking Link card**
+- Copy Booking Link card
 - Left-aligned sidebar navigation
 - Menu & Services, Bookings, Profile, Settings, Plans tabs
-- **Full 15+ business type config** — restaurant, diner, cafe, other_food, hotel, apartment, event_hall, event, sports, spa, beauty_salon, salon, nails, car_wash, activity_place 🆕
-  - Each type has: proper label ("Restaurant" not "Business"), correct item noun ("Menu Item" vs "Room" vs "Service"), action button text, icon, accent color
-  - Case-insensitive lookup so `"Restaurant"` and `"restaurant"` both work
-  - Handles both `car_wash` and `car-wash` variants
-- **Reads `business_token` first; scoped logout** 🆕
+- Full 15+ business type config — restaurant, diner, cafe, other_food, hotel, apartment, event_hall, event, sports, spa, beauty_salon, salon, nails, car_wash, activity_place
+- Reads `business_token` first; scoped logout
 
 ### 5. Public Booking Page (UnifiedBookingPage)
 - Business-type-aware labels
@@ -627,16 +651,16 @@ GET    /api/domain-info
 - Image upload (drag-drop + button, 16 limit, reorder, Primary badge)
 
 ### 8. Business Profile
-- All fields editable, logo upload only
+- All fields editable, logo upload only (cover image + gallery removed)
 
 ### 9. Email Notifications ✅ WORKING
-- **Domain verified:** `myplazzaa.com`
-- **Sender:** `bookings@myplazzaa.com` (Plazzaa <...>)
-- **Business-type-aware templates** — `BOOKING_EMAIL_LABELS` config
-- **Delivered end-to-end** with real message IDs from Resend
-- **Silent failures eliminated** via `logEmailResult()`
-- **Env var sanitization** via `cleanEnv()`
-- **Functions:** `sendEmail`, `sendBookingConfirmation`, `sendWelcomeEmail`, `sendApprovalEmail`, `sendReminderEmail`
+- Domain verified: `myplazzaa.com`
+- Sender: `bookings@myplazzaa.com` (Plazzaa <...>)
+- Business-type-aware templates — `BOOKING_EMAIL_LABELS` config
+- Delivered end-to-end with real message IDs from Resend
+- Silent failures eliminated via `logEmailResult()`
+- Env var sanitization via `cleanEnv()`
+- Functions: `sendEmail`, `sendBookingConfirmation`, `sendWelcomeEmail`, `sendApprovalEmail`, `sendReminderEmail`
 
 ### 10. Subscription System
 - Free (50 bookings), Starter (₦30k, 100 bookings), Pro (₦50k, unlimited)
@@ -645,65 +669,73 @@ GET    /api/domain-info
 
 ### 11. Admin Login & Sessions
 - `/admin` route, `admin_sessions` table, 1-day expiry
-- Scoped token storage 🆕
+- Scoped token storage
 
 ### 12. Domain & Deployment ✅ LIVE
-- **Production:** `https://myplazzaa.com`
+- Production: `https://myplazzaa.com`
 - Backend: `https://booking-backend-clean.onrender.com`
 - Frontend: `https://booking-frontend-clean.onrender.com` (legacy)
 - DNS: Namecheap → Render
-- **Business-level custom domains** supported
+- Business-level custom domains supported
 
 ### 13. Database-Driven Content
 - Features, amenities, area guide, phones, property details, images — all per-item
 
 ### 14. Host Landing Page ✅ UPDATED 19–20 SEPT
-- **Stays/Food/Others positioning**
+- Stays/Food/Others positioning
 - 13-image slideshow (7 event + 6 new across categories)
 - Features: "Instant Notifications" replaced "Staff Management"
 - Footer email: `hello@myplazzaa.com`
 - Hero H1: "The all-in-one platform for **businesses** in Nigeria"
-- **Plazzaa blue wordmark PNG in header**
-- **Plazzaa white wordmark PNG in footer**
+- Plazzaa blue wordmark PNG in header
+- Plazzaa white wordmark PNG in footer
 - Responsive: hero 56px→32px, sections 80px→50px padding on mobile
 
 ### 15. Business Signup
 - 2-step flow with grouped business type dropdown
 
 ### 16. Homepage Category Cards ✅ UPDATED 19–20 SEPT
-- **Stays / Food / Others**
+- Stays / Food / Others
 - Subtitles: "Hotels, apartments & venues" / "Restaurants, cafés & more" / "Spas, salons & activities"
 - Icons: `Building2` / `Utensils` / `Sparkles`
 - Hero copy + image per group
-- **Group search** — comma-separated business types
-- **"Book Now" routes to `/book/{slug}`**
-- **Plazzaa blue wordmark PNG in header**
+- Group search — comma-separated business types
+- "Book Now" routes to `/book/{slug}`
+- Plazzaa blue wordmark PNG in header
 - Responsive: hero 420px→260px, gaps scale down
 
 ### 17. Plazzaa Brand Rebrand ✅ LIVE 20 SEPT
-- **Logo swap:** `plazzaa-logo-blue.png` (header), `plazzaa-logo-white.png` (footer)
-- **Favicon:** `plazzaa-favicon.png` (white P on blue)
-- **Browser tab:** "Plazzaa — Bookings For Businesses"
-- **Footer copyright:** "© 2026 Plazzaa. All rights reserved."
-- **All "Booking Hub" strings → "Plazzaa"** across visible UI
-- **Font stack updated:** Mail Sans Roman prepended, falls back to Plus Jakarta Sans
+- Logo swap: `plazzaa-logo-blue.png` (header), `plazzaa-logo-white.png` (footer)
+- Favicon: `plazzaa-favicon.png` (white P on blue)
+- Browser tab: "Plazzaa — Bookings For Businesses"
+- Footer copyright: "© 2026 Plazzaa. All rights reserved."
+- All "Booking Hub" strings → "Plazzaa" across visible UI
+- Font stack updated: Mail Sans Roman prepended, falls back to Plus Jakarta Sans
 
 ### 18. Responsive Polish ✅ 20 SEPT
-- **All logos scale:** 28px desktop → 22px mobile
-- **All grids:** multi-column desktop → single column mobile
-- **All paddings/margins:** scale via `isDesktop` ternaries
-- **Back button:** "Back to Home" → "Back" on mobile
-- **Tested at 375 / 768 / 1280px**
+- All logos scale: 28px desktop → 22px mobile
+- All grids: multi-column desktop → single column mobile
+- All paddings/margins: scale via `isDesktop` ternaries
+- Back button: "Back to Home" → "Back" on mobile
+- Tested at 375 / 768 / 1280px
 
-### 19. Business Type Label Fix ✅ 21 SEPT 🆕
-- **Problem:** Business dashboard showed "Business" instead of the actual type for restaurant, spa, salon, nails, car-wash, café, apartment, etc. — because `getBusinessTypeLabel()` only knew `hotel`, `sports`, `event`.
-- **Fix:** New `getBusinessTypeConfig()` in `BusinessDashboard.jsx` covers 15+ types with proper labels, icons, colors, and item nouns.
-- **Case-insensitive lookup** so `"Restaurant"` and `"restaurant"` both work.
-- **Handles both `car_wash` and `car-wash`** variants.
+### 19. Business Type Label Fix ✅ 21 SEPT
+- Problem: Business dashboard showed "Business" instead of the actual type for restaurant, spa, salon, nails, car-wash, café, apartment, etc.
+- Fix: New `getBusinessTypeConfig()` in `BusinessDashboard.jsx` covers 15+ types with proper labels, icons, colours, and item nouns.
+- Case-insensitive lookup so `"Restaurant"` and `"restaurant"` both work.
+- Handles both `car_wash` and `car-wash` variants.
 
-### 20. Scoped Auth Tokens ✅ 21 SEPT 🆕
-- **Problem:** Logging into a business overwrote the admin session; business logout wiped both. On return to admin → "Session expired."
-- **Fix:** Scoped localStorage keys — `admin_token` and `business_token`. Each dashboard reads and clears only its own scope. `api.js` picks the right token based on route.
+### 20. Scoped Auth Tokens ✅ 21 SEPT
+- Problem: Logging into a business overwrote the admin session; business logout wiped both.
+- Fix: Scoped localStorage keys — `admin_token` and `business_token`. Each dashboard reads and clears only its own scope. `api.js` picks the right token based on route.
+
+### 21. Homepage Real-Businesses Fix ✅ 22 SEPT 🆕
+- **Problem (spotted by UX designer testing with Olusegun):** Homepage showed fake businesses — hardcoded location cards ("Victoria Island", "Lekki", "Abuja City Center", "Wuse District" with fabricated hotel counts) and hardcoded "Popular Stays" (Eko Hotel, Transcorp Hilton, The Guest House Lagos with fabricated ratings and prices). Search result cards also used hardcoded stock images keyed by business_type and displayed hardcoded `₦0`, hardcoded `4.9` rating, and a fake fallback description. Clicking some cards triggered a "Please select a location" toast because `PopularStays.onSelectHotel` set `location` to a display string that didn't match any `city` value in the DB.
+- **Fix:**
+  - **Backend** (`server.js`): `GET /api/businesses` now selects `*, rooms(id, images, name)` and filters `.eq('is_active', true)` alongside the existing `.eq('status', 'approved')`.
+  - **Frontend** (`HomePage.jsx`): `DestinationCards` and `PopularStays` imports and render blocks removed. New "Available on Plazzaa" grid fed by `/api/businesses`. `resolveBusinessImage()` picks `cover_image` → `logo_url` → `rooms[0].images[0]` → placeholder. `formatBusinessArea()` shows real city/state or nothing — never a fake "Lagos". No fake price, no fake rating, no fake description.
+  - Clicking a card → `navigate('/book/{slug}')` directly. No location check, no toast.
+- **Status:** Code written. **Local testing pending.**
 
 ---
 
@@ -739,48 +771,51 @@ GET    /api/domain-info
 | 57 | Tab title was "Book Anything in Nigeria" | Changed to "Plazzaa — Bookings For Businesses" | ✅ FIXED 20 Sept |
 | 58 | Mask-image trick rendered filled purple square | Replaced with plain `<img>` of blue wordmark PNG | ✅ FIXED 20 Sept |
 | 59 | Logo too big on some screens | Resized 40px→28px desktop, 32px→22px mobile | ✅ FIXED 20 Sept |
-| 60 | **Business dashboard showed "Business" for restaurant/spa/etc.** | **Full `getBusinessTypeConfig()` covers 15+ types** | ✅ FIXED 21 Sept 🆕 |
-| 61 | **Admin session killed on business logout** | **Scoped tokens: `admin_token` vs `business_token`** | ✅ FIXED 21 Sept 🆕 |
+| 60 | Business dashboard showed "Business" for restaurant/spa/etc. | Full `getBusinessTypeConfig()` covers 15+ types | ✅ FIXED 21 Sept |
+| 61 | Admin session killed on business logout | Scoped tokens: `admin_token` vs `business_token` | ✅ FIXED 21 Sept |
+| 62 | **Homepage showed fake businesses + stock images + fake ₦0/4.9 ratings + "select location" toast** | **Removed DestinationCards/PopularStays; new "Available on Plazzaa" grid; backend joins rooms + filters is_active** | **🟡 FIXED IN CODE — local test pending 22 Sept** 🆕 |
 
 ---
 
 ## 💡 Breakthroughs & Key Decisions
 
-1. **Indigo Branding** (#4F46E5) — will swap to Plazzaa Blue post-demo
-2. **Mobile-First Philosophy** (375px first)
-3. **No JSX** (`React.createElement` throughout)
-4. **Supabase for DB + Storage**
-5. **Render for Deployment**
-6. **Unified Booking Page**
-7. **Plazzaa Rebrand** — complete through all visible UI as of 20 Sept
-8. **Subscription System** (Free/Starter/Pro)
-9. **Database-Driven Content**
-10. **Multi-Venue Architecture**
-11. **Venue Image Upload** with auto-bucket creation
-12. **Category-Based Features & Amenities**
-13. **Tabbed Room Management** (6 tabs)
-14. **Booking Receipt**
-15. **Copy Booking Link Card**
-16. **Business Categories Broadened** (Stays / Food / Others)
-17. **"Menu & Services" Rename**
-18. **Guest Count Relocation** — moved to confirmation step
-19. **Business-Type-Aware System** — config-driven labels across homepage, booking page, emails, dashboard
-20. **Industry-Standard Approach** — one booking model, adaptive presentation
-21. **Custom Domain Support** — `myplazzaa.com` live
-22. **Resend Domain Verification** — `bookings@myplazzaa.com`
-23. **Email Observability** — silent failures eliminated
-24. **Defensive Configuration** — env vars sanitized at load time
-25. **Group Search** — homepage search translates groups to specific types
-26. **HostLanding Repositioning** — from event-venue-only to all-business-types
-27. **Plazzaa Logo Live** — blue wordmark PNG used directly (no CSS tricks)
-28. **Font Fallback Strategy** — Mail Sans prepended, Plus Jakarta fallback
-29. **Responsive-First Rebrand** — tested at 375 / 768 / 1280px
-30. **🆕 Full Business-Type Config in Dashboard** — 15+ types, case-insensitive
-31. **🆕 Scoped Auth Tokens** — admin and business sessions independent
+1. Indigo Branding (#4F46E5) — will swap to Plazzaa Blue post-deploy
+2. Mobile-First Philosophy (375px first)
+3. No JSX (`React.createElement` throughout)
+4. Supabase for DB + Storage
+5. Render for Deployment
+6. Unified Booking Page
+7. Plazzaa Rebrand — complete through all visible UI
+8. Subscription System (Free/Starter/Pro)
+9. Database-Driven Content
+10. Multi-Venue Architecture
+11. Venue Image Upload with auto-bucket creation
+12. Category-Based Features & Amenities
+13. Tabbed Room Management (6 tabs)
+14. Booking Receipt
+15. Copy Booking Link Card
+16. Business Categories Broadened (Stays / Food / Others)
+17. "Menu & Services" Rename
+18. Guest Count Relocation — moved to confirmation step
+19. Business-Type-Aware System — config-driven labels across homepage, booking page, emails, dashboard
+20. Industry-Standard Approach — one booking model, adaptive presentation
+21. Custom Domain Support — `myplazzaa.com` live
+22. Resend Domain Verification — `bookings@myplazzaa.com`
+23. Email Observability — silent failures eliminated
+24. Defensive Configuration — env vars sanitized at load time
+25. Group Search — homepage search translates groups to specific types
+26. HostLanding Repositioning — from event-venue-only to all-business-types
+27. Plazzaa Logo Live — blue wordmark PNG used directly (no CSS tricks)
+28. Font Fallback Strategy — Mail Sans prepended, Plus Jakarta fallback
+29. Responsive-First Rebrand — tested at 375 / 768 / 1280px
+30. Full Business-Type Config in Dashboard — 15+ types, case-insensitive
+31. Scoped Auth Tokens — admin and business sessions independent
+32. **🆕 Real-Data-Only Homepage** — no hardcoded businesses, images, prices, or ratings on the public grid. The homepage is now a mirror of admin-approved, active businesses.
+33. **🆕 Backend-Join Pattern for Homepage Cards** — `select('*, rooms(id, images, name)')` avoids N+1 fetches and gives the homepage the business owner's own uploaded image without a second HTTP round-trip.
 
 ---
 
-## 📊 Current Project Status (LIVE — 21 SEPTEMBER 2026)
+## 📊 Current Project Status (22 SEPTEMBER 2026)
 
 ### Deployment Status
 
@@ -807,11 +842,11 @@ GET    /api/domain-info
 | Feature | Status | Completion |
 |---------|--------|------------|
 | User Authentication | ✅ | 100% |
-| Scoped Auth Tokens (admin vs business) | ✅ | **100%** 🆕 |
+| Scoped Auth Tokens (admin vs business) | ✅ | 100% |
 | Business Registration (2-step) | ✅ | 100% |
 | Admin Dashboard | ✅ | 100% |
 | Business Dashboard | ✅ | 100% |
-| **Full 15+ Business Type Config** | ✅ | **100%** 🆕 |
+| Full 15+ Business Type Config | ✅ | 100% |
 | Copy Booking Link Card | ✅ | 100% |
 | Menu & Services (RoomPage) | ✅ | 100% |
 | Per-Item Features/Amenities/Area Guide/Details/Images | ✅ | 100% |
@@ -836,8 +871,9 @@ GET    /api/domain-info
 | Subscription System | ✅ | 100% |
 | Staff Feature Removed | ✅ | 100% |
 | Plazzaa Rebrand (full UI) | ✅ | 100% |
-| **Theme color match (indigo → Plazzaa Blue)** | ⏳ | **Pending — post-demo** |
-| **Mail Sans Roman `.woff2` files** | ⏳ | **Pending — Emmanuel** |
+| **Homepage real-businesses only 🆕** | 🟡 | **95% — code done, local test pending** |
+| Theme colour match (indigo → Plazzaa Blue) | ⏳ | Pending — post-deploy |
+| Mail Sans Roman `.woff2` files | ⏳ | Pending — Emmanuel |
 | Landing Page Redesign | ⏳ | Pending (Emmanuel) |
 | Guest Count Relocation | ⏳ | Pending (Jeremiah) |
 
@@ -845,30 +881,38 @@ GET    /api/domain-info
 
 ## 🎯 What's Left to Do
 
-### 🔴 Immediate — Monday 21 Sept Demo
+### 🔴 Immediate — 22 Sept (Tonight)
 
 | Task | Owner | Priority | Status |
 |------|-------|----------|--------|
-| Test all 4 business types end-to-end | Olusegun | 🔴 HIGH | ⏳ PENDING |
-| Test business-type labels on all account types | Olusegun | 🔴 HIGH | ⏳ PENDING |
-| Test scoped tokens — admin session survives business login | Olusegun | 🔴 HIGH | ⏳ PENDING |
-| Verify Plazzaa logo/favicon/tab title live | Olusegun | 🔴 HIGH | ⏳ PENDING |
-| Demo for Mr. Terrence | Team | 🔴 HIGH | 🎯 3:30PM TODAY |
-| Landing page redesign | Emmanuel | 🔴 HIGH | ⏳ PENDING |
-| Guest count → confirmation page only | Jeremiah | 🔴 HIGH | ⏳ PENDING |
+| Paste new `server.js` (with `/api/businesses` join + is_active filter) | Olusegun | 🔴 HIGH | ⏳ PENDING |
+| Paste new `HomePage.jsx` (remove DestinationCards/PopularStays, add real grid) | Olusegun | 🔴 HIGH | ⏳ PENDING |
+| **Back up `server.js` before editing** (`cp server.js server.js.backup.22sept`) | Olusegun | 🔴 HIGH | ⏳ PENDING |
+| Start backend, verify no errors | Olusegun | 🔴 HIGH | ⏳ PENDING |
+| `curl http://localhost:5000/api/businesses` — verify `rooms` array is present | Olusegun | 🔴 HIGH | ⏳ PENDING |
+| Start frontend, open localhost:5173 in incognito | Olusegun | 🔴 HIGH | ⏳ PENDING |
+| Verify: fake cards gone, "Available on Plazzaa" grid appears, real images, no toast on click | Olusegun | 🔴 HIGH | ⏳ PENDING |
+| Test at 375px and 1280px | Olusegun | 🔴 HIGH | ⏳ PENDING |
+| Commit + push to GitHub | Olusegun | 🔴 HIGH | ⏳ PENDING |
+| Confirm Render redeploys clean | Olusegun | 🔴 HIGH | ⏳ PENDING |
 
-### 🟡 Post-Demo (This Week)
+### 🟡 This Week (Post-Fix)
 
 | Task | Priority | Notes |
 |------|----------|-------|
+| Merge Emmanuel's UI changes into `main` | 🔴 HIGH | Group decision, end of week |
+| Deploy B2B platform changes to `myplazzaa.com` | 🔴 HIGH | Wednesday 24 Sept target; Friday 26 Sept worst-case |
+| Terrence to review platform after deploy | 🟡 MEDIUM | — |
 | Rotate exposed Resend API key | 🔴 HIGH | Pasted in chat history |
 | Rotate exposed Supabase service role key | 🔴 HIGH | Pasted in chat history |
 | Rotate exposed Paystack secret key | 🔴 HIGH | Pasted in chat history |
 | Change admin password (`admin@bookinghub.com / admin123`) | 🔴 HIGH | Publicly known |
-| Full theme color swap (indigo → Plazzaa Blue `#2563EB`) | 🟡 MEDIUM | — |
+| Full theme colour swap (indigo → Plazzaa Blue `#2563EB`) | 🟡 MEDIUM | — |
 | Set up `hello@myplazzaa.com` mailbox | 🟡 MEDIUM | Footer advertises this |
-| Onboard pilot businesses | 🟡 MEDIUM | After demo |
-| Document product flows | 🟡 MEDIUM | Felicity |
+| Pilot Business Partnerships (2–3 businesses, 2–3 month trial) | 🟡 MEDIUM | Group decision |
+| Recruit New Businesses (target those without booking platforms) | 🟡 MEDIUM | Group decision |
+| Determine Pricing Strategy | 🟡 MEDIUM | Group decision |
+| Brainstorm Monetisation (alternative revenue, credit-limit UX) | 🟡 MEDIUM | Group decision |
 
 ### 🟢 Phase 2 (After Pilot Feedback)
 
@@ -885,17 +929,21 @@ GET    /api/domain-info
 - Multi-item cart for restaurants (if data shows need)
 - Recurring bookings for sports (if data shows need)
 - Replace Google-hosted images in HostLanding slideshow
+- Consider replacing homepage hero images with real business imagery
 
 ### Known Issues
 
 | Issue | Priority | Status |
 |-------|----------|--------|
-| 4 exposed secrets in chat history need rotation | 🔴 High | Post-demo |
-| `hello@myplazzaa.com` may not have a mailbox set up | 🟡 Medium | Post-demo |
-| No real businesses onboarded yet | 🟡 Medium | After demo |
+| Homepage fix not yet tested locally 🆕 | 🔴 High | Tonight |
+| 4 exposed secrets in chat history need rotation | 🔴 High | Post-deploy |
+| `hello@myplazzaa.com` may not have a mailbox set up | 🟡 Medium | Post-deploy |
+| No test environment — updates deploy directly live | 🟡 Medium | Noted by Yannick |
+| No real businesses onboarded yet | 🟡 Medium | After deploy |
 | Paystack not fully tested in production | 🟡 Medium | Test mode only |
-| Theme still indigo — Plazzaa Blue swap pending | 🟢 Low | Post-demo |
+| Theme still indigo — Plazzaa Blue swap pending | 🟢 Low | Post-deploy |
 | Mail Sans Roman font files not yet added | 🟢 Low | Emmanuel |
+| Supabase nested `rooms` query relies on FK cache — if it errors, swap to two-step query 🆕 | 🟡 Medium | During local test |
 
 ---
 
@@ -918,28 +966,31 @@ GET    /api/domain-info
 - Emails working end-to-end
 - Scoped auth tokens (admin and business sessions independent)
 
-✅ **Recent fixes (18–21 Sept)**
-- Business-type-aware `UnifiedBookingPage.jsx`
-- Fixed broken `if/else` email picker
-- Added `logEmailResult()` + `cleanEnv()`
-- Verified `myplazzaa.com` in Resend
-- Homepage category cards → Stays/Food/Others with group search
-- Book Now routes to `/book/{slug}`
-- HostLanding rebranded for Stays/Food/Others
-- Plazzaa logo (blue wordmark PNG) live in headers
-- Plazzaa white wordmark live in footer
-- Favicon + tab title live
-- Responsive polish across breakpoints
-- **Full 15+ business type config in `BusinessDashboard.jsx`** 🆕
-- **Scoped auth tokens — `admin_token` vs `business_token`** 🆕
+🟡 **Newest work in-flight (22 Sept):**
+- Homepage real-businesses fix — code written, **NOT YET TESTED LOCALLY, NOT YET PUSHED**
+- Files changed: `server.js` (one route), `client/src/HomePage.jsx` (full rewrite)
+- Files removed from render (but kept on disk): `DestinationCards.jsx`, `PopularStays.jsx`
 
 ### 🚨 Immediate Next Steps
 
-1. **Push 21 Sept fixes to GitHub** — BusinessDashboard label config, AdminDashboard/AdminLogin/BusinessLogin/api.js scoped tokens
-2. **Verify on `myplazzaa.com`** after Render redeploys
-3. **Test scoped auth** — log into admin, home, business login, business logout, back to `/admin` → still logged in
-4. **Test business type labels** — log into a restaurant business → check label says "Restaurant" with utensils icon
-5. **Deliver demo at 3:30PM**
+1. **Back up `server.js`:** `cp server.js server.js.backup.22sept`
+2. **Paste the new `server.js`** — the one with `select('*, rooms(id, images, name)')` and `.eq('is_active', true)`
+3. **Start backend:** `node server.js` — no errors
+4. **Test endpoint:** `curl http://localhost:5000/api/businesses` — verify each business has a `rooms` array
+   - **If it errors about missing relation:** swap the nested select for a two-step query (fetch businesses, then fetch all rooms in one `.in('business_id', ids)` call)
+5. **Paste the new `HomePage.jsx`** — the one without `DestinationCards`/`PopularStays` imports and with the "Available on Plazzaa" grid
+6. **Start frontend:** `npm run dev`
+7. **Open `http://localhost:5173` in incognito**
+8. **Verify:**
+   - "Victoria Island", "Lekki", "Abuja City Center", "Wuse District" cards → **gone**
+   - "Eko Hotel", "Transcorp Hilton", "The Guest House Lagos" → **gone**
+   - New "Available on Plazzaa" grid with real businesses
+   - Each card shows the business owner's own uploaded image (logo or primary item image)
+   - Clicking a card → straight to `/book/{slug}` — **no toast**
+   - Search for a real city → results show real images, no fake ₦0 or 4.9 star
+9. **Test at 375px and 1280px**
+10. **If all good:** `git add . && git commit -m "homepage: real approved businesses only" && git push`
+11. **Verify on `myplazzaa.com`** after Render redeploys
 
 ### Key Files (UPDATED)
 
@@ -947,21 +998,23 @@ GET    /api/domain-info
 |------|---------|
 | `/client/index.html` | Global CSS, font stack, tab title, favicon |
 | `/client/src/App.jsx` | Main app, routing |
-| `/client/src/HomePage.jsx` | Homepage — Stays/Food/Others cards, group search, Plazzaa wordmark |
-| `/client/src/AdminDashboard.jsx` | **Admin dashboard — reads `admin_token`, scoped logout** 🆕 |
-| `/client/src/AdminLogin.jsx` | **Admin login — writes `admin_token`** 🆕 |
-| `/client/src/BusinessDashboard.jsx` | **Business dashboard — full 15+ type config, scoped tokens** 🆕 |
-| `/client/src/BusinessLogin.jsx` | **Business login — writes `business_token`** 🆕 |
+| `/client/src/HomePage.jsx` | **Homepage — Stays/Food/Others cards, real "Available on Plazzaa" grid 🆕** |
+| `/client/src/AdminDashboard.jsx` | Admin dashboard — reads `admin_token`, scoped logout |
+| `/client/src/AdminLogin.jsx` | Admin login — writes `admin_token` |
+| `/client/src/BusinessDashboard.jsx` | Business dashboard — full 15+ type config, scoped tokens |
+| `/client/src/BusinessLogin.jsx` | Business login — writes `business_token` |
 | `/client/src/BusinessSignup.jsx` | 2-step signup, grouped dropdown |
 | `/client/src/BusinessSettings.jsx` | Settings |
-| `/client/src/BusinessProfile.jsx` | Profile |
+| `/client/src/BusinessProfile.jsx` | Profile — logo upload only (cover + gallery removed) |
 | `/client/src/UnifiedBookingPage.jsx` | Public booking page — business-type-aware labels |
 | `/client/src/OwnerPropertiesPage.jsx` | All properties from a business |
-| `/client/src/RoomPage.jsx` | Menu & Services management |
+| `/client/src/RoomPage.jsx` | Menu & Services management — 6 tabs, image upload with Primary badge |
 | `/client/src/HostLanding.jsx` | Business marketing page — 13-image slideshow |
 | `/client/src/StaffManagement.jsx` | Kept for future — not accessible |
-| `/client/src/api.js` | **Scoped token manager** 🆕 |
-| `/server/server.js` | Express server (group search) |
+| `/client/src/api.js` | Scoped token manager |
+| `/client/src/components/DestinationCards.jsx` | **Removed from render — kept on disk 🆕** |
+| `/client/src/components/PopularStays.jsx` | **Removed from render — kept on disk 🆕** |
+| `/server/server.js` | **Express server — `/api/businesses` now joins rooms + filters is_active 🆕** |
 | `/server/src/services/emailService.js` | Business-type-aware emails |
 | `/server/src/routes/businessRoutes.js` | Enhanced business routes |
 | `/server/src/services/paystackService.js` | Paystack integration |
@@ -1019,19 +1072,28 @@ GET    /api/domain-info
 - [x] Tab title: "Plazzaa — Bookings For Businesses"
 - [x] Full responsive polish at 375 / 768 / 1280px
 - [x] Font stack ready for Mail Sans Roman
-- [x] **Full 15+ business type config in BusinessDashboard** 🆕
-- [x] **Scoped auth tokens (admin vs business)** 🆕
+- [x] Full 15+ business type config in BusinessDashboard
+- [x] Scoped auth tokens (admin vs business)
+
+### In Flight 🟡
+
+- [ ] **Homepage real-businesses fix — code complete, local test pending** 🆕
+- [ ] **Push homepage fix to GitHub after local verification** 🆕
+- [ ] **Verify on `myplazzaa.com` after Render redeploys** 🆕
 
 ### Pending ⏳
 
-- [ ] Full theme color swap (indigo → Plazzaa Blue `#2563EB`)
+- [ ] Merge Emmanuel's UI changes into `main`
+- [ ] Deploy B2B platform changes (Wednesday 24 Sept target)
+- [ ] Terrence review after deploy
+- [ ] Full theme colour swap (indigo → Plazzaa Blue `#2563EB`)
 - [ ] Mail Sans Roman `.woff2` files (Emmanuel)
-- [ ] Landing page redesign (businesses first) — Emmanuel
-- [ ] Guest count relocation — Jeremiah
-- [ ] Full end-to-end test all 4 business types
-- [ ] Full demo for Mr. Terrence (21 Sept)
-- [ ] Onboard pilot businesses
-- [ ] Rotate exposed secrets (post-demo)
+- [ ] Landing page redesign (Emmanuel)
+- [ ] Guest count relocation (Jeremiah)
+- [ ] Onboard pilot businesses (2–3 businesses, 2–3 month trial)
+- [ ] Determine pricing strategy
+- [ ] Brainstorm monetisation
+- [ ] Rotate exposed secrets (post-deploy)
 - [ ] Set up `hello@myplazzaa.com` mailbox
 
 ---
@@ -1040,15 +1102,15 @@ GET    /api/domain-info
 
 ### What We've Built
 
-We've built a complete, production-ready booking management platform, now live at `myplazzaa.com` with the full Plazzaa brand identity — logo, favicon, tab title, and rebranded copy across every page. The platform serves **any business type** — Stays, Food, and Others — with a single booking model that adapts labels, emails, category cards, and dashboard presentation per business type. Emails deliver end-to-end. The homepage and marketing pages reflect the broadened positioning. The entire platform is mobile-first, responsive across all devices, deployed on Render, and ready for real businesses.
+A complete, production-ready booking management platform, live at `myplazzaa.com` with full Plazzaa brand identity. The platform serves any business type — Stays, Food, Others — with a single booking model that adapts labels, emails, category cards, and dashboard presentation per business type. Emails deliver end-to-end. The homepage now shows only real, admin-approved businesses with their own uploaded images. The entire platform is mobile-first, responsive across all devices, deployed on Render, and ready for real businesses.
 
 ### What Makes This Special
 
 1. **Mobile-first** — built for Nigerian users
 2. **Multi-tenant** — each business gets their own branded page
-3. **Business-type-aware** — one booking model, adaptive presentation across homepage, booking page, emails, dashboard
+3. **Business-type-aware** — one booking model, adaptive presentation
 4. **Complete** — from registration to booking to payment to email
-5. **Professional** — Plazzaa branding, premium glass-morphism UI
+5. **Professional** — Plazzaa branding, premium UI
 6. **Secure** — JWT, bcrypt, rate limiting, DNS verification
 7. **Subscription-ready** — Free/Starter/Pro tiers
 8. **Database-driven** — all content configurable
@@ -1063,16 +1125,17 @@ We've built a complete, production-ready booking management platform, now live a
 17. **Plazzaa brand identity live** — logo, favicon, tab title, footer
 18. **Scoped auth tokens** — admin and business sessions independent
 19. **Full 15+ business type config** — restaurant, spa, salon, nails, car-wash, café, apartment, etc.
+20. **Real-data homepage** — no fake cards, no stock photos, no fabricated prices or ratings 🆕
 
 ### The Road Ahead
 
-The code is ready. The deployment is ready. The emails are working. The custom domain is live. The Plazzaa brand identity is live. The dashboard adapts to every business type. The auth tokens are scoped. What's left: run the final tests, deliver the demo on Monday 21 Sept, then rotate secrets, swap the theme to Plazzaa Blue, and begin pilot onboarding.
+The code is ready. The deployment is ready. The emails are working. The custom domain is live. The Plazzaa brand identity is live. The dashboard adapts to every business type. The auth tokens are scoped. The homepage now reflects real data. What's left: run the local test tonight, push the homepage fix, confirm Render redeploys clean, merge Emmanuel's UI changes, deploy the combined work by Wednesday, then rotate secrets, swap the theme to Plazzaa Blue, onboard the first pilot businesses, and begin collecting usage data.
 
 ---
 
 **"The best time to start was yesterday. The next best time is now."**
 
-Let's deliver Monday's demo. 🚀
+Let's ship this homepage fix. 🚀
 
 ---
 
@@ -1089,6 +1152,12 @@ cd server && node server.js
 
 # Build frontend
 cd client && npm run build
+
+# Back up server.js before a risky edit
+cp server/server.js server/server.js.backup.22sept
+
+# Test the homepage endpoint after editing
+curl http://localhost:5000/api/businesses | head -c 2000
 
 # Deploy to Render
 git add .
@@ -1133,21 +1202,28 @@ git push origin main
 ### Design Tokens
 
 - **Primary brand blue:** `#2563EB` (Plazzaa — pending theme swap)
-- **Current theme:** Indigo `#4F46E5` (until post-demo)
+- **Current theme:** Indigo `#4F46E5` (until post-deploy)
 - **Font stack:** `'Mail Sans Roman', 'Plus Jakarta Sans', system-ui, ...`
 - **Mobile-first breakpoints:** 375 / 768 / 1280px
 
-### Auth Storage Keys (as of 21 Sept)
+### Auth Storage Keys
 
 | Key | Purpose |
 |-----|---------|
-| `admin_token` | Admin JWT (new, primary) |
-| `business_token` | Business JWT (new, primary) |
+| `admin_token` | Admin JWT (primary) |
+| `business_token` | Business JWT (primary) |
 | `auth_token` | Legacy fallback (read-only) |
 | `token` | Legacy fallback (read-only) |
 | `admin` | Admin object (dashboard uses) |
 | `currentBusiness` | Current business object |
 
+### Image Resolution Priority (Homepage Cards) 🆕
+
+1. `business.cover_image` — legacy, still respected if set
+2. `business.logo_url` — what BusinessProfile writes today
+3. `business.rooms[0].images[0]` — first item's primary image from RoomPage
+4. `null` → neutral "No image yet" placeholder
+
 ---
 
-*Last update: 21 September 2026, pre-demo*
+*Last update: 22 September 2026, evening — homepage fix in flight, local test pending*
