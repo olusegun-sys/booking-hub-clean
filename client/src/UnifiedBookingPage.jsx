@@ -7,10 +7,16 @@
 // Removed back navigation - users stay on booking page
 // Removed "View all properties from this owner" link
 // Standardized loading spinner matches BusinessDashboard
+// UPDATED 23 Sept 2026:
+//  - Booking receipt modal now downloads as PNG (html2canvas) instead of window.print
+//  - Subtitle forced to pure white so it pops on the indigo header
+//  - Fixed the white sliver at the top edge (parent clips, no per-corner radius on header)
+//  - General spacing/button polish for a senior-dev feel
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import html2canvas from 'html2canvas';
 
 // ============================================================
 // ICON IMPORTS
@@ -69,7 +75,6 @@ import {
   Grid3x3,
   GalleryHorizontal,
   GalleryVertical,
-  Printer,
   Download,
   CheckCircle,
   ReceiptText,
@@ -362,27 +367,43 @@ function generateOrderId() {
 // ============================================================
 // RECEIPT COMPONENT (Business-type-aware)
 // ============================================================
-function BookingReceipt({ booking, business, venue, labels, onClose, onPrint }) {
+function BookingReceipt({ booking, business, venue, labels, onClose, onDownload, downloading }) {
   const isMobile = window.innerWidth < 640;
+  const receiptRef = useRef(null);
 
+  // WHY: outer card owns the border-radius and clips its children.
+  // The header no longer sets its own corner radii — that's what caused
+  // the 1-pixel white sliver at the top edge (sub-pixel rounding between
+  // two elements with slightly different radii).
   const receiptStyle = {
     backgroundColor: 'white',
     borderRadius: isMobile ? '16px' : '20px',
     maxWidth: '600px',
     width: '100%',
     maxHeight: '90vh',
+    overflow: 'hidden',
+    boxShadow: '0 24px 64px rgba(15, 23, 42, 0.28)',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column'
+  };
+
+  // WHY: inner scroll wrapper so the header stays attached visually to the
+  // card (no gap), and the body scrolls without affecting the clipped edge.
+  const scrollWrapperStyle = {
     overflowY: 'auto',
-    boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-    position: 'relative'
+    overflowX: 'hidden',
+    display: 'flex',
+    flexDirection: 'column'
   };
 
   const headerStyle = {
     background: 'linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)',
-    padding: isMobile ? '20px 20px 16px' : '28px 28px 20px',
-    color: 'white',
-    borderTopLeftRadius: isMobile ? '16px' : '20px',
-    borderTopRightRadius: isMobile ? '16px' : '20px',
-    textAlign: 'center'
+    padding: isMobile ? '24px 20px 20px' : '32px 32px 24px',
+    // WHY: no per-corner radius here. Parent's overflow:hidden + borderRadius clip this cleanly.
+    textAlign: 'center',
+    color: '#FFFFFF',
+    flexShrink: 0
   };
 
   const bodyStyle = { padding: isMobile ? '20px' : '24px' };
@@ -402,7 +423,8 @@ function BookingReceipt({ booking, business, venue, labels, onClose, onPrint }) 
     display: 'flex',
     justifyContent: 'space-between',
     padding: isMobile ? '8px 0' : '10px 0',
-    borderBottom: '1px solid #f1f5f9'
+    borderBottom: '1px solid #f1f5f9',
+    gap: '12px'
   };
 
   const labelStyle = { fontSize: isMobile ? '13px' : '14px', color: '#64748b' };
@@ -421,12 +443,13 @@ function BookingReceipt({ booking, business, venue, labels, onClose, onPrint }) 
 
   const statusBadgeStyle = {
     display: 'inline-block',
-    padding: '4px 16px',
+    padding: '4px 14px',
     borderRadius: '999px',
     backgroundColor: '#d1fae5',
     color: '#065f46',
-    fontSize: '13px',
-    fontWeight: '500'
+    fontSize: '12px',
+    fontWeight: '600',
+    letterSpacing: '0.2px'
   };
 
   const isFoodOrService = labels.priceSuffix === '' && labels.businessNoun !== 'Event Hall';
@@ -434,204 +457,231 @@ function BookingReceipt({ booking, business, venue, labels, onClose, onPrint }) 
   return React.createElement(
     'div',
     { style: receiptStyle },
-    // Header
     React.createElement(
       'div',
-      { style: headerStyle },
+      { style: scrollWrapperStyle, ref: receiptRef },
+      // Header
       React.createElement(
         'div',
-        { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '8px' } },
-        React.createElement(CheckCircle, { size: isMobile ? 32 : 40 }),
-        React.createElement(
-          'h2',
-          { style: { fontSize: isMobile ? '20px' : '24px', fontWeight: '700', margin: 0 } },
-          labels.receiptTitle
-        )
-      ),
-      React.createElement(
-        'p',
-        { style: { fontSize: isMobile ? '13px' : '15px', opacity: 0.9, margin: 0 } },
-        labels.receiptSubtitle
-      )
-    ),
-    // Body
-    React.createElement(
-      'div',
-      { style: bodyStyle },
-      // Status + Reference
-      React.createElement(
-        'div',
-        { style: { ...sectionStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } },
-        React.createElement('span', { style: statusBadgeStyle }, 'Confirmed'),
-        React.createElement(
-          'span',
-          { style: { fontSize: '13px', color: '#94a3b8' } },
-          'Ref: ' + (booking?.booking_reference || generateOrderId())
-        )
-      ),
-      // Item / Venue Details
-      React.createElement(
-        'div',
-        { style: sectionStyle },
-        React.createElement(
-          'h4',
-          { style: sectionTitleStyle },
-          React.createElement(Building2, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
-          labels.businessNoun + ' Details'
-        ),
+        { style: headerStyle },
         React.createElement(
           'div',
-          { style: { marginBottom: '4px', fontSize: isMobile ? '16px' : '18px', fontWeight: '600', color: '#1A1F36' } },
-          venue?.name || business?.name
+          { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '8px' } },
+          React.createElement(CheckCircle, { size: isMobile ? 32 : 40, color: '#FFFFFF' }),
+          React.createElement(
+            'h2',
+            { style: { fontSize: isMobile ? '20px' : '24px', fontWeight: '700', margin: 0, color: '#FFFFFF' } },
+            labels.receiptTitle
+          )
         ),
-        (venue?.address || business?.address || business?.city) &&
+        // WHY: subtitle is forced to #FFFFFF with opacity 1 so it reads crisp
+        // white against the indigo, not a washed-out grey.
+        React.createElement(
+          'p',
+          { style: { fontSize: isMobile ? '13px' : '15px', opacity: 1, margin: 0, color: '#FFFFFF' } },
+          labels.receiptSubtitle
+        )
+      ),
+      // Body
+      React.createElement(
+        'div',
+        { style: bodyStyle },
+        // Status + Reference
+        React.createElement(
+          'div',
+          { style: { ...sectionStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } },
+          React.createElement('span', { style: statusBadgeStyle }, 'Confirmed'),
+          React.createElement(
+            'span',
+            { style: { fontSize: '13px', color: '#94a3b8', fontWeight: '500' } },
+            'Ref: ' + (booking?.booking_reference || generateOrderId())
+          )
+        ),
+        // Item / Venue Details
+        React.createElement(
+          'div',
+          { style: sectionStyle },
+          React.createElement(
+            'h4',
+            { style: sectionTitleStyle },
+            React.createElement(Building2, { size: 14, style: { display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' } }),
+            labels.businessNoun + ' Details'
+          ),
           React.createElement(
             'div',
-            { style: { fontSize: '13px', color: '#64748b' } },
-            venue?.address || business?.address || business?.city
-          )
-      ),
-      // Customer Details
-      React.createElement(
-        'div',
-        { style: sectionStyle },
-        React.createElement(
-          'h4',
-          { style: sectionTitleStyle },
-          React.createElement(User, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
-          'Customer Details'
+            { style: { marginBottom: '4px', fontSize: isMobile ? '16px' : '18px', fontWeight: '600', color: '#1A1F36' } },
+            venue?.name || business?.name
+          ),
+          (venue?.address || business?.address || business?.city) &&
+            React.createElement(
+              'div',
+              { style: { fontSize: '13px', color: '#64748b' } },
+              venue?.address || business?.address || business?.city
+            )
         ),
+        // Customer Details
         React.createElement(
           'div',
-          { style: rowStyle },
-          React.createElement('span', { style: labelStyle }, 'Full Name'),
-          React.createElement('span', { style: valueStyle }, booking?.customer_name || '')
-        ),
-        React.createElement(
-          'div',
-          { style: rowStyle },
-          React.createElement('span', { style: labelStyle }, 'Email'),
-          React.createElement('span', { style: valueStyle }, booking?.customer_email || '')
-        ),
-        React.createElement(
-          'div',
-          { style: { ...rowStyle, borderBottom: 'none' } },
-          React.createElement('span', { style: labelStyle }, 'Phone'),
-          React.createElement('span', { style: valueStyle }, booking?.customer_phone || '')
-        )
-      ),
-      // Booking Details
-      React.createElement(
-        'div',
-        { style: sectionStyle },
-        React.createElement(
-          'h4',
-          { style: sectionTitleStyle },
-          React.createElement(CalendarCheck, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
-          labels.itemNoun + ' Details'
-        ),
-        React.createElement(
-          'div',
-          { style: rowStyle },
-          React.createElement('span', { style: labelStyle }, labels.dateSummaryLabel),
-          React.createElement('span', { style: valueStyle }, formatDate(booking?.check_in_date || ''))
-        ),
-        React.createElement(
-          'div',
-          { style: rowStyle },
-          React.createElement('span', { style: labelStyle }, labels.itemSummaryLabel),
-          React.createElement('span', { style: valueStyle }, venue?.name || '')
-        ),
-        React.createElement(
-          'div',
-          { style: { ...rowStyle, borderBottom: 'none' } },
-          React.createElement('span', { style: labelStyle }, 'Payment Method'),
-          React.createElement('span', { style: valueStyle }, 
-            booking?.payment_method === 'paystack' ? 'Pay Online' : (isFoodOrService ? 'Pay on Pickup' : 'Pay at Venue')
-          )
-        )
-      ),
-      // Payment Summary
-      React.createElement(
-        'div',
-        { style: sectionStyle },
-        React.createElement(
-          'h4',
-          { style: sectionTitleStyle },
-          React.createElement(Banknote, { size: 14, style: { display: 'inline', marginRight: '6px' } }),
-          'Payment Summary'
-        ),
-        React.createElement(
-          'div',
-          { style: rowStyle },
-          React.createElement('span', { style: labelStyle }, labels.priceFieldLabel),
-          React.createElement('span', { style: valueStyle }, formatCurrency(booking?.total_amount || 0))
-        ),
-        React.createElement(
-          'div',
-          { style: totalStyle },
-          React.createElement('span', { style: totalLabelStyle }, labels.totalLabel),
-          React.createElement('span', { style: totalValueStyle }, formatCurrency(booking?.total_amount || 0))
-        ),
-        booking?.payment_method === 'paystack' ?
+          { style: sectionStyle },
+          React.createElement(
+            'h4',
+            { style: sectionTitleStyle },
+            React.createElement(User, { size: 14, style: { display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' } }),
+            'Customer Details'
+          ),
           React.createElement(
             'div',
-            { style: { marginTop: '12px', padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '8px', textAlign: 'center', fontSize: '13px', color: '#065f46' } },
-            React.createElement(CheckCircle, { size: 16, style: { display: 'inline', marginRight: '6px' } }),
-            'Payment processed successfully'
-          ) :
+            { style: rowStyle },
+            React.createElement('span', { style: labelStyle }, 'Full Name'),
+            React.createElement('span', { style: valueStyle }, booking?.customer_name || '')
+          ),
           React.createElement(
             'div',
-            { style: { marginTop: '12px', padding: '12px', backgroundColor: '#fef3c7', borderRadius: '8px', textAlign: 'center', fontSize: '13px', color: '#92400e' } },
-            isFoodOrService ? 'Pay on pickup or delivery' : 'Pay at venue on the day of your event'
+            { style: rowStyle },
+            React.createElement('span', { style: labelStyle }, 'Email'),
+            React.createElement('span', { style: valueStyle }, booking?.customer_email || '')
+          ),
+          React.createElement(
+            'div',
+            { style: { ...rowStyle, borderBottom: 'none' } },
+            React.createElement('span', { style: labelStyle }, 'Phone'),
+            React.createElement('span', { style: valueStyle }, booking?.customer_phone || '')
           )
-      ),
-      // Actions
-      React.createElement(
-        'div',
-        { style: { display: 'flex', gap: '10px', marginTop: '16px', flexDirection: isMobile ? 'column' : 'row' } },
+        ),
+        // Booking Details
         React.createElement(
-          'button',
+          'div',
+          { style: sectionStyle },
+          React.createElement(
+            'h4',
+            { style: sectionTitleStyle },
+            React.createElement(CalendarCheck, { size: 14, style: { display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' } }),
+            labels.itemNoun + ' Details'
+          ),
+          React.createElement(
+            'div',
+            { style: rowStyle },
+            React.createElement('span', { style: labelStyle }, labels.dateSummaryLabel),
+            React.createElement('span', { style: valueStyle }, formatDate(booking?.check_in_date || ''))
+          ),
+          React.createElement(
+            'div',
+            { style: rowStyle },
+            React.createElement('span', { style: labelStyle }, labels.itemSummaryLabel),
+            React.createElement('span', { style: valueStyle }, venue?.name || '')
+          ),
+          React.createElement(
+            'div',
+            { style: { ...rowStyle, borderBottom: 'none' } },
+            React.createElement('span', { style: labelStyle }, 'Payment Method'),
+            React.createElement('span', { style: valueStyle }, 
+              booking?.payment_method === 'paystack' ? 'Pay Online' : (isFoodOrService ? 'Pay on Pickup' : 'Pay at Venue')
+            )
+          )
+        ),
+        // Payment Summary
+        React.createElement(
+          'div',
+          { style: sectionStyle },
+          React.createElement(
+            'h4',
+            { style: sectionTitleStyle },
+            React.createElement(Banknote, { size: 14, style: { display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' } }),
+            'Payment Summary'
+          ),
+          React.createElement(
+            'div',
+            { style: rowStyle },
+            React.createElement('span', { style: labelStyle }, labels.priceFieldLabel),
+            React.createElement('span', { style: valueStyle }, formatCurrency(booking?.total_amount || 0))
+          ),
+          React.createElement(
+            'div',
+            { style: totalStyle },
+            React.createElement('span', { style: totalLabelStyle }, labels.totalLabel),
+            React.createElement('span', { style: totalValueStyle }, formatCurrency(booking?.total_amount || 0))
+          ),
+          booking?.payment_method === 'paystack' ?
+            React.createElement(
+              'div',
+              { style: { marginTop: '12px', padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '8px', textAlign: 'center', fontSize: '13px', color: '#065f46' } },
+              React.createElement(CheckCircle, { size: 16, style: { display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' } }),
+              'Payment processed successfully'
+            ) :
+            React.createElement(
+              'div',
+              { style: { marginTop: '12px', padding: '12px', backgroundColor: '#fef3c7', borderRadius: '8px', textAlign: 'center', fontSize: '13px', color: '#92400e' } },
+              isFoodOrService ? 'Pay on pickup or delivery' : 'Pay at venue on the day of your event'
+            )
+        ),
+        // Actions
+        React.createElement(
+          'div',
+          { style: { display: 'flex', gap: '12px', marginTop: '20px', flexDirection: isMobile ? 'column' : 'row' } },
+          React.createElement(
+            'button',
+            {
+              onClick: () => onDownload(receiptRef.current, booking?.booking_reference),
+              disabled: downloading,
+              style: {
+                flex: 1,
+                padding: isMobile ? '13px' : '14px',
+                backgroundColor: '#f1f5f9',
+                color: downloading ? '#94a3b8' : '#475569',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: downloading ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease'
+              }
+            },
+            downloading
+              ? React.createElement(Loader, { size: 18, style: { animation: 'spin 1s linear infinite' } })
+              : React.createElement(Download, { size: 18 }),
+            downloading ? 'Preparing...' : 'Download Receipt'
+          ),
+          React.createElement(
+            'button',
+            {
+              onClick: onClose,
+              disabled: downloading,
+              style: {
+                flex: 1,
+                padding: isMobile ? '13px' : '14px',
+                backgroundColor: '#4F46E5',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: downloading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)',
+                transition: 'all 0.2s ease'
+              }
+            },
+            React.createElement(Check, { size: 18 }),
+            'Done'
+          )
+        ),
+        React.createElement(
+          'p',
           {
-            onClick: onPrint,
             style: {
-              flex: 1, padding: isMobile ? '12px' : '14px',
-              backgroundColor: '#f1f5f9', color: '#475569',
-              border: 'none', borderRadius: '10px',
-              fontSize: '14px', fontWeight: '500',
-              cursor: 'pointer', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', gap: '8px'
+              textAlign: 'center', fontSize: '12px', color: '#94a3b8',
+              marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9'
             }
           },
-          React.createElement(Printer, { size: 18 }),
-          'Print Receipt'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: onClose,
-            style: {
-              flex: 2, padding: isMobile ? '12px' : '14px',
-              backgroundColor: '#4F46E5', color: 'white',
-              border: 'none', borderRadius: '10px',
-              fontSize: '14px', fontWeight: '600',
-              cursor: 'pointer', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', gap: '8px'
-            }
-          },
-          React.createElement(Check, { size: 18 }),
-          'Done'
+          'A confirmation email has been sent to your inbox'
         )
-      ),
-      React.createElement(
-        'p',
-        {
-          style: {
-            textAlign: 'center', fontSize: '12px', color: '#94a3b8',
-            marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9'
-          }
-        },
-        'A confirmation email has been sent to your inbox'
       )
     )
   );
@@ -677,6 +727,7 @@ function UnifiedBookingPage() {
   // Receipt
   const [receiptData, setReceiptData] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   // Call modal
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -920,8 +971,43 @@ function UnifiedBookingPage() {
     setReceiptData(null);
   }
 
-  function printReceipt() {
-    window.print();
+  // WHY: html2canvas captures the receipt node as a PNG. We pass scale:2 for
+  // retina-quality output, backgroundColor:null to preserve the card's own
+  // white background, and useCORS:true so any remote images load cleanly.
+  // The blob is then downloaded with a filename that includes the booking ref.
+  async function downloadReceipt(node, bookingReference) {
+    if (!node) {
+      toast.error('Receipt not ready. Please try again.');
+      return;
+    }
+    setDownloadingReceipt(true);
+    try {
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false,
+        windowWidth: node.scrollWidth,
+        windowHeight: node.scrollHeight
+      });
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const filename = `Plazzaa-Receipt-${(bookingReference || 'booking').replace(/[^A-Za-z0-9-]/g, '')}.png`;
+
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Receipt downloaded');
+    } catch (error) {
+      console.error('Download receipt error:', error);
+      toast.error('Could not download receipt. Please try again.');
+    } finally {
+      setDownloadingReceipt(false);
+    }
   }
 
   function copyPhone(phone) {
@@ -2012,9 +2098,9 @@ function UnifiedBookingPage() {
         {
           style: {
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 300, backdropFilter: 'blur(8px)',
+            zIndex: 300, backdropFilter: 'blur(10px)',
             padding: isMobile ? '12px' : '20px', overflowY: 'auto'
           }
         },
@@ -2032,7 +2118,8 @@ function UnifiedBookingPage() {
           venue: receiptData.venue,
           labels: labels,
           onClose: closeReceipt,
-          onPrint: printReceipt
+          onDownload: downloadReceipt,
+          downloading: downloadingReceipt
         })
       ),
 
