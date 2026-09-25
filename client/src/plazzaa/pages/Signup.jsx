@@ -116,7 +116,7 @@ export default function Signup() {
         if (data.success && data.business) {
           // Registration signs the merchant in; the confirmation plays, then
           // hands over to the dashboard.
-          if (data.token) localStorage.setItem('auth_token', data.token);
+          if (data.token) { localStorage.setItem('auth_token', data.token); localStorage.setItem('business_token', data.token); }
           localStorage.setItem('currentBusiness', JSON.stringify(data.business));
           setCreated(data.business);
           return;

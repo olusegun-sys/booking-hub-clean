@@ -47,7 +47,7 @@ export default function Login() {
       .then((response) => response.json())
       .then((data) => {
         if (data.success && data.business) {
-          if (data.token) localStorage.setItem('auth_token', data.token);
+          if (data.token) { localStorage.setItem('auth_token', data.token); localStorage.setItem('business_token', data.token); }
           localStorage.setItem('currentBusiness', JSON.stringify(data.business));
           window.location.href = '/dashboard';
           return;

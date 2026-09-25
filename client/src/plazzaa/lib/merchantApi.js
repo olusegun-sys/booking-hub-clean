@@ -8,7 +8,7 @@ import API_BASE from '../../config';
  * the screens never have to unwrap a response shape themselves.
  */
 
-export const token = () => localStorage.getItem('auth_token') || '';
+export const token = () => localStorage.getItem('auth_token') || localStorage.getItem('business_token') || '';
 
 export const currentBusiness = () => {
   try {

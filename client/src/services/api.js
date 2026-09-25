@@ -15,21 +15,21 @@ const STORAGE_KEYS = {
 
 // In-memory caches so we don't hit localStorage on every request
 let adminToken = localStorage.getItem(STORAGE_KEYS.admin);
-let businessToken = localStorage.getItem(STORAGE_KEYS.business);
+let businessToken =
+  localStorage.getItem(STORAGE_KEYS.business) ||
+  localStorage.getItem(STORAGE_KEYS.legacy);
 
-// WHY: On first load after this fix ships, existing users may still
-// have their session under the old 'auth_token' key. Migrate it once.
-(function migrateLegacyToken() {
+// Keep business_token and auth_token synced so Plazzaa V1 merchantApi
+// and legacy dashboards both remain authenticated seamlessly.
+(function syncTokens() {
   const legacy = localStorage.getItem(STORAGE_KEYS.legacy);
-  if (!legacy) return;
-
-  // Migrate to admin bucket (admin sessions were the ones being wiped,
-  // so favour admin over business if we can't tell)
-  if (!adminToken && !businessToken) {
-    localStorage.setItem(STORAGE_KEYS.admin, legacy);
-    adminToken = legacy;
+  const biz = localStorage.getItem(STORAGE_KEYS.business);
+  if (legacy && !biz) {
+    localStorage.setItem(STORAGE_KEYS.business, legacy);
+    businessToken = legacy;
+  } else if (biz && !legacy) {
+    localStorage.setItem(STORAGE_KEYS.legacy, biz);
   }
-  localStorage.removeItem(STORAGE_KEYS.legacy);
 })();
 
 // ============================================================
@@ -49,11 +49,17 @@ export function setAuthToken(token, scope) {
   if (token) {
     localStorage.setItem(key, token);
     if (scope === "admin") adminToken = token;
-    if (scope === "business") businessToken = token;
+    if (scope === "business") {
+      businessToken = token;
+      localStorage.setItem(STORAGE_KEYS.legacy, token);
+    }
   } else {
     localStorage.removeItem(key);
     if (scope === "admin") adminToken = null;
-    if (scope === "business") businessToken = null;
+    if (scope === "business") {
+      businessToken = null;
+      localStorage.removeItem(STORAGE_KEYS.legacy);
+    }
   }
 }
 

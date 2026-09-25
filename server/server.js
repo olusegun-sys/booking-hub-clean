@@ -1,4 +1,4 @@
-﻿// FILE: server.js
+// FILE: server.js
 // COMPLETE PRODUCTION-READY VERSION WITH SUBSCRIPTION SYSTEM
 // DEPLOY TO RENDER: Replace your server.js with this
 // UPDATED (19 Sept 2026): Email calls now surface { success: false } failures

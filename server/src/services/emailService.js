@@ -1,4 +1,4 @@
-﻿// FILE: server/src/services/emailService.js
+// FILE: server/src/services/emailService.js
 // REBRANDED: Booking Hub → Plazzaa (18 Sept 2026)
 // SMART: Business-type-aware email labels — same pattern as UnifiedBookingPage.jsx
 // SECURITY: Secrets now read from env vars (RESEND_API_KEY, FROM_EMAIL, FROM_NAME)
@@ -797,24 +797,6 @@ async function sendAwaitingValidation(booking, business) {
 // ============================================================
 // EXPORTS
 // ============================================================
-// <<<<<<< HEAD
-// module.exports = {
-//   sendEmail,
-//   sendBookingConfirmation,
-//   sendReminderEmail,
-//   sendWelcomeEmail,
-//   sendApprovalEmail,
-//   getBookingEmailLabels,
-//   // WHY: Exported for testing — lets you verify labels per type
-//   // and check whether env vars were parsed correctly at startup
-//   _config: {
-//     FROM_NAME: FROM_NAME,
-//     FROM_EMAIL: FROM_EMAIL,
-//     APP_URL: APP_URL,
-//     hasApiKey: !!RESEND_API_KEY
-//   }
-// =======
-
 module.exports = {
   sendEmail,
   sendBookingConfirmation,
