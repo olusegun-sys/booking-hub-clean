@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, CreditCard, XCircle, Building2 } from 'lucide-react';
+import API_BASE from './config';
 
 function PaystackPayment({ bookingReference, amount, email, onSuccess, onClose }) {
   const [loading, setLoading] = useState(false);
@@ -7,11 +8,6 @@ function PaystackPayment({ bookingReference, amount, email, onSuccess, onClose }
   const [paymentStatus, setPaymentStatus] = useState('idle');
   const [paystackLoaded, setPaystackLoaded] = useState(false);
   const [showPaystack, setShowPaystack] = useState(false);
-
-  // Dynamic API base - works on desktop and mobile
-  var API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:5000'
-    : 'http://' + window.location.hostname + ':5000';
 
   // Load Paystack script dynamically when showPaystack becomes true
   useEffect(() => {

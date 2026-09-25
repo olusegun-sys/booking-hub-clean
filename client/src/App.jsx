@@ -6,10 +6,13 @@
 import React from 'react';
 import { Toaster } from 'react-hot-toast';
 import './styles.css';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import HomePage from './HomePage';
 import BusinessLogin from './BusinessLogin';
 import BusinessDashboard from './BusinessDashboard';
+import MerchantDashboard from './plazzaa/dashboard/MerchantDashboard';
+import PlazzaaSignup from './plazzaa/pages/Signup';
+import PlazzaaBookingPage from './plazzaa/pages/BookingPage';
 import UnifiedBookingPage from './UnifiedBookingPage';
 import OwnerPropertiesPage from './OwnerPropertiesPage';
 import AdminDashboard from './AdminDashboard';
@@ -17,6 +20,13 @@ import AdminLogin from './AdminLogin';
 import HostLanding from './HostLanding';
 import BusinessSignup from './BusinessSignup';
 import API_BASE from './config';
+
+// Plazzaa (new brand surfaces)
+import './plazzaa/plazzaa.css';
+import Landing from './plazzaa/pages/Landing';
+import Explore from './plazzaa/pages/Explore';
+import ForBusiness from './plazzaa/pages/ForBusiness';
+import PlazzaaLogin from './plazzaa/pages/Login';
 
 var _useState = React.useState;
 var _useEffect = React.useEffect;
@@ -143,12 +153,19 @@ function App() {
   return React.createElement(Router, null,
     React.createElement(Toaster, null),
     React.createElement(Routes, null,
-      React.createElement(Route, { path: '/', element: React.createElement(HomePage, null) }),
-      React.createElement(Route, { path: '/become-host', element: React.createElement(HostLanding, null) }),
-      React.createElement(Route, { path: '/signup', element: React.createElement(BusinessSignup, null) }),
-      React.createElement(Route, { path: '/login', element: React.createElement(LoginPage, null) }),
-      React.createElement(Route, { path: '/dashboard', element: React.createElement(DashboardPage, null) }),
-      React.createElement(Route, { path: '/book/:businessSlug', element: React.createElement(UnifiedBookingPage, null) }),
+      React.createElement(Route, { path: '/', element: React.createElement(Landing, null) }),
+      React.createElement(Route, { path: '/explore', element: React.createElement(Explore, null) }),
+      React.createElement(Route, { path: '/business', element: React.createElement(ForBusiness, null) }),
+      React.createElement(Route, { path: '/hotels', element: React.createElement(Navigate, { to: '/explore', replace: true }) }),
+      React.createElement(Route, { path: '/become-host', element: React.createElement(Navigate, { to: '/business', replace: true }) }),
+      React.createElement(Route, { path: '/signup', element: React.createElement(PlazzaaSignup, null) }),
+      React.createElement(Route, { path: '/signup/legacy', element: React.createElement(BusinessSignup, null) }),
+      React.createElement(Route, { path: '/login', element: React.createElement(PlazzaaLogin, null) }),
+      React.createElement(Route, { path: '/dashboard', element: React.createElement(MerchantDashboard, null) }),
+      React.createElement(Route, { path: '/dashboard/legacy', element: React.createElement(DashboardPage, null) }),
+      React.createElement(Route, { path: '/book/:businessSlug', element: React.createElement(PlazzaaBookingPage, null) }),
+      React.createElement(Route, { path: '/book/:businessSlug/s/:serviceSlug', element: React.createElement(PlazzaaBookingPage, null) }),
+      React.createElement(Route, { path: '/book/:businessSlug/legacy', element: React.createElement(UnifiedBookingPage, null) }),
       React.createElement(Route, { path: '/owner/:businessId/properties', element: React.createElement(OwnerPropertiesPage, null) }),
       React.createElement(Route, { path: '/admin', element: React.createElement(AdminRoute, null) })
     )
