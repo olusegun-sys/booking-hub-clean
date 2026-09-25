@@ -1,13 +1,10 @@
-// FILE: client/src/api.js
+// FILE: client/src/services/api.js
 // FIXED 21 Sept 2026: separate auth scopes for admin vs business
 //   - admin login/logout uses 'admin_token'
 //   - business login/logout uses 'business_token'
 //   - request() picks the right token per route
 
-// Dynamic API base — works on desktop and mobile
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:5000'
-  : 'http://' + window.location.hostname + ':5000';
+import API_BASE from '../config';
 
 // ============================================================
 // SCOPED TOKEN MANAGEMENT
@@ -18,27 +15,25 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 const STORAGE_KEYS = {
   admin: 'admin_token',
   business: 'business_token',
-  // Legacy key — read-only fallback for existing sessions mid-migration
+  // Legacy key â€” read-only fallback for existing sessions mid-migration
   legacy: 'auth_token'
 };
 
 // In-memory caches so we don't hit localStorage on every request
 let adminToken = localStorage.getItem(STORAGE_KEYS.admin);
-let businessToken = localStorage.getItem(STORAGE_KEYS.business);
+let businessToken = localStorage.getItem(STORAGE_KEYS.business) || localStorage.getItem(STORAGE_KEYS.legacy);
 
-// WHY: On first load after this fix ships, existing users may still
-// have their session under the old 'auth_token' key. Migrate it once.
-(function migrateLegacyToken() {
+// Keep business_token and auth_token synced so Plazzaa V1 merchantApi
+// and legacy dashboards both remain authenticated seamlessly.
+(function syncTokens() {
   const legacy = localStorage.getItem(STORAGE_KEYS.legacy);
-  if (!legacy) return;
-
-  // Migrate to admin bucket (admin sessions were the ones being wiped,
-  // so favour admin over business if we can't tell)
-  if (!adminToken && !businessToken) {
-    localStorage.setItem(STORAGE_KEYS.admin, legacy);
-    adminToken = legacy;
+  const biz = localStorage.getItem(STORAGE_KEYS.business);
+  if (legacy && !biz) {
+    localStorage.setItem(STORAGE_KEYS.business, legacy);
+    businessToken = legacy;
+  } else if (biz && !legacy) {
+    localStorage.setItem(STORAGE_KEYS.legacy, biz);
   }
-  localStorage.removeItem(STORAGE_KEYS.legacy);
 })();
 
 // ============================================================
@@ -58,11 +53,17 @@ export function setAuthToken(token, scope) {
   if (token) {
     localStorage.setItem(key, token);
     if (scope === 'admin') adminToken = token;
-    if (scope === 'business') businessToken = token;
+    if (scope === 'business') {
+      businessToken = token;
+      localStorage.setItem(STORAGE_KEYS.legacy, token);
+    }
   } else {
     localStorage.removeItem(key);
     if (scope === 'admin') adminToken = null;
-    if (scope === 'business') businessToken = null;
+    if (scope === 'business') {
+      businessToken = null;
+      localStorage.removeItem(STORAGE_KEYS.legacy);
+    }
   }
 }
 
@@ -71,7 +72,7 @@ export function setAuthToken(token, scope) {
 export function getAuthToken(scope) {
   if (scope === 'admin') return adminToken;
   if (scope === 'business') return businessToken;
-  // No scope — return whichever exists (legacy behaviour for old callers)
+  // No scope â€” return whichever exists (legacy behaviour for old callers)
   return adminToken || businessToken;
 }
 
@@ -108,7 +109,7 @@ async function request(url, options = {}) {
     const data = await response.json();
 
     // WHY: On 401, only clear the token for the scope this route
-    // belongs to — don't nuke the whole session state.
+    // belongs to â€” don't nuke the whole session state.
     if (response.status === 401) {
       if (url.startsWith('/admin/')) {
         setAuthToken(null, 'admin');

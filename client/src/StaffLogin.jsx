@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import API_BASE from './config';
 
 const TEST_HOTEL_ABUJA_ID = 'f46a5855-ed71-4b4a-a895-e03f3a45a73f';
 
@@ -14,7 +15,7 @@ function StaffLogin({ onLogin }) {
     setError('');
 
     if (email === 'manager@testhotel.com' && password === 'manager123') {
-      const businessResponse = await fetch(`http://localhost:5000/api/businesses/${TEST_HOTEL_ABUJA_ID}`);
+      const businessResponse = await fetch(`${API_BASE}/api/businesses/${TEST_HOTEL_ABUJA_ID}`);
       const businessData = await businessResponse.json();
       
       if (businessData.success) {
@@ -29,7 +30,7 @@ function StaffLogin({ onLogin }) {
         });
       }
     } else if (email === 'receptionist@testhotel.com' && password === 'staff123') {
-      const businessResponse = await fetch(`http://localhost:5000/api/businesses/${TEST_HOTEL_ABUJA_ID}`);
+      const businessResponse = await fetch(`${API_BASE}/api/businesses/${TEST_HOTEL_ABUJA_ID}`);
       const businessData = await businessResponse.json();
       
       if (businessData.success) {

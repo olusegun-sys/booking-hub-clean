@@ -1,4 +1,4 @@
-﻿// FILE: server.js
+// FILE: server.js
 // COMPLETE PRODUCTION-READY VERSION WITH SUBSCRIPTION SYSTEM
 // DEPLOY TO RENDER: Replace your server.js with this
 // UPDATED (19 Sept 2026): Email calls now surface { success: false } failures
@@ -21,7 +21,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
-const { sendBookingConfirmation, sendWelcomeEmail, sendApprovalEmail } = require('./src/services/emailService');
+const { sendBookingConfirmation, sendWelcomeEmail, sendApprovalEmail, sendBookingValidated, sendAwaitingValidation } = require('./src/services/emailService');
 const { initializePayment, verifyPayment } = require('./src/services/paystackService');
 const detectBusinessFromDomain = require('./src/middleware/domainDetector');
 const { verifyDomainTxtRecord } = require('./src/services/dnsService');
@@ -251,6 +251,23 @@ async function authenticateAdmin(req, res, next) {
 app.use('/api/businesses/slug', detectBusinessFromDomain);
 app.use('/api/domain-info', detectBusinessFromDomain);
 app.use('/book', detectBusinessFromDomain);
+
+// ============================================================
+// PLAZZAA V1 BOOKING ENGINE
+// Services, bank details, availability, bank-transfer bookings
+// and merchant validation. Mounted under /api/v1 so the existing
+// hotel endpoints above are untouched.
+// ============================================================
+const createPlazzaaV1Router = require('./routes/plazzaaV1');
+
+app.use('/api/v1', createPlazzaaV1Router({
+  supabase: supabase,
+  authenticateBusiness: authenticateBusiness,
+  email: {
+    sendBookingValidated: sendBookingValidated,
+    sendAwaitingValidation: sendAwaitingValidation
+  }
+}));
 
 // ============================================================
 // HEALTH & TEST ROUTES
@@ -557,14 +574,17 @@ app.post('/api/businesses/register', async function(req, res) {
         slug: existingSlug ? slug + '-' + Date.now().toString(36) : slug,
         business_type: businessType,
         email: email,
-        password: password,
         password_hash: hashedPassword,
         phone: phone,
         address: address || '',
         city: city,
         state: state || '',
         custom_domain: customDomain || null,
-        status: 'pending',
+        // Plazzaa V1 is self-serve: a merchant who signs up can set up their
+        // booking page straight away. Registration previously wrote 'pending'
+        // while login rejected anything but 'approved', so no account created
+        // through the product could ever be used.
+        status: 'approved',
         booking_limit: 50,
         current_booking_count: 0,
         subscription_status: 'free',
@@ -585,7 +605,25 @@ app.post('/api/businesses/register', async function(req, res) {
         .catch(function(err) { console.error('[Email] ❌ Welcome threw an exception:', err); });
     }
 
-    res.json({ success: true, business: data, message: 'Business registered! A confirmation email has been sent.' });
+    // Sign the new merchant in right away rather than sending them to a login
+    // screen to retype what they just typed.
+    var token = generateToken();
+    var expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await supabase.from('business_sessions').upsert({
+      business_id: data.id,
+      token: token,
+      expires_at: expiresAt.toISOString()
+    });
+
+    var safeNewBusiness = removeSensitiveFields(data, 'password_hash', 'password');
+
+    res.json({
+      success: true,
+      business: safeNewBusiness,
+      token: token,
+      message: 'Business registered! A confirmation email has been sent.'
+    });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' });
@@ -610,8 +648,11 @@ app.post('/api/businesses/login', async function(req, res) {
       return res.status(401).json({ success: false, error: 'Invalid credentials.' });
     }
 
-    if (business.status !== 'approved') {
-      return res.status(401).json({ success: false, error: 'Your account is pending approval. Please wait for admin approval.' });
+    if (business.status === 'suspended' || business.status === 'rejected') {
+      return res.status(403).json({
+        success: false,
+        error: 'This account has been suspended. Please contact support.'
+      });
     }
 
     var isValidPassword = false;
