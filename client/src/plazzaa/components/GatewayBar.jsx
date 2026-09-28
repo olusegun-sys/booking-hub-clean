@@ -1,12 +1,22 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ArrowRight } from 'lucide-react';
-import { EASE } from '../lib/motion';
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+import { ArrowRight } from "lucide-react";
+import { EASE } from "../lib/motion";
 
 const DOORS = [
-  { to: '/explore', eyebrow: 'Somewhere to go?', label: 'Explore places', short: 'Explore places' },
-  { to: '/business', eyebrow: 'Run a business?', label: 'Plazzaa for Business', short: 'For business' }
+  {
+    to: "/explore",
+    eyebrow: "Somewhere to go?",
+    label: "Explore places",
+    short: "Explore places",
+  },
+  {
+    to: "/business",
+    eyebrow: "Run a business?",
+    label: "Plazzaa for Business",
+    short: "For business",
+  },
 ];
 
 /**
@@ -34,18 +44,21 @@ export default function GatewayBar({ revealAfter }) {
       const gate = document.querySelector(revealAfter);
       if (!gate) return;
       // Reveal once the gating section has left the top of the screen.
-      const past = gate.getBoundingClientRect().bottom <= window.innerHeight * 0.4;
+      const past =
+        gate.getBoundingClientRect().bottom <= window.innerHeight * 0.4;
       setVisible((was) => (was === past ? was : past));
     };
 
     check();
-    window.addEventListener('scroll', check, { passive: true });
-    window.addEventListener('resize', check);
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
     return () => {
-      window.removeEventListener('scroll', check);
-      window.removeEventListener('resize', check);
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
     };
   }, [revealAfter]);
+
+  return undefined;
 
   return (
     <AnimatePresence>
@@ -66,12 +79,17 @@ export default function GatewayBar({ revealAfter }) {
                   <Link
                     key={door.to}
                     to={door.to}
-                    aria-current={here ? 'page' : undefined}
+                    aria-current={here ? "page" : undefined}
                     className="group relative flex flex-1 items-center justify-between gap-3 rounded-[11px] px-4 py-3 text-plz-ink transition-colors duration-micro ease-plz hover:bg-plz-surface active:bg-plz-line/60 sm:flex-none sm:px-5"
                   >
                     <span className="flex flex-col text-left leading-tight">
                       <span className="hidden items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.09em] text-plz-grey sm:flex">
-                        {here && <span className="h-1.5 w-1.5 rounded-full bg-plz-blue" aria-hidden="true" />}
+                        {here && (
+                          <span
+                            className="h-1.5 w-1.5 rounded-full bg-plz-blue"
+                            aria-hidden="true"
+                          />
+                        )}
                         {door.eyebrow}
                       </span>
                       <span className="whitespace-nowrap text-[15px] font-semibold">

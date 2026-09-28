@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, ArrowUpRight } from 'lucide-react';
-import { EASE } from '../lib/motion';
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "motion/react";
+import { Menu, X, ArrowUpRight, LogIn } from "lucide-react";
+import { EASE } from "../lib/motion";
 
-import PlazzaaLogo from './PlazzaaLogo';
+import PlazzaaLogo from "./PlazzaaLogo";
 const LINKS = [
-  { to: '/explore', label: 'Discover' },
-  { to: '/explore#experiences', label: 'Experiences' },
-  { to: '/business', label: 'For business' }
+  { to: "/explore", label: "Discover" },
+  { to: "/explore#experiences", label: "Experiences" },
+  { to: "/business", label: "For business" },
 ];
 
 /**
@@ -16,7 +16,7 @@ const LINKS = [
  * hairline once you scroll past it — the page should feel like it owns the
  * top of the screen, not like a header is sitting on it.
  */
-export default function TopNav({ tone = 'light' }) {
+export default function TopNav({ tone = "light" }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
@@ -24,8 +24,8 @@ export default function TopNav({ tone = 'light' }) {
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -33,29 +33,27 @@ export default function TopNav({ tone = 'light' }) {
   }, [pathname]);
 
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [menuOpen]);
 
-  const solid = scrolled || tone === 'solid' || menuOpen;
+  const solid = scrolled || tone === "solid" || menuOpen;
 
   return (
     <header
       className={
-        'fixed inset-x-0 top-0 z-40 transition-colors duration-ui ease-plz ' +
-        (solid ? 'bg-white border-b border-plz-line' : 'bg-transparent')
+        "fixed inset-x-0 top-0 z-40 transition-colors duration-ui ease-plz " +
+        (solid ? "bg-white border-b border-plz-line" : "bg-transparent")
       }
     >
       <div className="plz-edge flex h-[64px] min-w-0 items-center justify-between gap-3 md:h-[76px]">
-        <Link
-          to="/"
-          className="flex items-center"
-          aria-label="Plazzaa home"
-        >
+        <Link to="/" className="flex items-center" aria-label="Plazzaa home">
           <PlazzaaLogo size={26} />
         </Link>
 
-        <nav className="hidden items-center gap-9 md:flex" aria-label="Main">
+        <nav className="hidden items-center gap-9 md:hidden" aria-label="Main">
           {LINKS.map((link) => (
             <Link
               key={link.label}
@@ -68,12 +66,16 @@ export default function TopNav({ tone = 'light' }) {
         </nav>
 
         <div className="hidden items-center gap-6 md:flex">
-          <Link to="/login" className="text-[15px] font-medium text-plz-body hover:text-plz-ink">
-            Log in
-          </Link>
+          {/* <Link */}
+          {/*   to="/login" */}
+          {/*   className="text-[15px] font-medium text-plz-body hover:text-plz-ink" */}
+          {/* > */}
+          {/*   Log in */}
+          {/* </Link> */}
+
           <Link to="/explore" className="plz-btn plz-btn-ink h-[44px] px-5">
-            Explore Plazzaa
-            <ArrowUpRight size={16} strokeWidth={2} />
+            Login
+            <LogIn size={16} strokeWidth={2} />
           </Link>
         </div>
 
@@ -83,7 +85,7 @@ export default function TopNav({ tone = 'light' }) {
           className="-mr-2 flex h-11 w-11 items-center justify-center text-plz-ink md:hidden"
           aria-expanded={menuOpen}
           aria-controls="plz-mobile-menu"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
         >
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
