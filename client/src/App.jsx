@@ -3,30 +3,36 @@
 // COMPLETE APP - WITH OWNER PROPERTIES ROUTE
 // =============================================
 
-import React from 'react';
-import { Toaster } from 'react-hot-toast';
-import './styles.css';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import HomePage from './HomePage';
-import BusinessLogin from './BusinessLogin';
-import BusinessDashboard from './BusinessDashboard';
-import MerchantDashboard from './plazzaa/dashboard/MerchantDashboard';
-import PlazzaaSignup from './plazzaa/pages/Signup';
-import PlazzaaBookingPage from './plazzaa/pages/BookingPage';
-import UnifiedBookingPage from './UnifiedBookingPage';
-import OwnerPropertiesPage from './OwnerPropertiesPage';
-import AdminDashboard from './AdminDashboard';
-import AdminLogin from './AdminLogin';
-import HostLanding from './HostLanding';
-import BusinessSignup from './BusinessSignup';
-import API_BASE from './config';
+import React from "react";
+import { Toaster } from "react-hot-toast";
+import "./styles.css";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
+import HomePage from "./HomePage";
+import BusinessLogin from "./BusinessLogin";
+import BusinessDashboard from "./BusinessDashboard";
+import MerchantDashboard from "./plazzaa/dashboard/MerchantDashboard";
+import PlazzaaSignup from "./plazzaa/pages/Signup";
+import PlazzaaBookingPage from "./plazzaa/pages/BookingPage";
+import UnifiedBookingPage from "./UnifiedBookingPage";
+import OwnerPropertiesPage from "./OwnerPropertiesPage";
+import AdminDashboard from "./AdminDashboard";
+import AdminLogin from "./AdminLogin";
+import HostLanding from "./HostLanding";
+import BusinessSignup from "./BusinessSignup";
+import API_BASE from "./config";
 
 // Plazzaa (new brand surfaces)
-import './plazzaa/plazzaa.css';
-import Landing from './plazzaa/pages/Landing';
-import Explore from './plazzaa/pages/Explore';
-import ForBusiness from './plazzaa/pages/ForBusiness';
-import PlazzaaLogin from './plazzaa/pages/Login';
+import "./plazzaa/plazzaa.css";
+import Landing from "./plazzaa/pages/Landing";
+import Explore from "./plazzaa/pages/Explore";
+import ForBusiness from "./plazzaa/pages/ForBusiness";
+import PlazzaaLogin from "./plazzaa/pages/Login";
 
 var _useState = React.useState;
 var _useEffect = React.useEffect;
@@ -40,15 +46,15 @@ function AdminRoute() {
   var isLoading = _useStateLoading[0];
   var setIsLoading = _useStateLoading[1];
 
-  _useEffect(function() {
+  _useEffect(function () {
     try {
-      var savedAdmin = localStorage.getItem('admin');
-      if (savedAdmin && savedAdmin !== 'undefined') {
+      var savedAdmin = localStorage.getItem("admin");
+      if (savedAdmin && savedAdmin !== "undefined") {
         var parsed = JSON.parse(savedAdmin);
         setAdmin(parsed);
       }
     } catch (err) {
-      console.error('Error reading admin from localStorage:', err);
+      console.error("Error reading admin from localStorage:", err);
     }
     setIsLoading(false);
   }, []);
@@ -56,25 +62,34 @@ function AdminRoute() {
   function handleAdminLogin(adminData) {
     setAdmin(adminData);
     try {
-      localStorage.setItem('admin', JSON.stringify(adminData));
+      localStorage.setItem("admin", JSON.stringify(adminData));
     } catch (err) {
-      console.error('Error saving admin to localStorage:', err);
+      console.error("Error saving admin to localStorage:", err);
     }
   }
 
   function handleAdminLogout() {
     setAdmin(null);
     try {
-      localStorage.removeItem('admin');
+      localStorage.removeItem("admin");
     } catch (err) {
-      console.error('Error removing admin from localStorage:', err);
+      console.error("Error removing admin from localStorage:", err);
     }
-    navigate('/admin');
+    navigate("/admin");
   }
 
   if (isLoading) {
-    return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' } },
-      React.createElement('div', { className: 'loading-spinner' })
+    return React.createElement(
+      "div",
+      {
+        style: {
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        },
+      },
+      React.createElement("div", { className: "loading-spinner" }),
     );
   }
 
@@ -82,18 +97,23 @@ function AdminRoute() {
     return React.createElement(AdminLogin, { onLogin: handleAdminLogin });
   }
 
-  return React.createElement(AdminDashboard, { admin: admin, onLogout: handleAdminLogout });
+  return React.createElement(AdminDashboard, {
+    admin: admin,
+    onLogout: handleAdminLogout,
+  });
 }
 
 function LoginPage() {
   var navigate = useNavigate();
 
   function handleClose() {
-    navigate('/');
+    navigate("/");
   }
 
-  return React.createElement('div', { className: 'modal-overlay', style: { display: 'flex' } },
-    React.createElement(BusinessLogin, { onClose: handleClose })
+  return React.createElement(
+    "div",
+    { className: "modal-overlay", style: { display: "flex" } },
+    React.createElement(BusinessLogin, { onClose: handleClose }),
   );
 }
 
@@ -106,36 +126,41 @@ function DashboardPage() {
   var isLoading = _useStateLoading[0];
   var setIsLoading = _useStateLoading[1];
 
-  _useEffect(function() {
+  _useEffect(function () {
     try {
-      var saved = localStorage.getItem('currentBusiness');
-      if (saved && saved !== 'undefined') {
+      var saved = localStorage.getItem("currentBusiness");
+      if (saved && saved !== "undefined") {
         setBusiness(JSON.parse(saved));
       }
     } catch (err) {
-      console.error('Error reading business from localStorage:', err);
+      console.error("Error reading business from localStorage:", err);
     }
     setIsLoading(false);
   }, []);
 
-  _useEffect(function() {
-    if (!isLoading && !business) {
-      navigate('/login', { replace: true });
-    }
-  }, [business, isLoading, navigate]);
+  _useEffect(
+    function () {
+      if (!isLoading && !business) {
+        navigate("/login", { replace: true });
+      }
+    },
+    [business, isLoading, navigate],
+  );
 
   function handleLogout() {
     try {
-      localStorage.removeItem('currentBusiness');
+      localStorage.removeItem("currentBusiness");
     } catch (err) {
-      console.error('Error removing business from localStorage:', err);
+      console.error("Error removing business from localStorage:", err);
     }
-    navigate('/', { replace: true });
+    navigate("/", { replace: true });
   }
 
   if (isLoading) {
-    return React.createElement('div', { className: 'app-container' },
-      React.createElement('div', { className: 'loading-spinner' })
+    return React.createElement(
+      "div",
+      { className: "app-container" },
+      React.createElement("div", { className: "loading-spinner" }),
     );
   }
 
@@ -145,30 +170,89 @@ function DashboardPage() {
 
   return React.createElement(BusinessDashboard, {
     business: business,
-    onLogout: handleLogout
+    onLogout: handleLogout,
   });
 }
 
 function App() {
-  return React.createElement(Router, null,
+  return React.createElement(
+    Router,
+    null,
     React.createElement(Toaster, null),
-    React.createElement(Routes, null,
-      React.createElement(Route, { path: '/', element: React.createElement(Landing, null) }),
-      React.createElement(Route, { path: '/explore', element: React.createElement(Explore, null) }),
-      React.createElement(Route, { path: '/business', element: React.createElement(ForBusiness, null) }),
-      React.createElement(Route, { path: '/hotels', element: React.createElement(Navigate, { to: '/explore', replace: true }) }),
-      React.createElement(Route, { path: '/become-host', element: React.createElement(Navigate, { to: '/business', replace: true }) }),
-      React.createElement(Route, { path: '/signup', element: React.createElement(PlazzaaSignup, null) }),
-      React.createElement(Route, { path: '/signup/legacy', element: React.createElement(BusinessSignup, null) }),
-      React.createElement(Route, { path: '/login', element: React.createElement(PlazzaaLogin, null) }),
-      React.createElement(Route, { path: '/dashboard', element: React.createElement(MerchantDashboard, null) }),
-      React.createElement(Route, { path: '/dashboard/legacy', element: React.createElement(DashboardPage, null) }),
-      React.createElement(Route, { path: '/book/:businessSlug', element: React.createElement(PlazzaaBookingPage, null) }),
-      React.createElement(Route, { path: '/book/:businessSlug/s/:serviceSlug', element: React.createElement(PlazzaaBookingPage, null) }),
-      React.createElement(Route, { path: '/book/:businessSlug/legacy', element: React.createElement(UnifiedBookingPage, null) }),
-      React.createElement(Route, { path: '/owner/:businessId/properties', element: React.createElement(OwnerPropertiesPage, null) }),
-      React.createElement(Route, { path: '/admin', element: React.createElement(AdminRoute, null) })
-    )
+    React.createElement(
+      Routes,
+      null,
+      React.createElement(Route, {
+        path: "/",
+        element: React.createElement(ForBusiness, null),
+      }),
+      React.createElement(Route, {
+        path: "/business",
+        element: React.createElement(ForBusiness, null),
+      }),
+      React.createElement(Route, {
+        path: "/explore",
+        element: React.createElement(Explore, null),
+      }),
+      React.createElement(Route, {
+        path: "/home",
+        element: React.createElement(Landing, null),
+      }),
+      React.createElement(Route, {
+        path: "/hotels",
+        element: React.createElement(Navigate, {
+          to: "/explore",
+          replace: true,
+        }),
+      }),
+      React.createElement(Route, {
+        path: "/become-host",
+        element: React.createElement(Navigate, {
+          to: "/business",
+          replace: true,
+        }),
+      }),
+      React.createElement(Route, {
+        path: "/signup",
+        element: React.createElement(PlazzaaSignup, null),
+      }),
+      React.createElement(Route, {
+        path: "/signup/legacy",
+        element: React.createElement(BusinessSignup, null),
+      }),
+      React.createElement(Route, {
+        path: "/login",
+        element: React.createElement(PlazzaaLogin, null),
+      }),
+      React.createElement(Route, {
+        path: "/dashboard",
+        element: React.createElement(MerchantDashboard, null),
+      }),
+      React.createElement(Route, {
+        path: "/dashboard/legacy",
+        element: React.createElement(DashboardPage, null),
+      }),
+      React.createElement(Route, {
+        path: "/book/:businessSlug",
+        element: React.createElement(PlazzaaBookingPage, null),
+      }),
+      React.createElement(Route, {
+        path: "/book/:businessSlug/s/:serviceSlug",
+        element: React.createElement(PlazzaaBookingPage, null),
+      }),
+      React.createElement(Route, {
+        path: "/book/:businessSlug/legacy",
+        element: React.createElement(UnifiedBookingPage, null),
+      }),
+      React.createElement(Route, {
+        path: "/owner/:businessId/properties",
+        element: React.createElement(OwnerPropertiesPage, null),
+      }),
+      React.createElement(Route, {
+        path: "/admin",
+        element: React.createElement(AdminRoute, null),
+      }),
+    ),
   );
 }
 
