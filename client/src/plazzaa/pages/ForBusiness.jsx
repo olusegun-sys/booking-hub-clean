@@ -59,8 +59,8 @@ const PLANS = [
     name: 'Free',
     price: '₦0',
     cadence: '/month',
-    note: 'Everything you need to take your first bookings.',
-    features: ['50 bookings per month', 'Your booking link', 'Dashboard and bookings list', 'Email support'],
+    note: 'Everything you need to take and manage your first bookings.',
+    features: ['50 bookings per month', 'Online booking & checkout', 'Dashboard and bookings management', 'Email support'],
     cta: 'Start free',
     featured: false
   },
@@ -128,18 +128,17 @@ export default function ForBusiness() {
                   Plazzaa for merchants
                 </p>
                 <h1 className="mt-6 text-hero text-plz-ink" style={{ textWrap: 'balance' }}>
-                  Bookings shouldn&apos;t live in your{' '}
-                  <span className="plz-serif italic text-plz-blue">DMs.</span>
+                  The complete platform to take, process, and manage your{' '}
+                  <span className="plz-serif italic text-plz-blue">bookings.</span>
                 </h1>
-                <p className="mx-auto mt-6 max-w-[54ch] text-lead text-plz-body">
-                  Create one simple booking link where customers choose your services, pick an
-                  available time, and book.
+                <p className="mx-auto mt-6 max-w-[56ch] text-lead text-plz-body">
+                  Move beyond chaotic DMs. Let clients reserve live slots, process bank transfers seamlessly, and run your entire schedule from one central dashboard.
                 </p>
 
                 <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
                     <Link to="/signup" className="plz-btn plz-btn-primary w-full sm:w-auto">
-                      Create your booking link
+                      Get started free
                       <ArrowRight size={16} />
                     </Link>
                   </motion.div>
@@ -172,7 +171,7 @@ export default function ForBusiness() {
                 <DashboardMock />
               </motion.div>
               <p className="mt-5 text-center text-[13px] text-plz-body">
-                Your dashboard: every booking, its payment state, and the link that brought it in.
+                Your command center: take reservations, process bank transfers, and manage your full diary in real time.
               </p>
             </div>
           </section>
@@ -344,8 +343,7 @@ export default function ForBusiness() {
                     Start free. Pay when it&apos;s working.
                   </h2>
                   <p className="mt-4 text-lead text-plz-body">
-                    Every plan includes your booking link, your services and availability, and
-                    manual payment validation.
+                    Every plan includes your automated booking system, services and availability setup, and manual payment verification.
                   </p>
                 </div>
               </Reveal>
@@ -457,7 +455,7 @@ export default function ForBusiness() {
                       {[
                         'Nothing to migrate when it opens',
                         'Early businesses go in first',
-                        'Same link, more people arriving at it'
+                        'Integrated booking operations, more clients reaching you'
                       ].map((line) => (
                         <li key={line} className="flex items-start gap-3 text-[16px] text-plz-ink">
                           <Check size={18} className="mt-1 shrink-0 text-plz-blue" strokeWidth={2.5} />
@@ -492,7 +490,7 @@ export default function ForBusiness() {
             <Reveal>
               <div className="flex flex-col items-start justify-between gap-8 rounded-visual bg-plz-ink p-8 text-white md:flex-row md:items-end md:p-14">
                 <h2 className="max-w-[18ch] text-h2 text-white" style={{ textWrap: 'balance' }}>
-                  Create it. Share it. Get booked.
+                  Take control of your entire booking workflow.
                 </h2>
                 <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
                   <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
