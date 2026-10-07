@@ -4,6 +4,10 @@
 // UPDATED: Config-driven tabs and fields based on business_type
 // UPDATED: Professional delete confirmation modal
 // UPDATED: Images tab with drag-drop upload, reorder, primary badge
+// UPDATED 7 Oct 2026: FIX — reads business_token (post scoped-token refactor),
+//                     not the legacy auth_token which no longer exists for new sessions.
+//                     Fail-fast guards added to every authenticated call.
+//                     Root cause of 401 on image upload.
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -680,6 +684,27 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
 }
 
 // ============================================================
+// TOKEN HELPER (post scoped-token refactor)
+// ============================================================
+// WHY: After the 21 Sept scoped-token refactor, business sessions are
+// written to `business_token`, NOT the legacy `auth_token`. Reading the
+// legacy key returns null for any new session, which produces
+// `Authorization: Bearer null` → 401 on every authenticated request.
+//
+// This helper reads the correct key first, falls back to legacy for
+// migration, and returns null when the user truly has no session.
+// It is called fresh per request — never captured once at mount — so
+// a re-login in another tab is picked up without a page reload.
+function getBusinessToken() {
+  return (
+    localStorage.getItem('business_token') ||
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('token') ||
+    null
+  );
+}
+
+// ============================================================
 // MAIN COMPONENT
 // ============================================================
 function RoomPage({ business, onBack }) {
@@ -700,7 +725,8 @@ function RoomPage({ business, onBack }) {
   const config = getBusinessConfig(business?.business_type);
   const IconComponent = config.icon;
 
-  const token = localStorage.getItem('auth_token');
+  // WHY: no top-level `const token` anymore. Token is read fresh inside
+  // each handler via getBusinessToken() so it reflects the current session.
   const isMobile = window.innerWidth < 640;
 
   // ============================================================
@@ -755,6 +781,13 @@ function RoomPage({ business, onBack }) {
 
   function fetchRooms() {
     setLoading(true);
+    // WHY: read fresh per request, not once at mount.
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again.');
+      setLoading(false);
+      return;
+    }
     fetch(API_BASE + '/api/businesses/' + business.id + '/rooms', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
@@ -875,7 +908,16 @@ function RoomPage({ business, onBack }) {
   function handleConfirmDelete() {
     if (!roomToDelete) return;
     const roomId = roomToDelete.id;
-    
+
+    // WHY: fail-fast guard — don't fire the request if there's no session.
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again.');
+      setDeleteModalOpen(false);
+      setRoomToDelete(null);
+      return;
+    }
+
     fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
@@ -913,7 +955,7 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // IMAGE UPLOAD
+  // IMAGE UPLOAD — THE BUG THAT WAS FIXED
   // ============================================================
   function handleVenueImageUpload(event) {
     const file = event.target.files[0];
@@ -942,6 +984,16 @@ function RoomPage({ business, onBack }) {
       return;
     }
 
+    // WHY: read the token fresh here — this was the exact line that broke
+    // after the scoped-token refactor. Old code used a captured `token`
+    // from localStorage.getItem('auth_token'), which is null for any
+    // session created after 21 Sept.
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again to upload images.');
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
 
@@ -961,7 +1013,14 @@ function RoomPage({ business, onBack }) {
           fileData: base64Data
         })
       })
-        .then(function(res) { return res.json(); })
+        .then(function(res) {
+          // WHY: distinguish 401 from other failures so the user gets a clear
+          // action ("log in again") instead of a generic "Something went wrong".
+          if (res.status === 401) {
+            throw new Error('SESSION_EXPIRED');
+          }
+          return res.json();
+        })
         .then(function(data) {
           setUploadProgress(100);
           if (data.success) {
@@ -975,9 +1034,13 @@ function RoomPage({ business, onBack }) {
           }
           setUploading(false);
         })
-        .catch(function() {
-          showError('Something went wrong. Please try again.');
+        .catch(function(err) {
           setUploading(false);
+          if (err && err.message === 'SESSION_EXPIRED') {
+            showError('Session expired. Please log in again.');
+          } else {
+            showError('Something went wrong. Please try again.');
+          }
         });
     };
 
@@ -997,6 +1060,13 @@ function RoomPage({ business, onBack }) {
     }
 
     if (!confirm('Remove this image?')) return;
+
+    // WHY: fresh token, fail-fast guard.
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again.');
+      return;
+    }
 
     fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId + '/images', {
       method: 'DELETE',
@@ -1151,6 +1221,13 @@ function RoomPage({ business, onBack }) {
       if (isNaN(capacity) || capacity <= 0) {
         capacity = 1;
       }
+    }
+
+    // WHY: fresh token, fail-fast guard.
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again.');
+      return;
     }
 
     setSaving(true);
