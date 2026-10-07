@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, ArrowUpRight, LogIn } from "lucide-react";
+import { Menu, X, ArrowUpRight, LogIn, ShieldIcon } from "lucide-react";
 import { EASE } from "../lib/motion";
 
 import PlazzaaLogo from "./PlazzaaLogo";
@@ -66,14 +66,15 @@ export default function TopNav({ tone = "light" }) {
         </nav>
 
         <div className="hidden items-center gap-6 md:flex">
-          {/* <Link */}
-          {/*   to="/login" */}
-          {/*   className="text-[15px] font-medium text-plz-body hover:text-plz-ink" */}
-          {/* > */}
-          {/*   Log in */}
-          {/* </Link> */}
+          <Link
+            to="/admin"
+            className="text-xs font-semibold bg-neutral-100 border border-neutral-200 rounded-md px-1.5 py-1 text-neutral-700 flex gap-0.5 items-center justify-center"
+          >
+            <ShieldIcon className="size-3.5" />
+            Admin
+          </Link>
 
-          <Link to="/explore" className="plz-btn plz-btn-ink h-[44px] px-5">
+          <Link to="/login" className="plz-btn plz-btn-ink h-[44px] px-5">
             Login
             <LogIn size={16} strokeWidth={2} />
           </Link>
