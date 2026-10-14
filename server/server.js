@@ -363,7 +363,6 @@ app.get("/api/businesses", async function (req, res) {
       .from("businesses")
       .select("*, rooms(id, images, name)") // WHY: include rooms so homepage can use primary item image
       .eq("status", "approved") // WHY: only vetted businesses
-      .eq("is_active", true) // WHY: also require active flag
       .order("created_at", { ascending: false });
 
     if (error) throw error;
