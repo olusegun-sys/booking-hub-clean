@@ -185,7 +185,7 @@ export default function Login() {
             <p className="mt-10 text-[14px] text-plz-body">
               New to Plazzaa?{' '}
               <Link to="/signup" className="font-semibold text-plz-blue hover:underline">
-                Create your booking link
+                Register your business
               </Link>
             </p>
           </motion.div>

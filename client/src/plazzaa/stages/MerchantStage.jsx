@@ -74,8 +74,7 @@ function Scene({ progress }) {
               <span className="mt-1 block plz-serif italic">for you.</span>
             </h2>
             <p className="mt-5 max-w-[46ch] text-lead text-white/70">
-              Give your customers a simpler way to book. Create your services, set your
-              availability, and share one Plazzaa link.
+              The complete platform to take, process, and manage all your bookings without losing track in direct messages.
             </p>
 
             <motion.div
@@ -93,7 +92,7 @@ function Scene({ progress }) {
                   to="/signup"
                   className="plz-btn w-full border border-white/25 text-white hover:border-white sm:w-auto"
                 >
-                  Create your booking link
+                  Get started free
                 </Link>
               </motion.div>
             </motion.div>

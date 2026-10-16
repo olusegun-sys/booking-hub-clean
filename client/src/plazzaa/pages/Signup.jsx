@@ -185,8 +185,8 @@ export default function Signup() {
             </h1>
             <p className="mt-3 text-body text-plz-body">
               {step === 0
-                ? 'Your own booking page, live in minutes. No card needed.'
-                : 'This is how you’ll sign in, and how customers reach you.'}
+                ? 'Set up your business booking platform in minutes. No card needed.'
+                : 'This is how you’ll sign in, manage bookings, and communicate with clients.'}
             </p>
 
             <form onSubmit={submit} noValidate className="mt-9">
@@ -373,11 +373,11 @@ export default function Signup() {
                         {loading ? (
                           <>
                             <Loader2 size={16} className="animate-spin" />
-                            Creating your page…
+                            Creating your account…
                           </>
                         ) : (
                           <>
-                            Create my booking page
+                            Get started
                             <ArrowRight size={16} />
                           </>
                         )}
@@ -422,14 +422,14 @@ export default function Signup() {
                   Brighter Communities
                 </p>
                 <p className="mt-5 max-w-[34ch] text-lead text-white">
-                  Set your services, share one link, and let customers book themselves in.
+                  The complete booking operations platform to run your business effortlessly.
                 </p>
 
                 <ul className="mt-7 flex flex-col gap-2.5">
                   {[
-                    'Your own booking page',
-                    'Payments straight to your bank',
-                    'No commission on bookings'
+                    'Live booking management & calendar',
+                    'Payments verified straight to your bank',
+                    'No commission on your bookings'
                   ].map((line) => (
                     <li key={line} className="flex items-center gap-2.5 text-[15px] text-white/90">
                       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20">
