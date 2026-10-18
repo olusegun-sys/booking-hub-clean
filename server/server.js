@@ -1,11 +1,11 @@
-// FILE: server.js
+﻿// FILE: server.js
 // COMPLETE PRODUCTION-READY VERSION WITH SUBSCRIPTION SYSTEM
 // DEPLOY TO RENDER: Replace your server.js with this
 // UPDATED (19 Sept 2026): Email calls now surface { success: false } failures
 // UPDATED (19 Sept 2026): Search route supports comma-separated business types (group search)
 // UPDATED (22 Sept 2026): /api/businesses now returns rooms[] and filters is_active=true
-//                        WHY: homepage needs the business's own uploaded image (logo or
-//                        primary item image), and only approved+active businesses should show.
+// UPDATED (17 Oct 2026): Forgot-password flow — request + confirm endpoints
+//                        (Email enumeration prevention, single-use tokens, session invalidation)
 
 // ============================================================
 // LOAD ENVIRONMENT VARIABLES FROM server/.env
@@ -27,6 +27,7 @@ const {
   sendApprovalEmail,
   sendBookingValidated,
   sendAwaitingValidation,
+  sendPasswordResetEmail,
 } = require("./src/services/emailService");
 const {
   initializePayment,
@@ -34,6 +35,14 @@ const {
 } = require("./src/services/paystackService");
 const detectBusinessFromDomain = require("./src/middleware/domainDetector");
 const { verifyDomainTxtRecord } = require("./src/services/dnsService");
+
+// >>> FORGOT PASSWORD (NEW 17 Oct 2026) — pure token management
+const {
+  createResetToken,
+  findValidToken,
+  markTokenUsed,
+  purgeOldTokens,
+} = require("./src/services/passwordResetService");
 
 // ============================================================
 // ENHANCED BUSINESS ROUTES
@@ -146,6 +155,9 @@ const ALLOWED_ORIGINS = [
   "http://127.0.0.1:5173",
   "https://booking-frontend-clean.onrender.com",
   "https://booking-hub-frontend-clean.onrender.com",
+  "https://myplazzaa.com",
+  "https://www.myplazzaa.com",
+  "https://myplazzaa-staging-frontend.onrender.com",
 ];
 
 if (process.env.ALLOWED_ORIGINS) {
@@ -294,9 +306,6 @@ app.use("/book", detectBusinessFromDomain);
 
 // ============================================================
 // PLAZZAA V1 BOOKING ENGINE
-// Services, bank details, availability, bank-transfer bookings
-// and merchant validation. Mounted under /api/v1 so the existing
-// hotel endpoints above are untouched.
 // ============================================================
 const createPlazzaaV1Router = require("./routes/plazzaaV1");
 
@@ -351,18 +360,12 @@ app.get("/api/supabase-test", async function (req, res) {
 // ============================================================
 // PUBLIC BUSINESS ROUTES
 // ============================================================
-
-// >>> CHANGED 22 Sept 2026: /api/businesses now joins rooms and requires is_active=true
-// WHY: The homepage needs each business's own uploaded image (logo_url or the
-// primary image on their first item). Nested select brings rooms along in one
-// request instead of N+1 fetches. is_active=true guards against any approved
-// but deactivated business leaking onto the public homepage.
 app.get("/api/businesses", async function (req, res) {
   try {
     const { data, error } = await supabase
       .from("businesses")
-      .select("*, rooms(id, images, name)") // WHY: include rooms so homepage can use primary item image
-      .eq("status", "approved") // WHY: only vetted businesses
+      .select("*, rooms(id, images, name)")
+      .eq("status", "approved")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -399,9 +402,6 @@ app.get("/api/businesses/search/category", async function (req, res) {
       .select("*")
       .eq("status", "approved");
 
-    // WHY: category can be a single type ("hotel") or a comma-separated
-    // group ("hotel,apartment,event_hall"). Split and use .in() when multiple
-    // so searches like "Stays" find hotels, apartments, and event halls.
     if (category) {
       const types = String(category)
         .split(",")
@@ -694,10 +694,6 @@ app.post("/api/businesses/register", async function (req, res) {
         city: city,
         state: state || "",
         custom_domain: customDomain || null,
-        // Plazzaa V1 is self-serve: a merchant who signs up can set up their
-        // booking page straight away. Registration previously wrote 'pending'
-        // while login rejected anything but 'approved', so no account created
-        // through the product could ever be used.
         status: "approved",
         booking_limit: 50,
         current_booking_count: 0,
@@ -721,7 +717,6 @@ app.post("/api/businesses/register", async function (req, res) {
         });
     }
 
-    // EMAIL: Welcome — now checks return value so failures are visible
     if (data) {
       sendWelcomeEmail(data)
         .then(function (result) {
@@ -732,8 +727,6 @@ app.post("/api/businesses/register", async function (req, res) {
         });
     }
 
-    // Sign the new merchant in right away rather than sending them to a login
-    // screen to retype what they just typed.
     var token = generateToken();
     var expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
@@ -847,6 +840,203 @@ app.post("/api/businesses/login", async function (req, res) {
   }
 });
 
+// ============================================================
+// >>> FORGOT PASSWORD (NEW 17 Oct 2026)
+// ============================================================
+// WHY placed here: these routes must come BEFORE any parameterised
+// /api/businesses/:something routes further down, otherwise Express
+// would try to interpret "forgot-password" as a :something param.
+
+// Separate rate limiter — tighter than the global one, because this
+// endpoint sends emails (costly, abusable).
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  // WHY success:true on the limit response — even a rate-limit refusal
+  // shouldn't reveal whether the account exists. From the user's
+  // perspective, they get the same response either way.
+  message: {
+    success: true,
+    message: "If that email exists, we've sent a reset link.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: function () {
+    return process.env.NODE_ENV !== "production";
+  },
+});
+
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    error: "Too many attempts. Please try again later.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: function () {
+    return process.env.NODE_ENV !== "production";
+  },
+});
+
+// ------------------------------------------------------------
+// REQUEST A RESET LINK
+// ------------------------------------------------------------
+app.post(
+  "/api/businesses/forgot-password",
+  forgotPasswordLimiter,
+  async function (req, res) {
+    // WHY: The same response is returned for every outcome. An attacker
+    // cannot distinguish "email exists" from "email doesn't exist" from
+    // "invalid format" from "something went wrong". Only network errors
+    // would look different — and those are the same regardless.
+    const GENERIC_RESPONSE = {
+      success: true,
+      message: "If that email exists, we've sent a reset link.",
+    };
+
+    try {
+      const email = ((req.body && req.body.email) || "").trim().toLowerCase();
+
+      if (!email || !email.includes("@")) {
+        return res.json(GENERIC_RESPONSE);
+      }
+
+      const { data: business, error: findError } = await supabase
+        .from("businesses")
+        .select("id, name, email")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (findError || !business) {
+        // WHY: Do NOT log the raw email here. Even logs are a leak vector
+        // if they end up in a monitoring service. Log a hashed hint only
+        // if you really need it — for now, silently return.
+        return res.json(GENERIC_RESPONSE);
+      }
+
+      const rawToken = await createResetToken(supabase, business.id);
+
+      const baseUrl = (process.env.APP_URL || "http://localhost:5173").replace(
+        /\/$/,
+        "",
+      );
+      const resetLink = baseUrl + "/reset-password?token=" + rawToken;
+
+      // WHY fire-and-forget: the user gets their generic success response
+      // the moment we've created the token. If Resend is slow (or down),
+      // it doesn't block the request. The email is either delivered as a
+      // side effect or logged as failed — either way, the API is fast.
+      sendPasswordResetEmail(business, resetLink)
+        .then(function (result) {
+          logEmailResult("Password reset (" + business.email + ")", result);
+        })
+        .catch(function (err) {
+          console.error(
+            "[Email] ❌ Password reset threw an exception:",
+            err,
+          );
+        });
+
+      // Opportunistic cleanup — non-fatal if it fails
+      purgeOldTokens(supabase).catch(function () {});
+
+      return res.json(GENERIC_RESPONSE);
+    } catch (error) {
+      console.error("[Password Reset] Request error:", error.message);
+      return res.json(GENERIC_RESPONSE);
+    }
+  },
+);
+
+// ------------------------------------------------------------
+// CONFIRM THE RESET (accept token + new password)
+// ------------------------------------------------------------
+app.post(
+  "/api/businesses/reset-password",
+  resetPasswordLimiter,
+  async function (req, res) {
+    try {
+      const { token, newPassword } = req.body || {};
+
+      // WHY: validation messages here ARE safe to be specific. Without a
+      // valid token, nothing is revealed about accounts — the attacker
+      // already knows they don't have a token.
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({
+          success: false,
+          error: "Missing reset token. Please use the link from your email.",
+        });
+      }
+
+      if (!newPassword || typeof newPassword !== "string") {
+        return res.status(400).json({
+          success: false,
+          error: "Please enter a new password.",
+        });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({
+          success: false,
+          error: "Password must be at least 8 characters.",
+        });
+      }
+
+      const tokenRecord = await findValidToken(supabase, token);
+
+      if (!tokenRecord) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "This reset link is invalid or has expired. Please request a new one.",
+        });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+
+      const { error: updateError } = await supabase
+        .from("businesses")
+        .update({ password_hash: passwordHash })
+        .eq("id", tokenRecord.business_id);
+
+      if (updateError) {
+        console.error("[Password Reset] Update error:", updateError);
+        return res.status(500).json({
+          success: false,
+          error: "Something went wrong. Please try again.",
+        });
+      }
+
+      await markTokenUsed(supabase, tokenRecord.id);
+
+      // WHY invalidate sessions: if the password changed because the
+      // account was compromised, any attacker session must die. Every
+      // existing login is logged out.
+      await supabase
+        .from("business_sessions")
+        .delete()
+        .eq("business_id", tokenRecord.business_id);
+
+      return res.json({
+        success: true,
+        message:
+          "Password updated. You can now sign in with your new password.",
+      });
+    } catch (error) {
+      console.error("[Password Reset] Confirm error:", error.message);
+      return res.status(500).json({
+        success: false,
+        error: "Something went wrong. Please try again.",
+      });
+    }
+  },
+);
+
+// ============================================================
+// STAFF LOGIN
+// ============================================================
 app.post("/api/staff/login", async function (req, res) {
   try {
     var { data, error } = await supabase
@@ -919,7 +1109,6 @@ app.put(
 
       if (error) throw error;
 
-      // EMAIL: Approval — now checks return value so failures are visible
       if (req.body.status === "approved" && data) {
         sendApprovalEmail(data)
           .then(function (result) {
@@ -2326,7 +2515,6 @@ app.post("/api/bookings", async function (req, res) {
       },
     };
 
-    // EMAIL: Booking confirmation — now checks return value so failures are visible
     sendBookingConfirmation(emailDetails, business)
       .then(function (emailResults) {
         if (!emailResults) {
@@ -2982,8 +3170,6 @@ async function ensureAdminUser() {
     if (!existingAdmin) {
       console.log("Creating default admin user...");
       var hashedPassword = await bcrypt.hash("admin123", 10);
-      // WHY: password field is no longer written — only password_hash.
-      // Storing plaintext passwords is a security risk.
       var { error } = await supabase.from("admin_users").insert({
         email: "admin@bookinghub.com",
         password_hash: hashedPassword,
