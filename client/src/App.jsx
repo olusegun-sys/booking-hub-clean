@@ -36,6 +36,8 @@ import API_BASE from './config';
 import './plazzaa/plazzaa.css';
 import PlazzaaLanding from './plazzaa/pages/Landing';
 import PlazzaaLogin from './plazzaa/pages/Login';
+import PlazzaaForgotPassword from './plazzaa/pages/ForgotPassword';
+import PlazzaaResetPassword from './plazzaa/pages/ResetPassword';
 import PlazzaaSignup from './plazzaa/pages/Signup';
 import PlazzaaExplore from './plazzaa/pages/Explore';
 import PlazzaaForBusiness from './plazzaa/pages/ForBusiness';
@@ -195,6 +197,8 @@ function App() {
       // the strongest marketing surfaces. Users land on these.
       React.createElement(Route, { path: '/', element: React.createElement(PlazzaaLanding, null) }),
       React.createElement(Route, { path: '/login', element: React.createElement(PlazzaaLogin, null) }),
+	  React.createElement(Route, { path: '/forgot-password', element: React.createElement(PlazzaaForgotPassword, null) }),
+      React.createElement(Route, { path: '/reset-password', element: React.createElement(PlazzaaResetPassword, null) }),
       React.createElement(Route, { path: '/signup', element: React.createElement(PlazzaaSignup, null) }),
       React.createElement(Route, { path: '/explore', element: React.createElement(PlazzaaExplore, null) }),
       React.createElement(Route, { path: '/for-business', element: React.createElement(PlazzaaForBusiness, null) }),
