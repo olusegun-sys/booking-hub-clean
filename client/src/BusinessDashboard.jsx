@@ -1,12 +1,12 @@
 ﻿// client/src/BusinessDashboard.jsx
 // =============================================
-// PREMIUM BUSINESS DASHBOARD - 2026 LUXURY DESIGN
-// Glass-morphism, gradients, animations, premium UX
-// UPDATED 21 Sept 2026: Full business type config (restaurant, spa, salon,
-//   nails, car-wash, café, apartment, event_hall, etc.)
-// UPDATED 21 Sept 2026: Reads/writes 'business_token' scoped key
-// UPDATED 21 Sept 2026: Shorter type labels — Sports (not "Sports Facility"),
-//   Events (not "Event Venue"), Salon, Nails, Activities
+// BUSINESS DASHBOARD — RESTYLED 19 Oct 2026
+// Colours: plz-blue #2D60EA (was indigo #4f46e5)
+// Fonts: Manrope prepended
+// Cards: 14px radius (was 20px)
+// Buttons: 10px soft rectangle (was 40px pill)
+// Sidebar: matches Emmanuel's design — solid pill active state
+// Logic unchanged — only styling
 // =============================================
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +20,6 @@ import {
   Copy, Check, ArrowRight, Wallet, Building, Phone, Mail,
   PartyPopper, Music, Cake, Briefcase, Gift, GlassWater,
   Link as LinkIcon,
-  // WHY: icons for the extra business types now supported
   Utensils, Coffee, Scissors, Car, Dumbbell
 } from 'lucide-react';
 import RoomPage from './RoomPage';
@@ -31,16 +30,43 @@ import UpgradeModal from './components/UpgradeModal';
 import API_BASE from './config';
 
 // ============================================================
-// HELPER: Format currency with ₦ symbol
+// DESIGN TOKENS — plz-blue palette
+// ============================================================
+// WHY: centralised so a future global swap only changes one place.
+// Aligned to Plazzaa marketing design (#2D60EA primary).
+const PLZ_BLUE = '#2D60EA';
+const PLZ_BLUE_DEEP = '#1F47B4';
+const PLZ_BLUE_TINT = '#E8F4FF';
+const PLZ_INK = '#18181B';
+const PLZ_BODY = '#52525B';
+const PLZ_GREY = '#A1A1AA';
+const PLZ_LINE = '#E4E4E7';
+const PLZ_SURFACE = '#F4F4F5';
+const PLZ_CREAM = '#FEF8E7';
+const PLZ_ERROR = '#C0395A';
+const PLZ_ERROR_TINT = '#FDEEF0';
+const PLZ_SUCCESS = '#1B7F43';
+const PLZ_SUCCESS_TINT = '#EAF7EF';
+const PLZ_WARN = '#B0840F';
+const PLZ_WARN_TINT = '#FEF8E7';
+
+// WHY: prepended to the app's existing font stack so his marketing
+// pages and our product pages share typography. Falls back to system
+// fonts if Manrope hasn't loaded yet (browser default).
+const FONT_STACK = "'Manrope', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+// WHY: card radius is one design token — matching his cards (14px).
+const CARD_RADIUS = '14px';
+const CARD_RADIUS_LG = '16px';
+
+// ============================================================
+// HELPERS
 // ============================================================
 function formatNaira(amount) {
   if (!amount && amount !== 0) return '₦0';
   return '₦' + Number(amount).toLocaleString();
 }
 
-// ============================================================
-// HELPER: Get base URL for booking links
-// ============================================================
 function getBookingBaseUrl() {
   if (typeof window !== 'undefined' && window.location) {
     return window.location.origin;
@@ -49,7 +75,7 @@ function getBookingBaseUrl() {
 }
 
 // ============================================================
-// SUBSCRIPTION TIERS CONFIGURATION - PREMIUM
+// SUBSCRIPTION TIERS — blue palette
 // ============================================================
 const SUBSCRIPTION_TIERS = {
   free: {
@@ -58,11 +84,11 @@ const SUBSCRIPTION_TIERS = {
     price: 0,
     bookings: 50,
     icon: Star,
-    iconBg: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)',
-    color: '#64748b',
-    gradient: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)',
+    iconBg: 'linear-gradient(135deg, #E4E4E7, #D4D4D8)',
+    color: '#52525B',
+    gradient: 'linear-gradient(135deg, #F4F4F5, #E4E4E7)',
     badge: 'Free',
-    badgeColor: '#94a3b8',
+    badgeColor: '#A1A1AA',
     features: [
       '50 bookings per month',
       'Basic dashboard',
@@ -75,11 +101,11 @@ const SUBSCRIPTION_TIERS = {
     price: 30000,
     bookings: 100,
     icon: Zap,
-    iconBg: 'linear-gradient(135deg, #4f46e5, #6366f1)',
-    color: '#4f46e5',
-    gradient: 'linear-gradient(135deg, #eef2ff, #e0e7ff)',
+    iconBg: 'linear-gradient(135deg, #2D60EA, #1F47B4)',
+    color: PLZ_BLUE,
+    gradient: 'linear-gradient(135deg, #E8F4FF, #D6E9FF)',
     badge: 'Popular',
-    badgeColor: '#4f46e5',
+    badgeColor: PLZ_BLUE,
     features: [
       '100 bookings per month',
       'Priority email support',
@@ -136,8 +162,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   // ============================================================
   // TOKEN & BUSINESS ID
   // ============================================================
-  // WHY: Read from 'business_token' first (scoped key), then fall back to
-  // legacy 'auth_token'/'token' for sessions started before the fix.
   const token = localStorage.getItem('business_token')
              || localStorage.getItem('auth_token')
              || localStorage.getItem('token');
@@ -156,7 +180,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       setLinkCopied(true);
       setTimeout(function() { setLinkCopied(false); }, 3000);
     }).catch(function() {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = bookingLink;
       document.body.appendChild(textArea);
@@ -210,7 +233,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   }, [businessId]);
 
   // ============================================================
-  // FETCH FUNCTIONS
+  // FETCH FUNCTIONS (unchanged)
   // ============================================================
   function fetchBusinessData() {
     const storedBusiness = localStorage.getItem('currentBusiness');
@@ -218,7 +241,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       try {
         const parsed = JSON.parse(storedBusiness);
         setBusiness(parsed);
-        console.log('[BusinessDashboard] Loaded business from localStorage:', parsed.name);
       } catch(e) {
         console.error('[BusinessDashboard] Error parsing stored business:', e);
       }
@@ -226,54 +248,37 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     
     if (!businessId) return Promise.resolve();
     
-    console.log('[BusinessDashboard] Fetching business profile for:', businessId);
-    
     return fetch(API_BASE + '/api/businesses/profile', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(res => {
-        console.log('[BusinessDashboard] Profile response status:', res.status);
         if (res.status === 401) {
           throw new Error('Session expired. Please login again.');
         }
         return res.json();
       })
       .then(data => {
-        console.log('[BusinessDashboard] Profile data:', data);
         if (data.success && data.business) {
           setBusiness(data.business);
           localStorage.setItem('currentBusiness', JSON.stringify(data.business));
-          console.log('[BusinessDashboard] Business profile updated:', data.business.name);
         } else {
-          console.error('[BusinessDashboard] Profile fetch failed:', data.error);
           setError(data.error || 'Failed to load business profile');
         }
       })
       .catch(err => {
-        console.error('[BusinessDashboard] Fetch business error:', err);
         setError(err.message || 'Failed to load business data');
       });
   }
 
   function fetchRooms() {
     if (!businessId) return Promise.resolve();
-    
-    console.log('[BusinessDashboard] Fetching rooms for:', businessId);
-    
     return fetch(API_BASE + '/api/businesses/' + businessId + '/rooms', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
-      .then(res => {
-        console.log('[BusinessDashboard] Rooms response status:', res.status);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        console.log('[BusinessDashboard] Rooms data:', data);
         if (data.success) {
           setRooms(data.rooms || []);
-          console.log('[BusinessDashboard] Set rooms count:', data.rooms?.length || 0);
-        } else {
-          console.error('[BusinessDashboard] Rooms fetch failed:', data.error);
         }
       })
       .catch(err => console.error('[BusinessDashboard] Fetch rooms error:', err));
@@ -281,65 +286,43 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
 
   function fetchBookings() {
     if (!businessId) return Promise.resolve();
-    
-    console.log('[BusinessDashboard] Fetching bookings for businessId:', businessId);
-    console.log('[BusinessDashboard] Using token:', token ? 'Present (starts with ' + token.substring(0, 10) + '...)' : 'Missing');
-    
     return fetch(API_BASE + '/api/businesses/' + businessId + '/bookings', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(res => {
-        console.log('[BusinessDashboard] Bookings response status:', res.status);
         if (res.status === 401) {
-          console.error('[BusinessDashboard] Unauthorized - token may be expired');
           setError('Session expired. Please login again.');
           return { success: false, error: 'Unauthorized' };
         }
         return res.json();
       })
       .then(data => {
-        console.log('[BusinessDashboard] Bookings data received:', data);
-        console.log('[BusinessDashboard] Bookings count:', data.bookings?.length || 0);
         if (data.success) {
           setBookings(data.bookings || []);
-          console.log('[BusinessDashboard] Set bookings count:', data.bookings?.length || 0);
-          if (data.bookings && data.bookings.length > 0) {
-            console.log('[BusinessDashboard] First booking:', data.bookings[0]);
-          }
         } else {
-          console.error('[BusinessDashboard] Bookings fetch failed:', data.error);
           setError(data.error || 'Failed to load bookings');
         }
       })
       .catch(err => {
-        console.error('[BusinessDashboard] Fetch bookings error:', err);
         setError('Network error loading bookings');
       });
   }
 
   // ============================================================
-  // SUBSCRIPTION FUNCTIONS
+  // SUBSCRIPTION FUNCTIONS (unchanged)
   // ============================================================
   function fetchSubscriptionStatus() {
     if (!businessId) return Promise.resolve();
-    
-    console.log('[BusinessDashboard] Fetching subscription status for:', businessId);
-    
     return fetch(API_BASE + '/api/businesses/' + businessId + '/subscription', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
-      .then(res => {
-        console.log('[BusinessDashboard] Subscription response status:', res.status);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        console.log('[BusinessDashboard] Subscription data:', data);
         if (data.success) {
           setSubscriptionData(data.data);
         } else if (data.fallback) {
           setSubscriptionData(data.fallback);
         } else {
-          console.warn('[BusinessDashboard] No subscription data, using defaults');
           setSubscriptionData({
             plan: 'free',
             limit: 50,
@@ -351,7 +334,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         }
       })
       .catch(err => {
-        console.error('[BusinessDashboard] Fetch subscription error:', err);
         setSubscriptionData({
           plan: 'free',
           limit: 50,
@@ -406,10 +388,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         return;
       }
 
-      console.log('[BusinessDashboard] Submitting upgrade request for:', businessId);
-      console.log('[BusinessDashboard] Plan:', selectedTier);
-      console.log('[BusinessDashboard] Reference:', paymentData.reference);
-
       const response = await fetch(`${API_BASE}/api/businesses/${businessId}/upgrade-request`, {
         method: 'POST',
         headers: {
@@ -423,10 +401,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         })
       });
 
-      console.log('[BusinessDashboard] Upgrade response status:', response.status);
-
       const data = await response.json();
-      console.log('[BusinessDashboard] Upgrade response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create upgrade request');
@@ -450,143 +425,38 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   }
 
   // ============================================================
-  // BUSINESS TYPE CONFIG
+  // BUSINESS TYPE CONFIG (unchanged)
   // ============================================================
-  // WHY: Single source of truth for every business_type we support.
-  // Labels are kept short so the header reads cleanly even when the
-  // business name already contains the type word (e.g. "Peak Sports"
-  // next to "Sports"). Case-insensitive lookup means "Sports",
-  // "sports", and "  SPORTS  " all match. Both car_wash spellings
-  // are supported because production data has used both.
   function getBusinessTypeConfig() {
     const raw = business?.business_type;
     const type = (raw || '').toString().toLowerCase().trim();
 
     const configs = {
-      // ---------- STAYS ----------
-      hotel: {
-        label: 'Hotel',
-        singular: 'Room', plural: 'Rooms',
-        action: 'Add Room',
-        icon: Hotel, iconColor: '#4f46e5'
-      },
-      apartment: {
-        label: 'Apartment',
-        singular: 'Apartment', plural: 'Apartments',
-        action: 'Add Apartment',
-        icon: Building2, iconColor: '#4f46e5'
-      },
-      event_hall: {
-        label: 'Event Hall',
-        singular: 'Hall', plural: 'Halls',
-        action: 'Add Hall',
-        icon: PartyPopper, iconColor: '#d97706'
-      },
-      event: {
-        label: 'Events',
-        singular: 'Venue', plural: 'Venues',
-        action: 'Add Venue',
-        icon: Sparkles, iconColor: '#d97706'
-      },
-
-      // ---------- FOOD ----------
-      restaurant: {
-        label: 'Restaurant',
-        singular: 'Menu Item', plural: 'Menu & Services',
-        action: 'Add Menu Item',
-        icon: Utensils, iconColor: '#ea580c'
-      },
-      diner: {
-        label: 'Diner',
-        singular: 'Menu Item', plural: 'Menu & Services',
-        action: 'Add Menu Item',
-        icon: Utensils, iconColor: '#ea580c'
-      },
-      cafe: {
-        label: 'Café',
-        singular: 'Item', plural: 'Menu & Services',
-        action: 'Add Item',
-        icon: Coffee, iconColor: '#b45309'
-      },
-      other_food: {
-        label: 'Food',
-        singular: 'Item', plural: 'Menu & Services',
-        action: 'Add Item',
-        icon: Utensils, iconColor: '#ea580c'
-      },
-
-      // ---------- OTHERS ----------
-      sports: {
-        label: 'Sports',
-        singular: 'Court', plural: 'Courts',
-        action: 'Add Court',
-        icon: Trophy, iconColor: '#059669'
-      },
-      spa: {
-        label: 'Spa',
-        singular: 'Service', plural: 'Services',
-        action: 'Add Service',
-        icon: Sparkles, iconColor: '#0891b2'
-      },
-      beauty_salon: {
-        label: 'Salon',
-        singular: 'Service', plural: 'Services',
-        action: 'Add Service',
-        icon: Scissors, iconColor: '#db2777'
-      },
-      // Legacy value present in production data
-      salon: {
-        label: 'Salon',
-        singular: 'Service', plural: 'Services',
-        action: 'Add Service',
-        icon: Scissors, iconColor: '#db2777'
-      },
-      nails: {
-        label: 'Nails',
-        singular: 'Service', plural: 'Services',
-        action: 'Add Service',
-        icon: Sparkle, iconColor: '#db2777'
-      },
-      // Support both hyphen and no-hyphen variants
-      car_wash: {
-        label: 'Car Wash',
-        singular: 'Service', plural: 'Services',
-        action: 'Add Service',
-        icon: Car, iconColor: '#0ea5e9'
-      },
-      'car-wash': {
-        label: 'Car Wash',
-        singular: 'Service', plural: 'Services',
-        action: 'Add Service',
-        icon: Car, iconColor: '#0ea5e9'
-      },
-      carwash: {
-        label: 'Car Wash',
-        singular: 'Service', plural: 'Services',
-        action: 'Add Service',
-        icon: Car, iconColor: '#0ea5e9'
-      },
-      activity_place: {
-        label: 'Activities',
-        singular: 'Activity', plural: 'Activities',
-        action: 'Add Activity',
-        icon: Dumbbell, iconColor: '#7c3aed'
-      }
+      hotel: { label: 'Hotel', singular: 'Room', plural: 'Rooms', action: 'Add Room', icon: Hotel, iconColor: PLZ_BLUE },
+      apartment: { label: 'Apartment', singular: 'Apartment', plural: 'Apartments', action: 'Add Apartment', icon: Building2, iconColor: PLZ_BLUE },
+      event_hall: { label: 'Event Hall', singular: 'Hall', plural: 'Halls', action: 'Add Hall', icon: PartyPopper, iconColor: '#d97706' },
+      event: { label: 'Events', singular: 'Venue', plural: 'Venues', action: 'Add Venue', icon: Sparkles, iconColor: '#d97706' },
+      restaurant: { label: 'Restaurant', singular: 'Menu Item', plural: 'Menu & Services', action: 'Add Menu Item', icon: Utensils, iconColor: '#ea580c' },
+      diner: { label: 'Diner', singular: 'Menu Item', plural: 'Menu & Services', action: 'Add Menu Item', icon: Utensils, iconColor: '#ea580c' },
+      cafe: { label: 'Café', singular: 'Item', plural: 'Menu & Services', action: 'Add Item', icon: Coffee, iconColor: '#b45309' },
+      other_food: { label: 'Food', singular: 'Item', plural: 'Menu & Services', action: 'Add Item', icon: Utensils, iconColor: '#ea580c' },
+      sports: { label: 'Sports', singular: 'Court', plural: 'Courts', action: 'Add Court', icon: Trophy, iconColor: '#059669' },
+      spa: { label: 'Spa', singular: 'Service', plural: 'Services', action: 'Add Service', icon: Sparkles, iconColor: '#0891b2' },
+      beauty_salon: { label: 'Salon', singular: 'Service', plural: 'Services', action: 'Add Service', icon: Scissors, iconColor: '#db2777' },
+      salon: { label: 'Salon', singular: 'Service', plural: 'Services', action: 'Add Service', icon: Scissors, iconColor: '#db2777' },
+      nails: { label: 'Nails', singular: 'Service', plural: 'Services', action: 'Add Service', icon: Sparkle, iconColor: '#db2777' },
+      car_wash: { label: 'Car Wash', singular: 'Service', plural: 'Services', action: 'Add Service', icon: Car, iconColor: '#0ea5e9' },
+      'car-wash': { label: 'Car Wash', singular: 'Service', plural: 'Services', action: 'Add Service', icon: Car, iconColor: '#0ea5e9' },
+      carwash: { label: 'Car Wash', singular: 'Service', plural: 'Services', action: 'Add Service', icon: Car, iconColor: '#0ea5e9' },
+      activity_place: { label: 'Activities', singular: 'Activity', plural: 'Activities', action: 'Add Activity', icon: Dumbbell, iconColor: '#7c3aed' }
     };
 
     return configs[type] || {
-      label: 'Business',
-      singular: 'Item', plural: 'Items',
-      action: 'Add Item',
-      icon: Building2, iconColor: '#4f46e5'
+      label: 'Business', singular: 'Item', plural: 'Items', action: 'Add Item', icon: Building2, iconColor: PLZ_BLUE
     };
   }
 
-  // Wrapper kept so existing call sites don't need to change
-  function getBusinessTypeLabels() {
-    return getBusinessTypeConfig();
-  }
-
+  function getBusinessTypeLabels() { return getBusinessTypeConfig(); }
   const typeLabels = getBusinessTypeLabels();
   const TypeIcon = typeLabels.icon;
 
@@ -595,9 +465,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     return React.createElement(config.icon, { size: 14 });
   }
 
-  function getBusinessTypeLabel() {
-    return getBusinessTypeConfig().label;
-  }
+  function getBusinessTypeLabel() { return getBusinessTypeConfig().label; }
 
   function getCurrentTier() {
     const tier = business?.subscription_status || 'free';
@@ -620,9 +488,6 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   };
 
   const handleLogout = () => {
-    // WHY: Clear ONLY the business token — do not touch 'admin_token'.
-    // This keeps the admin session alive if the same user is logged in
-    // as both.
     localStorage.removeItem('business_token');
     localStorage.removeItem('auth_token');
     localStorage.removeItem('token');
@@ -636,7 +501,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   };
 
   // ============================================================
-  // CALCULATIONS
+  // CALCULATIONS (unchanged)
   // ============================================================
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
   const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
@@ -646,7 +511,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   const currentTier = getCurrentTier();
 
   // ============================================================
-  // NAVIGATION ITEMS
+  // NAV ITEMS
   // ============================================================
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -657,13 +522,18 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   ];
 
   if (loading) {
-    return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f8fafc' } },
+    return React.createElement('div', { 
+      style: { 
+        display: 'flex', justifyContent: 'center', alignItems: 'center', 
+        minHeight: '100vh', background: PLZ_SURFACE, fontFamily: FONT_STACK 
+      } 
+    },
       React.createElement('div', { className: 'loading-spinner' })
     );
   }
 
   // ============================================================
-  // RENDER OVERVIEW
+  // RENDER OVERVIEW — RESTYLED
   // ============================================================
   const renderOverview = () => {
     const labels = getBusinessTypeLabels();
@@ -671,12 +541,12 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     const currentTierData = getCurrentTier();
     
     return React.createElement('div', null,
-      // Error message if any
+      // Error message
       error && React.createElement('div', {
         style: {
-          backgroundColor: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: '12px',
+          backgroundColor: PLZ_ERROR_TINT,
+          border: '1px solid ' + PLZ_ERROR + '33',
+          borderRadius: '10px',
           padding: '12px 16px',
           marginBottom: '16px',
           display: 'flex',
@@ -684,16 +554,16 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           gap: '8px'
         }
       },
-        React.createElement(AlertTriangle, { size: 16, color: '#dc2626' }),
-        React.createElement('span', { style: { color: '#991b1b', fontSize: '13px' } }, error)
+        React.createElement(AlertTriangle, { size: 16, color: PLZ_ERROR }),
+        React.createElement('span', { style: { color: PLZ_ERROR, fontSize: '13px' } }, error)
       ),
 
-      // Premium Plan Banner
+      // Plan Banner — darker plz-blue gradient, softer radius
       React.createElement('div', {
         style: {
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4f46e5 100%)',
-          borderRadius: '24px',
-          padding: isDesktop ? '32px 36px' : '24px 20px',
+          background: 'linear-gradient(135deg, #1E3A8A 0%, #2D60EA 60%, #4A7DFF 100%)',
+          borderRadius: CARD_RADIUS_LG,
+          padding: isDesktop ? '28px 32px' : '20px 18px',
           marginBottom: '20px',
           display: 'flex',
           alignItems: 'center',
@@ -703,87 +573,65 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           color: 'white',
           position: 'relative',
           overflow: 'hidden',
-          boxShadow: '0 20px 60px rgba(79, 70, 229, 0.3)'
+          boxShadow: '0 16px 40px rgba(45, 96, 234, 0.25)',
+          fontFamily: FONT_STACK
         }
       },
         React.createElement('div', {
           style: {
-            position: 'absolute',
-            top: '-50%',
-            right: '-20%',
-            width: '300px',
-            height: '300px',
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.05)',
-            pointerEvents: 'none'
+            position: 'absolute', top: '-50%', right: '-20%',
+            width: '300px', height: '300px', borderRadius: '50%',
+            background: 'rgba(255,255,255,0.05)', pointerEvents: 'none'
           }
         }),
         React.createElement('div', {
           style: {
-            position: 'absolute',
-            bottom: '-40%',
-            left: '-10%',
-            width: '200px',
-            height: '200px',
-            borderRadius: '50%',
-            background: 'rgba(99, 102, 241, 0.2)',
-            pointerEvents: 'none'
+            position: 'absolute', bottom: '-40%', left: '-10%',
+            width: '200px', height: '200px', borderRadius: '50%',
+            background: 'rgba(255,255,255,0.08)', pointerEvents: 'none'
           }
         }),
         React.createElement('div', { 
           style: { 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '16px', 
-            position: 'relative', 
-            zIndex: 1,
-            flexWrap: 'wrap'
+            display: 'flex', alignItems: 'center', gap: '14px', 
+            position: 'relative', zIndex: 1, flexWrap: 'wrap' 
           } 
         },
           React.createElement('div', {
             style: {
-              width: '56px',
-              height: '56px',
-              background: 'rgba(255,255,255,0.15)',
-              borderRadius: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: '52px', height: '52px',
+              background: 'rgba(255,255,255,0.18)',
+              borderRadius: '12px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.15)',
               flexShrink: 0
             }
           },
-            React.createElement(Crown, { size: 28, color: '#fcd34d' })
+            React.createElement(Crown, { size: 26, color: '#FFD166' })
           ),
           React.createElement('div', { style: { minWidth: 0, flex: 1 } },
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
               React.createElement('h2', { 
                 style: { 
-                  fontSize: isDesktop ? '20px' : '17px', 
-                  fontWeight: '700', 
-                  margin: 0, 
-                  color: 'white' 
+                  fontSize: isDesktop ? '19px' : '16px', 
+                  fontWeight: '600', margin: 0, color: 'white',
+                  letterSpacing: '-0.01em'
                 } 
               }, currentTierData.name + ' Plan'),
               React.createElement('span', {
                 style: {
-                  background: 'rgba(255,255,255,0.2)',
-                  padding: '2px 10px',
-                  borderRadius: '20px',
-                  fontSize: '10px',
-                  fontWeight: '500',
-                  letterSpacing: '0.5px',
-                  color: 'white'
+                  background: 'rgba(255,255,255,0.22)',
+                  padding: '2px 10px', borderRadius: '20px',
+                  fontSize: '10px', fontWeight: '600',
+                  letterSpacing: '0.5px', color: 'white'
                 }
               }, currentTierData.badge)
             ),
             React.createElement('p', { 
               style: { 
-                opacity: 0.9, 
-                fontSize: isDesktop ? '13px' : '12px', 
-                margin: '4px 0 0 0', 
-                color: 'white' 
+                opacity: 0.92, fontSize: isDesktop ? '13px' : '12px',
+                margin: '4px 0 0 0', color: 'white'
               } 
             },
               currentTierData.bookings === 999999 
@@ -794,17 +642,13 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         ),
         React.createElement('div', { 
           style: { 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '12px', 
-            position: 'relative', 
-            zIndex: 1,
-            flexWrap: 'wrap'
+            display: 'flex', alignItems: 'center', gap: '12px',
+            position: 'relative', zIndex: 1, flexWrap: 'wrap'
           } 
         },
           React.createElement('div', { style: { textAlign: isDesktop ? 'right' : 'left' } },
             React.createElement('span', { 
-              style: { fontSize: '12px', opacity: 0.7, color: 'white' } 
+              style: { fontSize: '11px', opacity: 0.75, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em' } 
             }, 'Price'),
             React.createElement('div', { 
               style: { fontSize: isDesktop ? '18px' : '16px', fontWeight: '700', color: 'white' } 
@@ -815,78 +659,59 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           currentTierData.id !== 'pro' && React.createElement('button', {
             onClick: () => setActiveTab('subscription'),
             style: {
-              padding: isDesktop ? '10px 24px' : '8px 18px',
-              background: 'white',
-              color: '#4f46e5',
-              border: 'none',
-              borderRadius: '40px',
+              padding: isDesktop ? '10px 22px' : '8px 16px',
+              background: 'white', color: PLZ_BLUE,
+              border: 'none', borderRadius: '10px',
               fontSize: isDesktop ? '13px' : '12px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              whiteSpace: 'nowrap'
+              fontWeight: '600', cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+              whiteSpace: 'nowrap', fontFamily: FONT_STACK
             },
-            onMouseEnter: (e) => { e.target.style.transform = 'scale(1.05)'; },
-            onMouseLeave: (e) => { e.target.style.transform = 'scale(1)'; }
+            onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-1px)'; },
+            onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; }
           }, '⬆ Upgrade')
         )
       ),
 
-      // ============================================================
-      // BOOKING LINK CARD
-      // ============================================================
+      // Booking Link Card — refined
       React.createElement('div', {
         style: {
           background: 'white',
-          borderRadius: isDesktop ? '20px' : '16px',
-          padding: isDesktop ? '20px 24px' : '16px 18px',
+          borderRadius: CARD_RADIUS,
+          padding: isDesktop ? '20px 22px' : '16px 18px',
           marginBottom: '20px',
-          border: '1px solid rgba(79, 70, 229, 0.15)',
-          boxShadow: '0 4px 20px rgba(79, 70, 229, 0.06)',
+          border: '1px solid ' + PLZ_LINE,
+          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          fontFamily: FONT_STACK
         }
       },
         React.createElement('div', {
           style: {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '3px',
-            background: 'linear-gradient(90deg, #4f46e5, #7c3aed, #6366f1)'
+            position: 'absolute', top: 0, left: 0, right: 0, height: '3px',
+            background: 'linear-gradient(90deg, ' + PLZ_BLUE + ', #4A7DFF)'
           }
         }),
         React.createElement('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            marginBottom: '14px'
-          }
+          style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }
         },
           React.createElement('div', {
             style: {
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: '36px', height: '36px', borderRadius: '10px',
+              background: PLZ_BLUE_TINT,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0
             }
           },
-            React.createElement(LinkIcon, { size: 18, color: '#4f46e5' })
+            React.createElement(LinkIcon, { size: 18, color: PLZ_BLUE })
           ),
           React.createElement('h3', {
             style: {
               fontSize: isDesktop ? '15px' : '14px',
-              fontWeight: '700',
-              color: '#0f172a',
-              margin: 0,
-              letterSpacing: '-0.2px'
+              fontWeight: '600', color: PLZ_INK,
+              margin: 0, letterSpacing: '-0.01em'
             }
           }, 'Your Booking Link')
         ),
@@ -895,33 +720,23 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             display: 'flex',
             alignItems: isDesktop ? 'center' : 'stretch',
             gap: isDesktop ? '12px' : '8px',
-            background: '#f8fafc',
-            borderRadius: '12px',
+            background: PLZ_SURFACE,
+            borderRadius: '10px',
             padding: isDesktop ? '10px 12px 10px 16px' : '8px 8px 8px 12px',
-            border: '1px solid #e2e8f0',
+            border: '1px solid ' + PLZ_LINE,
             flexDirection: isDesktop ? 'row' : 'column'
           }
         },
           React.createElement('div', {
-            style: {
-              flex: 1,
-              minWidth: 0,
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }
+            style: { flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', gap: '8px' }
           },
             React.createElement('code', {
               style: {
                 fontSize: isDesktop ? '13px' : '11px',
-                color: '#334155',
+                color: PLZ_BODY,
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                width: '100%',
-                display: 'block'
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                width: '100%', display: 'block'
               }
             }, bookingLink || 'Loading...')
           ),
@@ -929,342 +744,283 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             onClick: handleCopyBookingLink,
             disabled: !bookingLink,
             style: {
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              padding: isDesktop ? '10px 20px' : '10px 16px',
-              background: linkCopied ? '#10b981' : 'linear-gradient(135deg, #4f46e5, #6366f1)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: isDesktop ? '13px' : '12px',
-              fontWeight: '600',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              padding: isDesktop ? '9px 16px' : '9px 14px',
+              background: linkCopied ? PLZ_SUCCESS : PLZ_BLUE,
+              color: 'white', border: 'none', borderRadius: '10px',
+              fontSize: isDesktop ? '13px' : '12px', fontWeight: '600',
               cursor: bookingLink ? 'pointer' : 'not-allowed',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
+              whiteSpace: 'nowrap', flexShrink: 0,
               transition: 'all 0.2s ease',
-              boxShadow: linkCopied ? '0 4px 12px rgba(16, 185, 129, 0.25)' : '0 4px 12px rgba(79, 70, 229, 0.25)',
-              width: isDesktop ? 'auto' : '100%'
+              boxShadow: linkCopied 
+                ? '0 2px 8px rgba(27, 127, 67, 0.25)' 
+                : '0 2px 8px rgba(45, 96, 234, 0.25)',
+              width: isDesktop ? 'auto' : '100%',
+              fontFamily: FONT_STACK
             },
             onMouseEnter: (e) => {
               if (bookingLink && !linkCopied) {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 6px 18px rgba(79, 70, 229, 0.35)';
+                e.currentTarget.style.background = PLZ_BLUE_DEEP;
               }
             },
             onMouseLeave: (e) => {
               if (!linkCopied) {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.25)';
+                e.currentTarget.style.background = PLZ_BLUE;
               }
             }
           },
             linkCopied 
-              ? React.createElement(React.Fragment, null,
-                  React.createElement(Check, { size: 14 }),
-                  'Copied!'
-                )
-              : React.createElement(React.Fragment, null,
-                  React.createElement(Copy, { size: 14 }),
-                  'Copy Link'
-                )
+              ? React.createElement(React.Fragment, null, React.createElement(Check, { size: 14 }), 'Copied!')
+              : React.createElement(React.Fragment, null, React.createElement(Copy, { size: 14 }), 'Copy Link')
           )
         )
       ),
 
-      // Stats Grid
+      // Stats Grid — refined cards
       React.createElement('div', { 
         style: { 
           display: 'grid', 
-          gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', 
-          gap: '16px', 
-          marginBottom: '24px' 
+          gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
+          gap: '16px', marginBottom: '24px',
+          fontFamily: FONT_STACK
         } 
       },
+        renderStatCard({
+          label: 'Total Revenue',
+          value: formatNaira(totalRevenue),
+          icon: DollarSign,
+          iconColor: PLZ_BLUE,
+          desc: 'Lifetime revenue',
+          isDesktop: isDesktop
+        }),
+        renderStatCard({
+          label: 'Total Bookings',
+          value: bookings.length,
+          icon: Calendar,
+          iconColor: PLZ_BLUE,
+          desc: 'Total bookings received',
+          isDesktop: isDesktop
+        }),
+        renderStatCard({
+          label: 'Active ' + labels.plural,
+          value: rooms.length,
+          icon: Icon,
+          iconColor: labels.iconColor,
+          desc: 'Total ' + labels.plural.toLowerCase(),
+          isDesktop: isDesktop
+        }),
         React.createElement('div', { 
           style: { 
             background: 'white',
-            borderRadius: isDesktop ? '20px' : '16px',
+            borderRadius: CARD_RADIUS,
             padding: isDesktop ? '20px' : '16px',
-            border: '1px solid rgba(226, 232, 240, 0.6)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            transition: 'all 0.3s ease'
+            border: '1px solid ' + PLZ_LINE,
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+            transition: 'all 0.2s ease'
           },
-          onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
-          onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.04)'; }
+          onMouseEnter: (e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.08)'; },
+          onMouseLeave: (e) => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(15, 23, 42, 0.04)'; }
         },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' } },
-            React.createElement('span', { style: { fontSize: isDesktop ? '12px' : '11px', fontWeight: '500', color: '#64748b' } }, 'Total Revenue'),
-            React.createElement('div', { style: { width: '36px', height: '36px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(DollarSign, { size: 18, color: '#4f46e5' })
+            React.createElement('span', { style: { fontSize: isDesktop ? '12px' : '11px', fontWeight: '500', color: PLZ_BODY } }, 'Bookings Used'),
+            React.createElement('div', { 
+              style: { 
+                width: '36px', height: '36px', 
+                background: PLZ_BLUE_TINT, 
+                borderRadius: '10px', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+              } 
+            },
+              React.createElement(TrendingUp, { size: 18, color: PLZ_BLUE })
             )
           ),
-          React.createElement('h2', { style: { fontSize: isDesktop ? '24px' : '20px', fontWeight: '700', color: '#0f172a', margin: 0 } }, 
-            formatNaira(totalRevenue)
-          ),
-          React.createElement('p', { style: { fontSize: isDesktop ? '12px' : '11px', color: '#94a3b8', marginTop: '6px' } }, 'Lifetime revenue')
-        ),
-        React.createElement('div', { 
-          style: { 
-            background: 'white',
-            borderRadius: isDesktop ? '20px' : '16px',
-            padding: isDesktop ? '20px' : '16px',
-            border: '1px solid rgba(226, 232, 240, 0.6)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            transition: 'all 0.3s ease'
+          React.createElement('h2', { 
+            style: { fontSize: isDesktop ? '24px' : '20px', fontWeight: '600', color: PLZ_INK, margin: 0, letterSpacing: '-0.02em' } 
+          }, confirmedBookings + '/' + limit),
+          React.createElement('div', { 
+            style: { marginTop: '8px', height: '5px', background: PLZ_SURFACE, borderRadius: '4px', overflow: 'hidden' } 
           },
-          onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
-          onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.04)'; }
-        },
-          React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' } },
-            React.createElement('span', { style: { fontSize: isDesktop ? '12px' : '11px', fontWeight: '500', color: '#64748b' } }, 'Total Bookings'),
-            React.createElement('div', { style: { width: '36px', height: '36px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(Calendar, { size: 18, color: '#4f46e5' })
-            )
-          ),
-          React.createElement('h2', { style: { fontSize: isDesktop ? '24px' : '20px', fontWeight: '700', color: '#0f172a', margin: 0 } }, bookings.length),
-          React.createElement('p', { style: { fontSize: isDesktop ? '12px' : '11px', color: '#94a3b8', marginTop: '6px' } }, 'Total bookings received')
-        ),
-        React.createElement('div', { 
-          style: { 
-            background: 'white',
-            borderRadius: isDesktop ? '20px' : '16px',
-            padding: isDesktop ? '20px' : '16px',
-            border: '1px solid rgba(226, 232, 240, 0.6)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            transition: 'all 0.3s ease'
-          },
-          onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
-          onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.04)'; }
-        },
-          React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' } },
-            React.createElement('span', { style: { fontSize: isDesktop ? '12px' : '11px', fontWeight: '500', color: '#64748b' } }, 'Active ' + labels.plural),
-            React.createElement('div', { style: { width: '36px', height: '36px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(Icon, { size: 18, color: labels.iconColor })
-            )
-          ),
-          React.createElement('h2', { style: { fontSize: isDesktop ? '24px' : '20px', fontWeight: '700', color: '#0f172a', margin: 0 } }, rooms.length),
-          React.createElement('p', { style: { fontSize: isDesktop ? '12px' : '11px', color: '#94a3b8', marginTop: '6px' } }, 'Total ' + labels.plural.toLowerCase())
-        ),
-        React.createElement('div', { 
-          style: { 
-            background: 'white',
-            borderRadius: isDesktop ? '20px' : '16px',
-            padding: isDesktop ? '20px' : '16px',
-            border: '1px solid rgba(226, 232, 240, 0.6)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            transition: 'all 0.3s ease'
-          },
-          onMouseEnter: (e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)'; },
-          onMouseLeave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.04)'; }
-        },
-          React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' } },
-            React.createElement('span', { style: { fontSize: isDesktop ? '12px' : '11px', fontWeight: '500', color: '#64748b' } }, 'Bookings Used'),
-            React.createElement('div', { style: { width: '36px', height: '36px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement(TrendingUp, { size: 18, color: '#4f46e5' })
-            )
-          ),
-          React.createElement('h2', { style: { fontSize: isDesktop ? '24px' : '20px', fontWeight: '700', color: '#0f172a', margin: 0 } }, confirmedBookings + '/' + limit),
-          React.createElement('div', { style: { marginTop: '8px', height: '5px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' } },
             React.createElement('div', { 
               style: { 
                 width: Math.min(usagePercent, 100) + '%', 
-                height: '100%', 
-                background: usagePercent > 80 ? 'linear-gradient(90deg, #ef4444, #dc2626)' : 'linear-gradient(90deg, #4f46e5, #6366f1)', 
-                borderRadius: '4px',
-                transition: 'width 0.6s ease'
+                height: '100%',
+                background: usagePercent > 80 
+                  ? 'linear-gradient(90deg, ' + PLZ_ERROR + ', #a32e4c)' 
+                  : 'linear-gradient(90deg, ' + PLZ_BLUE + ', #4A7DFF)',
+                borderRadius: '4px', transition: 'width 0.6s ease'
               } 
             })
           ),
-          React.createElement('p', { style: { fontSize: isDesktop ? '12px' : '11px', color: '#94a3b8', marginTop: '8px' } }, remaining + ' bookings remaining')
+          React.createElement('p', { style: { fontSize: isDesktop ? '12px' : '11px', color: PLZ_GREY, marginTop: '8px' } }, remaining + ' bookings remaining')
         )
       ),
       
-      // Quick Actions
+      // Quick Actions — refined
       React.createElement('div', { 
         style: { 
           background: 'white', 
-          borderRadius: isDesktop ? '20px' : '16px', 
-          border: '1px solid rgba(226, 232, 240, 0.6)', 
+          borderRadius: CARD_RADIUS, 
+          border: '1px solid ' + PLZ_LINE, 
           overflow: 'hidden', 
           marginBottom: '24px', 
-          boxShadow: '0 4px 20px rgba(0,0,0,0.04)' 
+          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+          fontFamily: FONT_STACK
         } 
       },
-        React.createElement('div', { style: { padding: isDesktop ? '18px 24px' : '16px 18px', borderBottom: '1px solid #f1f5f9', background: '#fafbff' } },
-          React.createElement('h3', { style: { fontSize: isDesktop ? '15px' : '14px', fontWeight: '600', color: '#0f172a', margin: 0 } }, '⚡ Quick Actions')
+        React.createElement('div', { 
+          style: { 
+            padding: isDesktop ? '16px 22px' : '14px 18px', 
+            borderBottom: '1px solid ' + PLZ_LINE, 
+            background: '#FAFBFF' 
+          } 
+        },
+          React.createElement('h3', { 
+            style: { fontSize: isDesktop ? '15px' : '14px', fontWeight: '600', color: PLZ_INK, margin: 0 } 
+          }, '⚡ Quick Actions')
         ),
         React.createElement('div', { 
           style: { 
-            padding: isDesktop ? '20px 24px' : '16px 18px', 
-            display: 'flex', 
-            gap: '12px', 
-            flexWrap: 'wrap' 
+            padding: isDesktop ? '18px 22px' : '16px 18px',
+            display: 'flex', gap: '10px', flexWrap: 'wrap'
           } 
         },
           React.createElement('button', { 
             onClick: () => setActiveTab('rooms'), 
             style: { 
-              padding: isDesktop ? '10px 24px' : '10px 18px', 
-              background: 'linear-gradient(135deg, #4f46e5, #6366f1)', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '40px', 
-              fontSize: isDesktop ? '13px' : '12px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px', 
-              transition: 'all 0.3s ease', 
-              boxShadow: '0 4px 15px rgba(79, 70, 229, 0.3)' 
+              padding: isDesktop ? '10px 18px' : '10px 16px',
+              background: PLZ_BLUE, color: 'white',
+              border: 'none', borderRadius: '10px',
+              fontSize: isDesktop ? '13px' : '12px', fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(45, 96, 234, 0.25)',
+              fontFamily: FONT_STACK
             },
-            onMouseEnter: (e) => { e.currentTarget.style.transform = 'scale(1.02)'; },
-            onMouseLeave: (e) => { e.currentTarget.style.transform = 'scale(1)'; }
+            onMouseEnter: (e) => { e.currentTarget.style.background = PLZ_BLUE_DEEP; },
+            onMouseLeave: (e) => { e.currentTarget.style.background = PLZ_BLUE; }
           }, React.createElement(Plus, { size: 14 }), labels.action),
           React.createElement('button', { 
             onClick: () => setActiveTab('profile'), 
             style: { 
-              padding: isDesktop ? '10px 24px' : '10px 18px', 
-              background: 'white', 
-              color: '#475569', 
-              border: '1px solid #e2e8f0', 
-              borderRadius: '40px', 
-              fontSize: isDesktop ? '13px' : '12px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px', 
-              transition: 'all 0.3s ease' 
+              padding: isDesktop ? '10px 18px' : '10px 16px',
+              background: 'white', color: PLZ_BODY,
+              border: '1px solid ' + PLZ_LINE, borderRadius: '10px',
+              fontSize: isDesktop ? '13px' : '12px', fontWeight: '500',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'all 0.2s ease',
+              fontFamily: FONT_STACK
             },
-            onMouseEnter: (e) => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.color = '#4f46e5'; },
-            onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }
+            onMouseEnter: (e) => { e.currentTarget.style.borderColor = PLZ_BLUE; e.currentTarget.style.color = PLZ_BLUE; },
+            onMouseLeave: (e) => { e.currentTarget.style.borderColor = PLZ_LINE; e.currentTarget.style.color = PLZ_BODY; }
           }, React.createElement(Image, { size: 14 }), 'Update Images'),
           React.createElement('button', { 
             onClick: () => setActiveTab('settings'), 
             style: { 
-              padding: isDesktop ? '10px 24px' : '10px 18px', 
-              background: 'white', 
-              color: '#475569', 
-              border: '1px solid #e2e8f0', 
-              borderRadius: '40px', 
-              fontSize: isDesktop ? '13px' : '12px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px', 
-              transition: 'all 0.3s ease' 
+              padding: isDesktop ? '10px 18px' : '10px 16px',
+              background: 'white', color: PLZ_BODY,
+              border: '1px solid ' + PLZ_LINE, borderRadius: '10px',
+              fontSize: isDesktop ? '13px' : '12px', fontWeight: '500',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'all 0.2s ease',
+              fontFamily: FONT_STACK
             },
-            onMouseEnter: (e) => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.color = '#4f46e5'; },
-            onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }
+            onMouseEnter: (e) => { e.currentTarget.style.borderColor = PLZ_BLUE; e.currentTarget.style.color = PLZ_BLUE; },
+            onMouseLeave: (e) => { e.currentTarget.style.borderColor = PLZ_LINE; e.currentTarget.style.color = PLZ_BODY; }
           }, React.createElement(Clock, { size: 14 }), 'Set Hours')
         )
       ),
       
-      // Recent Bookings
+      // Recent Bookings — refined
       React.createElement('div', { 
         style: { 
           background: 'white', 
-          borderRadius: isDesktop ? '20px' : '16px', 
-          border: '1px solid rgba(226, 232, 240, 0.6)', 
+          borderRadius: CARD_RADIUS, 
+          border: '1px solid ' + PLZ_LINE, 
           overflow: 'hidden', 
-          boxShadow: '0 4px 20px rgba(0,0,0,0.04)' 
+          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+          fontFamily: FONT_STACK
         } 
       },
         React.createElement('div', { 
           style: { 
-            padding: isDesktop ? '18px 24px' : '16px 18px', 
-            borderBottom: '1px solid #f1f5f9', 
-            background: '#fafbff', 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            flexWrap: 'wrap', 
-            gap: '8px' 
+            padding: isDesktop ? '16px 22px' : '14px 18px',
+            borderBottom: '1px solid ' + PLZ_LINE,
+            background: '#FAFBFF',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            flexWrap: 'wrap', gap: '8px'
           } 
         },
-          React.createElement('h3', { style: { fontSize: isDesktop ? '15px' : '14px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 
+          React.createElement('h3', { 
+            style: { fontSize: isDesktop ? '15px' : '14px', fontWeight: '600', color: PLZ_INK, margin: 0 } 
+          },
             '📋 Recent Bookings',
-            React.createElement('span', { style: { fontSize: '11px', color: '#94a3b8', marginLeft: '8px' } }, 
+            React.createElement('span', { style: { fontSize: '11px', color: PLZ_GREY, marginLeft: '8px' } }, 
               '(' + bookings.length + ' total)'
             )
           ),
           React.createElement('button', { 
             onClick: () => setActiveTab('bookings'), 
-            style: { background: 'none', border: 'none', color: '#4f46e5', fontSize: '12px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }
+            style: { 
+              background: 'none', border: 'none', color: PLZ_BLUE, 
+              fontSize: '12px', fontWeight: '600', cursor: 'pointer', 
+              display: 'flex', alignItems: 'center', gap: '4px', fontFamily: FONT_STACK
+            }
           }, 'View All', React.createElement(ChevronRight, { size: 14 }))
         ),
-        React.createElement('div', { style: { padding: isDesktop ? '20px 24px' : '16px 18px' } },
+        React.createElement('div', { style: { padding: isDesktop ? '18px 22px' : '16px 18px' } },
           bookings.slice(0, 5).map(booking => 
             React.createElement('div', { 
               key: booking.id, 
               style: { 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                padding: '10px 0', 
-                borderBottom: '1px solid #f1f5f9',
-                gap: '12px'
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '10px 0', borderBottom: '1px solid ' + PLZ_LINE, gap: '12px'
               } 
             },
               React.createElement('div', { style: { minWidth: 0, flex: 1 } },
                 React.createElement('p', { 
                   style: { 
-                    fontWeight: '500', 
-                    color: '#0f172a', 
-                    margin: 0, 
+                    fontWeight: '600', color: PLZ_INK, margin: 0,
                     fontSize: isDesktop ? '14px' : '13px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                   } 
                 }, booking.customer_name || 'Guest'),
                 React.createElement('p', { 
                   style: { 
-                    fontSize: isDesktop ? '12px' : '11px', 
-                    color: '#64748b', 
+                    fontSize: isDesktop ? '12px' : '11px', color: PLZ_BODY,
                     margin: '2px 0 0 0',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                   } 
                 }, booking.booking_reference || booking.id)
               ),
               React.createElement('div', { style: { textAlign: 'right', flexShrink: 0 } },
-                React.createElement('p', { style: { fontWeight: '600', color: '#4f46e5', margin: 0, fontSize: isDesktop ? '14px' : '13px' } }, formatNaira(booking.total_amount || 0)),
+                React.createElement('p', { 
+                  style: { fontWeight: '600', color: PLZ_BLUE, margin: 0, fontSize: isDesktop ? '14px' : '13px' } 
+                }, formatNaira(booking.total_amount || 0)),
                 React.createElement('span', { 
                   style: { 
-                    fontSize: '10px', 
-                    padding: '2px 10px', 
-                    borderRadius: '20px', 
-                    background: booking.status === 'confirmed' ? '#d1fae5' : '#fef3c7',
-                    color: booking.status === 'confirmed' ? '#065f46' : '#92400e',
-                    display: 'inline-block',
-                    marginTop: '3px',
-                    fontWeight: '500'
+                    fontSize: '10px', padding: '2px 10px', borderRadius: '20px',
+                    background: booking.status === 'confirmed' ? PLZ_SUCCESS_TINT : PLZ_WARN_TINT,
+                    color: booking.status === 'confirmed' ? PLZ_SUCCESS : PLZ_WARN,
+                    display: 'inline-block', marginTop: '3px', fontWeight: '600'
                   } 
                 }, booking.status || 'pending')
               )
             )
           ),
           bookings.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: '32px 16px' } },
-            React.createElement(Calendar, { size: 36, color: '#cbd5e1' }),
-            React.createElement('p', { style: { color: '#64748b', marginTop: '10px', fontSize: '13px' } }, 'No bookings yet'),
+            React.createElement(Calendar, { size: 36, color: '#CBD5E1' }),
+            React.createElement('p', { style: { color: PLZ_BODY, marginTop: '10px', fontSize: '13px' } }, 'No bookings yet'),
             React.createElement('button', { 
               onClick: fetchBookings,
               style: { 
-                marginTop: '8px',
-                padding: '6px 16px',
-                backgroundColor: '#4f46e5',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '500'
+                marginTop: '8px', padding: '8px 16px',
+                backgroundColor: PLZ_BLUE, color: 'white',
+                border: 'none', borderRadius: '8px',
+                cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                fontFamily: FONT_STACK
               }
             }, 'Refresh')
           )
@@ -1273,8 +1029,49 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     );
   };
 
+  // Helper — stat card
+  function renderStatCard({ label, value, icon: Icon, iconColor, desc, isDesktop }) {
+    return React.createElement('div', { 
+      style: { 
+        background: 'white',
+        borderRadius: CARD_RADIUS,
+        padding: isDesktop ? '20px' : '16px',
+        border: '1px solid ' + PLZ_LINE,
+        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+        transition: 'all 0.2s ease',
+        fontFamily: FONT_STACK
+      },
+      onMouseEnter: (e) => { 
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.08)'; 
+        e.currentTarget.style.transform = 'translateY(-2px)'; 
+      },
+      onMouseLeave: (e) => { 
+        e.currentTarget.style.boxShadow = '0 1px 3px rgba(15, 23, 42, 0.04)'; 
+        e.currentTarget.style.transform = 'translateY(0)'; 
+      }
+    },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' } },
+        React.createElement('span', { style: { fontSize: isDesktop ? '12px' : '11px', fontWeight: '500', color: PLZ_BODY } }, label),
+        React.createElement('div', { 
+          style: { 
+            width: '36px', height: '36px', 
+            background: PLZ_BLUE_TINT, 
+            borderRadius: '10px', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center' 
+          } 
+        },
+          React.createElement(Icon, { size: 18, color: iconColor })
+        )
+      ),
+      React.createElement('h2', { 
+        style: { fontSize: isDesktop ? '24px' : '20px', fontWeight: '600', color: PLZ_INK, margin: 0, letterSpacing: '-0.02em' } 
+      }, value),
+      React.createElement('p', { style: { fontSize: isDesktop ? '12px' : '11px', color: PLZ_GREY, marginTop: '6px' } }, desc)
+    );
+  }
+
   // ============================================================
-  // RENDER SUBSCRIPTION / PLANS TAB
+  // RENDER SUBSCRIPTION — blue accents
   // ============================================================
   const renderSubscription = () => {
     const currentTierData = getCurrentTier();
@@ -1291,23 +1088,19 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       return React.createElement('div', {
         key: tier.id,
         style: {
-          background: isCurrent 
-            ? 'linear-gradient(145deg, #ffffff, #fafbff)' 
-            : 'white',
-          borderRadius: '24px',
-          padding: isDesktop ? '32px' : '24px 20px',
+          background: isCurrent ? 'linear-gradient(145deg, #ffffff, #FAFBFF)' : 'white',
+          borderRadius: CARD_RADIUS_LG,
+          padding: isDesktop ? '28px' : '22px 18px',
           position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          border: isCurrent 
-            ? '2px solid ' + tier.color 
-            : '1px solid rgba(226, 232, 240, 0.6)',
+          display: 'flex', flexDirection: 'column',
+          border: isCurrent ? '2px solid ' + tier.color : '1px solid ' + PLZ_LINE,
           boxShadow: isCurrent 
-            ? '0 20px 60px ' + tier.color + '22, 0 4px 20px rgba(0,0,0,0.04)' 
-            : (isHovered ? '0 12px 40px rgba(0,0,0,0.08)' : '0 4px 20px rgba(0,0,0,0.04)'),
-          transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          cursor: 'pointer'
+            ? '0 16px 40px ' + tier.color + '22, 0 1px 3px rgba(15, 23, 42, 0.04)' 
+            : (isHovered ? '0 8px 24px rgba(15, 23, 42, 0.08)' : '0 1px 3px rgba(15, 23, 42, 0.04)'),
+          transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          cursor: 'pointer',
+          fontFamily: FONT_STACK
         },
         onMouseEnter: () => setHoveredTier(tierId),
         onMouseLeave: () => setHoveredTier(null),
@@ -1315,84 +1108,60 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
       },
         tier.badge && React.createElement('div', {
           style: {
-            position: 'absolute',
-            top: '-12px',
-            right: '24px',
-            background: 'linear-gradient(135deg, ' + tier.color + ', ' + (tierId === 'pro' ? '#f59e0b' : '#6366f1') + ')',
-            color: 'white',
-            fontSize: '11px',
-            fontWeight: '700',
-            padding: '6px 16px',
-            borderRadius: '20px',
-            letterSpacing: '0.5px',
-            textTransform: 'uppercase',
-            boxShadow: '0 4px 15px ' + tier.color + '44'
+            position: 'absolute', top: '-12px', right: '20px',
+            background: tier.color,
+            color: 'white', fontSize: '10px', fontWeight: '700',
+            padding: '5px 14px', borderRadius: '16px',
+            letterSpacing: '0.5px', textTransform: 'uppercase',
+            boxShadow: '0 4px 12px ' + tier.color + '44',
+            fontFamily: FONT_STACK
           }
         }, tier.badge),
 
         React.createElement('div', {
           style: {
-            width: '64px',
-            height: '64px',
-            background: tier.iconBg,
-            borderRadius: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '20px',
-            boxShadow: '0 8px 25px ' + tier.color + '33',
+            width: '56px', height: '56px',
+            background: tier.iconBg, borderRadius: '14px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: '18px',
+            boxShadow: '0 6px 18px ' + tier.color + '33',
             transition: 'transform 0.3s ease',
-            transform: isHovered ? 'scale(1.05) rotate(-3deg)' : 'scale(1) rotate(0deg)'
+            transform: isHovered ? 'scale(1.04)' : 'scale(1)'
           }
-        }, React.createElement(TierIcon, { size: 28, color: 'white' })),
+        }, React.createElement(TierIcon, { size: 26, color: 'white' })),
 
         React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '8px' } },
-          React.createElement('h3', {
-            style: { fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: 0 }
-          }, tier.name + ' Plan'),
+          React.createElement('h3', { style: { fontSize: '20px', fontWeight: '600', color: PLZ_INK, margin: 0, letterSpacing: '-0.01em' } }, tier.name + ' Plan'),
           React.createElement('div', { style: { textAlign: 'right' } },
-            React.createElement('span', {
-              style: { fontSize: '28px', fontWeight: '800', color: tier.color }
-            }, isFree ? 'Free' : formatNaira(tier.price)),
-            !isFree && React.createElement('span', {
-              style: { fontSize: '14px', color: '#94a3b8', marginLeft: '4px' }
-            }, '/mo')
+            React.createElement('span', { style: { fontSize: '26px', fontWeight: '700', color: tier.color, letterSpacing: '-0.02em' } }, isFree ? 'Free' : formatNaira(tier.price)),
+            !isFree && React.createElement('span', { style: { fontSize: '13px', color: PLZ_GREY, marginLeft: '4px' } }, '/mo')
           )
         ),
 
         React.createElement('div', {
           style: {
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: tier.color + '10',
-            color: tier.color,
-            padding: '4px 14px',
-            borderRadius: '20px',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '20px'
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            background: tier.color + '10', color: tier.color,
+            padding: '4px 12px', borderRadius: '16px',
+            fontSize: '12px', fontWeight: '600',
+            marginBottom: '18px', fontFamily: FONT_STACK
           }
         },
-          React.createElement(InfinityIcon, { size: 14 }),
+          React.createElement(InfinityIcon, { size: 13 }),
           isUnlimited ? 'Unlimited bookings' : (tier.bookings + ' bookings/month')
         ),
 
-        React.createElement('ul', { style: { margin: '0 0 24px 0', padding: 0, listStyle: 'none', flex: 1 } },
+        React.createElement('ul', { style: { margin: '0 0 20px 0', padding: 0, listStyle: 'none', flex: 1 } },
           tier.features.map((feature, index) =>
             React.createElement('li', {
               key: index,
               style: {
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '6px 0',
-                color: '#475569',
-                fontSize: '14px',
-                borderBottom: index < tier.features.length - 1 ? '1px solid #f1f5f9' : 'none'
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '6px 0', color: PLZ_BODY, fontSize: '13px',
+                borderBottom: index < tier.features.length - 1 ? '1px solid ' + PLZ_LINE : 'none'
               }
             },
-              React.createElement(CheckCircle, { size: 16, color: tier.color, style: { flexShrink: 0 } }),
+              React.createElement(CheckCircle, { size: 15, color: tier.color, style: { flexShrink: 0 } }),
               React.createElement('span', null, feature)
             )
           )
@@ -1402,47 +1171,34 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           onClick: (e) => { e.stopPropagation(); if (!isCurrent) handleUpgradeClick(tier.id); },
           disabled: isCurrent,
           style: {
-            width: '100%',
-            padding: '14px',
-            background: isCurrent 
-              ? '#f1f5f9' 
-              : 'linear-gradient(135deg, ' + tier.color + ', ' + (tierId === 'pro' ? '#f59e0b' : '#6366f1') + ')',
-            color: isCurrent ? '#94a3b8' : 'white',
-            border: 'none',
-            borderRadius: '14px',
-            fontSize: '15px',
-            fontWeight: '600',
+            width: '100%', padding: '13px',
+            background: isCurrent ? PLZ_SURFACE : tier.color,
+            color: isCurrent ? PLZ_GREY : 'white',
+            border: 'none', borderRadius: '10px',
+            fontSize: '14px', fontWeight: '600',
             cursor: isCurrent ? 'default' : 'pointer',
-            transition: 'all 0.3s ease',
-            boxShadow: isCurrent ? 'none' : ('0 4px 15px ' + tier.color + '44'),
-            opacity: isCurrent ? 0.7 : 1
+            transition: 'all 0.2s ease',
+            boxShadow: isCurrent ? 'none' : ('0 4px 12px ' + tier.color + '44'),
+            opacity: isCurrent ? 0.7 : 1,
+            fontFamily: FONT_STACK
           }
         }, 
           isCurrent 
             ? React.createElement(React.Fragment, null, '✓ ', React.createElement('span', { style: { fontWeight: '700' } }, 'Current Plan'))
-            : React.createElement(React.Fragment, null, '✨ Upgrade to ', tier.name)
+            : React.createElement(React.Fragment, null, 'Upgrade to ', tier.name)
         )
       );
     };
 
-    return React.createElement('div', null,
+    return React.createElement('div', { style: { fontFamily: FONT_STACK } },
       React.createElement('div', { 
-        style: { 
-          marginBottom: '36px',
-          position: 'relative',
-          padding: '32px 0 20px 0'
-        }
+        style: { marginBottom: '32px', position: 'relative', padding: '28px 0 16px 0' }
       },
         React.createElement('div', {
           style: {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: 'linear-gradient(90deg, #4f46e5, #7c3aed, #d97706, #4f46e5)',
-            borderRadius: '4px',
-            backgroundSize: '200% 100%',
+            position: 'absolute', top: 0, left: 0, right: 0, height: '3px',
+            background: 'linear-gradient(90deg, ' + PLZ_BLUE + ', #4A7DFF, ' + PLZ_BLUE + ')',
+            borderRadius: '3px', backgroundSize: '200% 100%',
             animation: 'gradientMove 4s ease-in-out infinite'
           }
         }),
@@ -1450,31 +1206,23 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           React.createElement('div', null,
             React.createElement('h1', {
               style: { 
-                fontSize: isDesktop ? '32px' : '24px', 
-                fontWeight: '800', 
-                color: '#0f172a', 
-                margin: '0 0 8px 0',
-                letterSpacing: '-0.5px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                flexWrap: 'wrap'
+                fontSize: isDesktop ? '28px' : '22px', fontWeight: '700', 
+                color: PLZ_INK, margin: '0 0 8px 0', letterSpacing: '-0.02em',
+                display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap'
               }
             },
-              '💎 Subscription Plans',
+              'Subscription Plans',
               React.createElement('span', {
                 style: {
-                  fontSize: '12px',
-                  fontWeight: '500',
+                  fontSize: '11px', fontWeight: '600',
                   background: currentTierData.color + '15',
                   color: currentTierData.color,
-                  padding: '4px 14px',
-                  borderRadius: '20px'
+                  padding: '4px 12px', borderRadius: '16px'
                 }
               }, currentTierData.name)
             ),
             React.createElement('p', {
-              style: { fontSize: isDesktop ? '16px' : '14px', color: '#64748b', margin: 0 }
+              style: { fontSize: isDesktop ? '15px' : '13px', color: PLZ_BODY, margin: 0 }
             }, 'Choose the perfect plan for your business growth')
           )
         )
@@ -1484,29 +1232,26 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
         style: {
           display: 'grid',
           gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr',
-          gap: '24px',
-          marginBottom: '32px'
+          gap: '20px', marginBottom: '28px'
         }
       }, tierOrder.map(renderTierCard)),
 
       React.createElement('div', {
         style: {
-          background: 'linear-gradient(135deg, #f8fafc, #eef2ff)',
-          borderRadius: '16px',
-          padding: isDesktop ? '20px 24px' : '16px 18px',
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '14px',
-          border: '1px solid rgba(79, 70, 229, 0.1)'
+          background: PLZ_SURFACE,
+          borderRadius: CARD_RADIUS,
+          padding: isDesktop ? '18px 22px' : '16px 18px',
+          display: 'flex', alignItems: 'flex-start', gap: '14px',
+          border: '1px solid ' + PLZ_LINE
         }
       },
-        React.createElement(Shield, { size: 20, color: '#4f46e5', style: { flexShrink: 0, marginTop: '2px' } }),
+        React.createElement(Shield, { size: 20, color: PLZ_BLUE, style: { flexShrink: 0, marginTop: '2px' } }),
         React.createElement('div', null,
           React.createElement('p', {
-            style: { fontSize: '14px', color: '#475569', margin: 0, fontWeight: '500' }
-          }, '🔒 Secure & Flexible'),
+            style: { fontSize: '13px', color: PLZ_INK, margin: 0, fontWeight: '600' }
+          }, 'Secure & Flexible'),
           React.createElement('p', {
-            style: { fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }
+            style: { fontSize: '12px', color: PLZ_BODY, margin: '4px 0 0 0' }
           }, 'Upgrades take effect within 24 hours after payment verification. Cancel or downgrade anytime from Settings.')
         )
       )
@@ -1514,7 +1259,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   };
 
   // ============================================================
-  // RENDER UPGRADE MODAL
+  // RENDER UPGRADE MODAL — blue accents
   // ============================================================
   const renderUpgradeModal = () => {
     if (!showUpgradeModal) return null;
@@ -1525,57 +1270,50 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     const isSuccess = paymentStep === 'success';
     const isProcessingState = isProcessing;
 
+    const closeModal = () => {
+      setShowUpgradeModal(false);
+      setPaymentStep('select');
+      setSelectedTier(null);
+      setPaymentData(null);
+    };
+
     if (isSuccess) {
       return React.createElement('div', {
         style: {
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.6)',
+          position: 'fixed', inset: 0,
+          background: 'rgba(15, 23, 42, 0.6)',
           backdropFilter: 'blur(12px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '20px', fontFamily: FONT_STACK
         },
-        onClick: () => {
-          setShowUpgradeModal(false);
-          setPaymentStep('select');
-          setSelectedTier(null);
-          setPaymentData(null);
-        }
+        onClick: closeModal
       },
         React.createElement('div', {
           style: {
-            background: 'white',
-            borderRadius: '32px',
-            maxWidth: '480px',
-            width: '100%',
-            padding: isDesktop ? '48px 40px' : '32px 24px',
+            background: 'white', borderRadius: '20px',
+            maxWidth: '480px', width: '100%',
+            padding: isDesktop ? '40px 36px' : '28px 22px',
             textAlign: 'center',
-            boxShadow: '0 40px 80px rgba(0,0,0,0.3)',
-            animation: 'scaleIn 0.4s ease'
+            boxShadow: '0 30px 60px rgba(15, 23, 42, 0.25)',
+            animation: 'scaleIn 0.3s ease'
           }
         },
           React.createElement('div', {
             style: {
-              width: '80px',
-              height: '80px',
-              background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
+              width: '72px', height: '72px',
+              background: PLZ_SUCCESS_TINT,
               borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 24px'
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px'
             }
           },
-            React.createElement(Check, { size: 40, color: '#065f46' })
+            React.createElement(Check, { size: 36, color: PLZ_SUCCESS })
           ),
           React.createElement('h2', {
-            style: { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }
-          }, '✅ Upgrade Request Submitted!'),
+            style: { fontSize: '22px', fontWeight: '700', color: PLZ_INK, margin: '0 0 8px 0', letterSpacing: '-0.02em' }
+          }, 'Upgrade Request Submitted'),
           React.createElement('p', {
-            style: { fontSize: '15px', color: '#64748b', margin: '0 0 24px 0' }
+            style: { fontSize: '14px', color: PLZ_BODY, margin: '0 0 20px 0' }
           },
             'We\'ve received your request to upgrade to ',
             React.createElement('strong', null, tier.name),
@@ -1583,18 +1321,18 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           ),
           React.createElement('div', {
             style: {
-              background: '#f0fdf4',
-              borderRadius: '16px',
-              padding: '16px 20px',
+              background: PLZ_SUCCESS_TINT,
+              borderRadius: '12px',
+              padding: '16px 18px',
               textAlign: 'left',
-              marginBottom: '24px'
+              marginBottom: '20px'
             }
           },
             React.createElement('p', {
-              style: { fontSize: '13px', color: '#065f46', margin: '0 0 8px 0', fontWeight: '600' }
-            }, '📋 Next Steps:'),
+              style: { fontSize: '12px', color: PLZ_SUCCESS, margin: '0 0 8px 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }
+            }, 'Next Steps'),
             React.createElement('ol', {
-              style: { fontSize: '13px', color: '#065f46', margin: 0, paddingLeft: '20px', lineHeight: '1.8' }
+              style: { fontSize: '13px', color: PLZ_SUCCESS, margin: 0, paddingLeft: '18px', lineHeight: '1.7' }
             },
               React.createElement('li', null, 'Transfer ', React.createElement('strong', null, formatNaira(paymentData?.amount)), ' to our account'),
               React.createElement('li', null, 'Use reference: ', React.createElement('strong', { style: { fontFamily: 'monospace', fontSize: '12px' } }, paymentData?.reference)),
@@ -1602,22 +1340,13 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             )
           ),
           React.createElement('button', {
-            onClick: () => {
-              setShowUpgradeModal(false);
-              setPaymentStep('select');
-              setSelectedTier(null);
-              setPaymentData(null);
-            },
+            onClick: closeModal,
             style: {
-              width: '100%',
-              padding: '14px',
-              background: '#4f46e5',
-              color: 'white',
-              border: 'none',
-              borderRadius: '14px',
-              fontSize: '15px',
-              fontWeight: '600',
-              cursor: 'pointer'
+              width: '100%', padding: '12px',
+              background: PLZ_BLUE, color: 'white',
+              border: 'none', borderRadius: '10px',
+              fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+              fontFamily: FONT_STACK
             }
           }, 'Go to Dashboard')
         )
@@ -1626,286 +1355,187 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
 
     return React.createElement('div', {
       style: {
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.6)',
+        position: 'fixed', inset: 0,
+        background: 'rgba(15, 23, 42, 0.6)',
         backdropFilter: 'blur(12px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '20px'
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 9999, padding: '20px', fontFamily: FONT_STACK
       },
-      onClick: (e) => {
-        if (e.target === e.currentTarget) {
-          setShowUpgradeModal(false);
-          setPaymentStep('select');
-          setSelectedTier(null);
-          setPaymentData(null);
-        }
-      }
+      onClick: (e) => { if (e.target === e.currentTarget) closeModal(); }
     },
       React.createElement('div', {
         style: {
-          background: 'white',
-          borderRadius: '32px',
-          maxWidth: '520px',
-          width: '100%',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          boxShadow: '0 40px 80px rgba(0,0,0,0.3)',
-          animation: 'slideUp 0.4s ease'
+          background: 'white', borderRadius: '20px',
+          maxWidth: '520px', width: '100%',
+          maxHeight: '90vh', overflowY: 'auto',
+          boxShadow: '0 30px 60px rgba(15, 23, 42, 0.3)',
+          animation: 'slideUp 0.3s ease'
         }
       },
         React.createElement('div', {
           style: {
-            padding: isDesktop ? '28px 32px' : '20px 20px',
-            borderBottom: '1px solid #f1f5f9',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
+            padding: isDesktop ? '24px 28px' : '20px 20px',
+            borderBottom: '1px solid ' + PLZ_LINE,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
           }
         },
           React.createElement('div', null,
             React.createElement('h2', {
-              style: { fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: 0 }
-            }, '💳 Complete Payment'),
+              style: { fontSize: '18px', fontWeight: '700', color: PLZ_INK, margin: 0, letterSpacing: '-0.01em' }
+            }, 'Complete Payment'),
             React.createElement('p', {
-              style: { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }
+              style: { fontSize: '13px', color: PLZ_BODY, margin: '4px 0 0 0' }
             }, 'Transfer the exact amount to our bank account')
           ),
           React.createElement('button', {
-            onClick: () => {
-              setShowUpgradeModal(false);
-              setPaymentStep('select');
-              setSelectedTier(null);
-              setPaymentData(null);
-            },
+            onClick: closeModal,
             style: {
-              background: 'none',
-              border: 'none',
-              fontSize: '24px',
-              cursor: 'pointer',
-              color: '#94a3b8',
-              padding: '0 8px'
+              background: 'none', border: 'none',
+              fontSize: '22px', cursor: 'pointer', color: PLZ_GREY, padding: '0 8px'
             }
           }, '✕')
         ),
 
         React.createElement('div', {
           style: {
-            margin: isDesktop ? '24px 32px 0' : '16px 20px 0',
-            background: 'linear-gradient(135deg, ' + tier.color + '15, ' + tier.color + '08)',
-            borderRadius: '16px',
-            padding: '16px 20px',
+            margin: isDesktop ? '20px 28px 0' : '16px 20px 0',
+            background: tier.color + '10',
+            borderRadius: '12px',
+            padding: '14px 18px',
             border: '1px solid ' + tier.color + '30',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '8px'
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: '8px'
           }
         },
           React.createElement('div', null,
-            React.createElement('span', {
-              style: { fontSize: '12px', color: '#64748b', fontWeight: '500' }
-            }, 'Upgrading to'),
-            React.createElement('div', {
-              style: { fontSize: '18px', fontWeight: '700', color: tier.color }
-            }, tier.name + ' Plan')
+            React.createElement('span', { style: { fontSize: '11px', color: PLZ_BODY, fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Upgrading to'),
+            React.createElement('div', { style: { fontSize: '17px', fontWeight: '700', color: tier.color, marginTop: '2px' } }, tier.name + ' Plan')
           ),
           React.createElement('div', { style: { textAlign: 'right' } },
-            React.createElement('span', {
-              style: { fontSize: '12px', color: '#64748b', fontWeight: '500' }
-            }, 'Amount'),
-            React.createElement('div', {
-              style: { fontSize: '22px', fontWeight: '800', color: tier.color }
-            }, formatNaira(tier.price))
+            React.createElement('span', { style: { fontSize: '11px', color: PLZ_BODY, fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Amount'),
+            React.createElement('div', { style: { fontSize: '20px', fontWeight: '700', color: tier.color, marginTop: '2px' } }, formatNaira(tier.price))
           )
         ),
 
         React.createElement('div', {
-          style: { padding: isDesktop ? '24px 32px' : '16px 20px' }
+          style: { padding: isDesktop ? '20px 28px' : '16px 20px' }
         },
           React.createElement('div', {
             style: {
-              background: '#f8fafc',
-              borderRadius: '16px',
-              padding: isDesktop ? '20px' : '16px',
-              border: '1px solid #e2e8f0'
+              background: PLZ_SURFACE,
+              borderRadius: '12px',
+              padding: isDesktop ? '18px' : '14px',
+              border: '1px solid ' + PLZ_LINE
             }
           },
             React.createElement('div', {
               style: {
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginBottom: '16px',
-                paddingBottom: '16px',
-                borderBottom: '2px dashed #e2e8f0'
+                display: 'flex', alignItems: 'center', gap: '12px',
+                marginBottom: '14px', paddingBottom: '14px',
+                borderBottom: '2px dashed ' + PLZ_LINE
               }
             },
               React.createElement('div', {
                 style: {
-                  width: '48px',
-                  height: '48px',
-                  background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
-                  borderRadius: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  width: '44px', height: '44px',
+                  background: PLZ_BLUE,
+                  borderRadius: '12px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0
                 }
               },
-                React.createElement(Building, { size: 24, color: 'white' })
+                React.createElement(Building, { size: 22, color: 'white' })
               ),
               React.createElement('div', { style: { minWidth: 0 } },
-                React.createElement('div', {
-                  style: { fontSize: '16px', fontWeight: '700', color: '#0f172a' }
-                }, paymentData?.bankName),
-                React.createElement('div', {
-                  style: { fontSize: '13px', color: '#64748b' }
-                }, paymentData?.accountName)
+                React.createElement('div', { style: { fontSize: '15px', fontWeight: '700', color: PLZ_INK } }, paymentData?.bankName),
+                React.createElement('div', { style: { fontSize: '12px', color: PLZ_BODY } }, paymentData?.accountName)
               )
             ),
 
             React.createElement('div', {
               style: {
-                background: 'white',
-                borderRadius: '12px',
-                padding: '14px 16px',
-                marginBottom: '12px',
-                border: '2px solid #4f46e5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '8px'
+                background: 'white', borderRadius: '10px',
+                padding: '12px 14px', marginBottom: '10px',
+                border: '2px solid ' + PLZ_BLUE,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexWrap: 'wrap', gap: '8px'
               }
             },
               React.createElement('div', null,
-                React.createElement('div', {
-                  style: { fontSize: '11px', color: '#64748b', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }
-                }, 'Account Number'),
-                React.createElement('div', {
-                  style: { fontSize: '20px', fontWeight: '700', color: '#0f172a', fontFamily: 'monospace', letterSpacing: '2px' }
-                }, paymentData?.accountNumber)
+                React.createElement('div', { style: { fontSize: '10px', color: PLZ_BODY, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Account Number'),
+                React.createElement('div', { style: { fontSize: '18px', fontWeight: '700', color: PLZ_INK, fontFamily: 'monospace', letterSpacing: '2px', marginTop: '2px' } }, paymentData?.accountNumber)
               ),
               React.createElement('div', {
                 style: {
-                  background: '#d1fae5',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  fontSize: '11px',
-                  color: '#065f46',
-                  fontWeight: '600'
+                  background: PLZ_SUCCESS_TINT,
+                  padding: '4px 10px', borderRadius: '16px',
+                  fontSize: '10px', color: PLZ_SUCCESS, fontWeight: '600'
                 }
               }, '✓ Active')
             ),
 
             React.createElement('div', {
-              style: {
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '8px'
-              }
+              style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }
             },
               React.createElement('div', {
-                style: {
-                  background: 'white',
-                  borderRadius: '10px',
-                  padding: '12px 14px'
-                }
+                style: { background: 'white', borderRadius: '8px', padding: '10px 12px' }
               },
-                React.createElement('div', {
-                  style: { fontSize: '10px', color: '#94a3b8', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }
-                }, 'Plan'),
-                React.createElement('div', {
-                  style: { fontSize: '14px', fontWeight: '600', color: '#0f172a', textTransform: 'capitalize' }
-                }, paymentData?.plan)
+                React.createElement('div', { style: { fontSize: '10px', color: PLZ_GREY, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Plan'),
+                React.createElement('div', { style: { fontSize: '13px', fontWeight: '600', color: PLZ_INK, textTransform: 'capitalize', marginTop: '2px' } }, paymentData?.plan)
               ),
               React.createElement('div', {
-                style: {
-                  background: 'white',
-                  borderRadius: '10px',
-                  padding: '12px 14px'
-                }
+                style: { background: 'white', borderRadius: '8px', padding: '10px 12px' }
               },
-                React.createElement('div', {
-                  style: { fontSize: '10px', color: '#94a3b8', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }
-                }, 'Amount'),
-                React.createElement('div', {
-                  style: { fontSize: '14px', fontWeight: '600', color: '#0f172a' }
-                }, formatNaira(paymentData?.amount))
+                React.createElement('div', { style: { fontSize: '10px', color: PLZ_GREY, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Amount'),
+                React.createElement('div', { style: { fontSize: '13px', fontWeight: '600', color: PLZ_INK, marginTop: '2px' } }, formatNaira(paymentData?.amount))
               )
             ),
 
             React.createElement('div', {
               style: {
-                background: 'white',
-                borderRadius: '10px',
-                padding: '12px 14px',
-                marginTop: '8px',
-                border: '1px dashed #cbd5e1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '8px'
+                background: 'white', borderRadius: '8px',
+                padding: '10px 12px', marginTop: '8px',
+                border: '1px dashed #CBD5E1',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexWrap: 'wrap', gap: '8px'
               }
             },
               React.createElement('div', { style: { minWidth: 0, flex: 1 } },
-                React.createElement('div', {
-                  style: { fontSize: '10px', color: '#94a3b8', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }
-                }, 'Reference'),
-                React.createElement('div', {
-                  style: { fontSize: '13px', fontWeight: '600', color: '#0f172a', fontFamily: 'monospace', wordBreak: 'break-all' }
-                }, paymentData?.reference)
+                React.createElement('div', { style: { fontSize: '10px', color: PLZ_GREY, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Reference'),
+                React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', color: PLZ_INK, fontFamily: 'monospace', wordBreak: 'break-all', marginTop: '2px' } }, paymentData?.reference)
               ),
               React.createElement('button', {
                 onClick: handleCopyReference,
                 style: {
-                  background: copied ? '#d1fae5' : '#eef2ff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '12px',
-                  color: copied ? '#065f46' : '#4f46e5',
-                  fontWeight: '500',
-                  flexShrink: 0
+                  background: copied ? PLZ_SUCCESS_TINT : PLZ_BLUE_TINT,
+                  border: 'none', borderRadius: '8px',
+                  padding: '6px 12px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  fontSize: '11px',
+                  color: copied ? PLZ_SUCCESS : PLZ_BLUE,
+                  fontWeight: '600', flexShrink: 0, fontFamily: FONT_STACK
                 }
               },
                 copied 
-                  ? React.createElement(React.Fragment, null, React.createElement(Check, { size: 14 }), ' Copied')
-                  : React.createElement(React.Fragment, null, React.createElement(Copy, { size: 14 }), ' Copy')
+                  ? React.createElement(React.Fragment, null, React.createElement(Check, { size: 12 }), ' Copied')
+                  : React.createElement(React.Fragment, null, React.createElement(Copy, { size: 12 }), ' Copy')
               )
             )
           ),
 
           React.createElement('div', {
             style: {
-              background: '#fffbeb',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              marginTop: '16px',
-              border: '1px solid #fde68a',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px'
+              background: PLZ_WARN_TINT,
+              borderRadius: '10px',
+              padding: '12px 14px', marginTop: '14px',
+              border: '1px solid #F2D98E',
+              display: 'flex', alignItems: 'flex-start', gap: '10px'
             }
           },
-            React.createElement(AlertTriangle, { size: 18, color: '#d97706', style: { flexShrink: 0, marginTop: '1px' } }),
+            React.createElement(AlertTriangle, { size: 16, color: PLZ_WARN, style: { flexShrink: 0, marginTop: '1px' } }),
             React.createElement('div', null,
-              React.createElement('div', {
-                style: { fontSize: '13px', fontWeight: '600', color: '#92400e' }
-              }, '⚠️ Important'),
-              React.createElement('div', {
-                style: { fontSize: '12px', color: '#78350f' }
-              },
+              React.createElement('div', { style: { fontSize: '12px', fontWeight: '600', color: PLZ_WARN } }, 'Important'),
+              React.createElement('div', { style: { fontSize: '11px', color: '#78350F', marginTop: '2px' } },
                 'Use the reference as narration. Verification takes ',
                 React.createElement('strong', null, 'up to 24 hours')
               )
@@ -1913,55 +1543,47 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           ),
 
           React.createElement('div', {
-            style: { marginTop: '20px', display: 'flex', gap: '12px', flexWrap: 'wrap' }
+            style: { marginTop: '18px', display: 'flex', gap: '10px', flexWrap: 'wrap' }
           },
             React.createElement('button', {
               onClick: handleConfirmPayment,
               disabled: isProcessingState,
               style: {
-                flex: 1,
-                minWidth: '140px',
-                padding: '14px 24px',
-                background: isProcessingState ? '#94a3b8' : 'linear-gradient(135deg, #4f46e5, #6366f1)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '14px',
-                fontSize: '15px',
-                fontWeight: '600',
+                flex: 1, minWidth: '140px',
+                padding: '12px 20px',
+                background: isProcessingState ? PLZ_GREY : PLZ_BLUE,
+                color: 'white', border: 'none', borderRadius: '10px',
+                fontSize: '14px', fontWeight: '600',
                 cursor: isProcessingState ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: isProcessingState ? 'none' : '0 4px 20px rgba(79, 70, 229, 0.3)'
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                boxShadow: isProcessingState ? 'none' : '0 4px 14px rgba(45, 96, 234, 0.25)',
+                fontFamily: FONT_STACK
               }
             },
               isProcessingState 
                 ? React.createElement(React.Fragment, null, 
-                    React.createElement('div', { style: { width: '20px', height: '20px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' } }),
+                    React.createElement('div', { 
+                      style: { 
+                        width: '16px', height: '16px', 
+                        border: '2px solid white', borderTop: '2px solid transparent', 
+                        borderRadius: '50%', animation: 'spin 0.8s linear infinite' 
+                      } 
+                    }),
                     ' Processing...'
                   )
                 : React.createElement(React.Fragment, null,
-                    React.createElement(Check, { size: 18 }),
+                    React.createElement(Check, { size: 16 }),
                     ' I\'ve Made the Transfer'
                   )
             ),
             React.createElement('button', {
-              onClick: () => {
-                setShowUpgradeModal(false);
-                setPaymentStep('select');
-                setSelectedTier(null);
-                setPaymentData(null);
-              },
+              onClick: closeModal,
               style: {
-                padding: '14px 20px',
-                background: 'white',
-                color: '#64748b',
-                border: '1px solid #e2e8f0',
-                borderRadius: '14px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
+                padding: '12px 18px',
+                background: 'white', color: PLZ_BODY,
+                border: '1px solid ' + PLZ_LINE, borderRadius: '10px',
+                fontSize: '13px', fontWeight: '500', cursor: 'pointer',
+                fontFamily: FONT_STACK
               }
             }, 'Cancel')
           )
@@ -1971,39 +1593,21 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   };
 
   // ============================================================
-  // RENDER CONTENT
+  // RENDER CONTENT (unchanged)
   // ============================================================
   const renderContent = () => {
     switch(activeTab) {
-      case 'overview':
-        return renderOverview();
+      case 'overview': return renderOverview();
       case 'rooms':
-        return React.createElement(RoomPage, { 
-          business: business,
-          onBack: () => setActiveTab('overview')
-        });
+        return React.createElement(RoomPage, { business: business, onBack: () => setActiveTab('overview') });
       case 'bookings':
-        return React.createElement(BookingsManager, { 
-          businessId: businessId,
-          bookings: bookings,
-          onBookingsUpdate: fetchBookings
-        });
+        return React.createElement(BookingsManager, { businessId: businessId, bookings: bookings, onBookingsUpdate: fetchBookings });
       case 'profile':
-        return React.createElement(BusinessProfile, { 
-          business: business, 
-          onBack: () => setActiveTab('overview'),
-          onUpdate: handleBusinessUpdate
-        });
+        return React.createElement(BusinessProfile, { business: business, onBack: () => setActiveTab('overview'), onUpdate: handleBusinessUpdate });
       case 'settings':
-        return React.createElement(BusinessSettings, { 
-          business: business,
-          onBack: () => setActiveTab('overview'),
-          onBusinessUpdate: fetchBusinessData
-        });
-      case 'subscription':
-        return renderSubscription();
-      default:
-        return renderOverview();
+        return React.createElement(BusinessSettings, { business: business, onBack: () => setActiveTab('overview'), onBusinessUpdate: fetchBusinessData });
+      case 'subscription': return renderSubscription();
+      default: return renderOverview();
     }
   };
 
@@ -2013,30 +1617,31 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   ];
 
   // ============================================================
-  // SIDEBAR STYLES - ALIGNED
+  // SIDEBAR STYLES — matching his design language
   // ============================================================
   const sidebarNavItemStyle = (isActive) => ({
     width: '100%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    gap: '12px',
-    padding: '12px 16px',
-    background: isActive ? '#eef2ff' : 'transparent',
+    gap: '10px',
+    padding: '10px 12px',
+    background: isActive ? PLZ_BLUE : 'transparent',
     border: 'none',
-    borderRadius: '12px',
-    color: isActive ? '#4f46e5' : '#475569',
+    borderRadius: '10px',
+    color: isActive ? 'white' : PLZ_BODY,
     fontWeight: isActive ? '600' : '500',
-    fontSize: '14px',
+    fontSize: '13px',
     cursor: 'pointer',
-    marginBottom: '4px',
+    marginBottom: '2px',
     textAlign: 'left',
-    transition: 'all 0.2s ease'
+    transition: 'all 0.15s ease',
+    fontFamily: FONT_STACK
   });
 
   const sidebarIconWrapStyle = {
-    width: '20px',
-    height: '20px',
+    width: '18px',
+    height: '18px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -2046,18 +1651,19 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
   // ============================================================
   // MAIN RENDER
   // ============================================================
-  return React.createElement('div', { style: { display: 'flex', minHeight: '100vh', background: '#f8fafc', position: 'relative' } },
+  return React.createElement('div', { 
+    style: { 
+      display: 'flex', minHeight: '100vh', 
+      background: '#F7F8FB', position: 'relative',
+      fontFamily: FONT_STACK
+    } 
+  },
     // Mobile overlay
     React.createElement('div', { 
       style: mobileMenuOpen && !isDesktop ? {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
-        zIndex: 998,
-        backdropFilter: 'blur(4px)'
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(15, 23, 42, 0.4)',
+        zIndex: 998, backdropFilter: 'blur(4px)'
       } : { display: 'none' },
       onClick: () => setMobileMenuOpen(false) 
     }),
@@ -2065,46 +1671,55 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     // Mobile menu
     React.createElement('div', { 
       style: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        bottom: 0,
-        width: '280px',
-        background: 'white',
-        zIndex: 999,
+        position: 'fixed', top: 0, left: 0, bottom: 0,
+        width: '280px', background: 'white', zIndex: 999,
         transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
         transition: 'transform 0.3s ease',
-        boxShadow: '2px 0 12px rgba(0,0,0,0.1)',
+        boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)',
         overflowY: 'auto'
       }
     },
-      React.createElement('div', { style: { padding: '24px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 } },
+      React.createElement('div', { 
+        style: { 
+          padding: '20px 16px', 
+          borderBottom: '1px solid ' + PLZ_LINE, 
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between' 
+        } 
+      },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
           business?.logo_url ? 
-            React.createElement('img', { src: business.logo_url, alt: business.name, style: { width: '40px', height: '40px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 } }) :
-            React.createElement('div', { style: { width: '40px', height: '40px', background: '#4f46e5', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
-              React.createElement(Building2, { size: 20, color: 'white' })
+            React.createElement('img', { 
+              src: business.logo_url, alt: business.name, 
+              style: { width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 } 
+            }) :
+            React.createElement('div', { 
+              style: { 
+                width: '36px', height: '36px', background: PLZ_BLUE, 
+                borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+              } 
+            },
+              React.createElement(Building2, { size: 18, color: 'white' })
             ),
           React.createElement('div', { style: { minWidth: 0 } },
             React.createElement('h2', { 
               style: { 
-                fontSize: '16px', 
-                fontWeight: '700', 
-                margin: 0, 
-                color: '#0f172a',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                fontSize: '15px', fontWeight: '600', margin: 0, color: PLZ_INK,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
               } 
             }, business?.name || 'Business'),
-            React.createElement('p', { style: { fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' } }, getBusinessTypeLabel())
+            React.createElement('p', { 
+              style: { fontSize: '11px', color: PLZ_BODY, margin: '2px 0 0 0' } 
+            }, getBusinessTypeLabel())
           )
         ),
-        React.createElement('button', { onClick: () => setMobileMenuOpen(false), style: { background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 } },
-          React.createElement(X, { size: 20, color: '#64748b' })
+        React.createElement('button', { 
+          onClick: () => setMobileMenuOpen(false), 
+          style: { background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 } 
+        },
+          React.createElement(X, { size: 18, color: PLZ_BODY })
         )
       ),
-      React.createElement('nav', { style: { padding: '16px 12px' } },
+      React.createElement('nav', { style: { padding: '12px 10px' } },
         navItemsWithSubscription.map(item => 
           React.createElement('button', {
             key: item.id,
@@ -2112,7 +1727,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             style: sidebarNavItemStyle(activeTab === item.id)
           },
             React.createElement('div', { style: sidebarIconWrapStyle },
-              React.createElement(item.icon, { size: 18 })
+              React.createElement(item.icon, { size: 16 })
             ),
             React.createElement('span', null, item.label)
           )
@@ -2121,24 +1736,17 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           onClick: handleLogout,
           style: {
             width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            gap: '12px',
-            padding: '12px 16px',
-            background: 'transparent',
-            border: 'none',
-            borderRadius: '12px',
-            color: '#ef4444',
-            fontWeight: '500',
-            fontSize: '14px',
-            cursor: 'pointer',
-            marginTop: '16px',
-            textAlign: 'left'
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+            gap: '10px', padding: '10px 12px',
+            background: 'transparent', border: 'none',
+            borderRadius: '10px', color: PLZ_ERROR,
+            fontWeight: '500', fontSize: '13px',
+            cursor: 'pointer', marginTop: '16px',
+            textAlign: 'left', fontFamily: FONT_STACK
           }
         },
           React.createElement('div', { style: sidebarIconWrapStyle },
-            React.createElement(LogOut, { size: 18 })
+            React.createElement(LogOut, { size: 16 })
           ),
           React.createElement('span', null, 'Logout')
         )
@@ -2148,51 +1756,45 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
     // Desktop Sidebar
     React.createElement('div', { 
       style: {
-        width: isDesktop ? '280px' : '0',
-        flexShrink: 0,
-        background: 'white',
-        borderRight: '1px solid #e2e8f0',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        height: '100vh',
-        overflowY: 'auto',
-        zIndex: 100,
+        width: isDesktop ? '240px' : '0',
+        flexShrink: 0, background: 'white',
+        borderRight: '1px solid ' + PLZ_LINE,
+        position: 'fixed', top: 0, left: 0, height: '100vh',
+        overflowY: 'auto', zIndex: 100,
         transition: 'width 0.3s ease'
       }
     },
-      React.createElement('div', { style: { padding: '24px 20px', borderBottom: '1px solid #e2e8f0' } },
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
+      React.createElement('div', { style: { padding: '20px 16px', borderBottom: '1px solid ' + PLZ_LINE } },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
           business?.logo_url ? 
             React.createElement('img', { 
               key: business.logo_url + Date.now(),
-              src: business.logo_url, 
-              alt: business.name, 
-              style: { width: '44px', height: '44px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 } 
+              src: business.logo_url, alt: business.name, 
+              style: { width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 } 
             }) :
-            React.createElement('div', { style: { width: '44px', height: '44px', background: '#4f46e5', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
-              React.createElement(Building2, { size: 22, color: 'white' })
+            React.createElement('div', { 
+              style: { 
+                width: '40px', height: '40px', background: PLZ_BLUE, 
+                borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+              } 
+            },
+              React.createElement(Building2, { size: 20, color: 'white' })
             ),
           React.createElement('div', { style: { minWidth: 0, flex: 1 } },
             React.createElement('h2', { 
               style: { 
-                fontSize: '15px', 
-                fontWeight: '700', 
-                margin: 0, 
-                color: '#0f172a',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                fontSize: '14px', fontWeight: '600', margin: 0, color: PLZ_INK,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
               } 
             }, business?.name || 'Business'),
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' } },
+            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' } },
               getBusinessTypeIcon(),
-              React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } }, getBusinessTypeLabel())
+              React.createElement('span', { style: { fontSize: '10px', color: PLZ_BODY } }, getBusinessTypeLabel())
             )
           )
         )
       ),
-      React.createElement('nav', { style: { padding: '16px 12px' } },
+      React.createElement('nav', { style: { padding: '12px 10px' } },
         navItemsWithSubscription.map(item => 
           React.createElement('button', {
             key: item.id,
@@ -2200,7 +1802,7 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
             style: sidebarNavItemStyle(activeTab === item.id)
           },
             React.createElement('div', { style: sidebarIconWrapStyle },
-              React.createElement(item.icon, { size: 18 })
+              React.createElement(item.icon, { size: 16 })
             ),
             React.createElement('span', null, item.label)
           )
@@ -2209,88 +1811,80 @@ function BusinessDashboard({ business: propBusiness, onLogout }) {
           onClick: handleLogout,
           style: {
             width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            gap: '12px',
-            padding: '12px 16px',
-            background: 'transparent',
-            border: 'none',
-            borderRadius: '12px',
-            color: '#ef4444',
-            fontWeight: '500',
-            fontSize: '14px',
-            cursor: 'pointer',
-            marginTop: '16px',
-            textAlign: 'left'
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+            gap: '10px', padding: '10px 12px',
+            background: 'transparent', border: 'none',
+            borderRadius: '10px', color: PLZ_ERROR,
+            fontWeight: '500', fontSize: '13px',
+            cursor: 'pointer', marginTop: '16px',
+            textAlign: 'left', fontFamily: FONT_STACK
           }
         },
           React.createElement('div', { style: sidebarIconWrapStyle },
-            React.createElement(LogOut, { size: 18 })
+            React.createElement(LogOut, { size: 16 })
           ),
           React.createElement('span', null, 'Logout')
         )
       )
     ),
     
-    // Main Content
+    // Main content
     React.createElement('div', { 
       style: {
-        flex: 1,
-        minWidth: 0,
-        background: '#f8fafc',
+        flex: 1, minWidth: 0,
+        background: '#F7F8FB',
         minHeight: '100vh',
-        marginLeft: isDesktop ? '280px' : '0',
+        marginLeft: isDesktop ? '240px' : '0',
         transition: 'margin-left 0.3s ease'
       }
     },
-      // Mobile Header
+      // Mobile header
       !isDesktop && React.createElement('div', { 
         style: { 
-          background: 'white', 
-          padding: '14px 16px', 
-          borderBottom: '1px solid #e2e8f0', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50
+          background: 'rgba(255,255,255,0.90)',
+          backdropFilter: 'blur(12px)',
+          padding: '12px 16px',
+          borderBottom: '1px solid ' + PLZ_LINE,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          position: 'sticky', top: 0, zIndex: 50
         } 
       },
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 } },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
           business?.logo_url ? 
-            React.createElement('img', { src: business.logo_url, alt: business.name, style: { width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 } }) :
-            React.createElement('div', { style: { width: '36px', height: '36px', background: '#4f46e5', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
-              React.createElement(Building2, { size: 18, color: 'white' })
+            React.createElement('img', { 
+              src: business.logo_url, alt: business.name, 
+              style: { width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 } 
+            }) :
+            React.createElement('div', { 
+              style: { 
+                width: '32px', height: '32px', background: PLZ_BLUE, 
+                borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+              } 
+            },
+              React.createElement(Building2, { size: 16, color: 'white' })
             ),
           React.createElement('div', { style: { minWidth: 0 } },
             React.createElement('h1', { 
               style: { 
-                fontSize: '15px', 
-                fontWeight: '700', 
-                margin: 0, 
-                color: '#0f172a',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                fontSize: '14px', fontWeight: '600', margin: 0, color: PLZ_INK,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
               } 
             }, business?.name || 'Dashboard'),
-            React.createElement('p', { style: { fontSize: '11px', color: '#64748b', margin: '2px 0 0 0' } }, getBusinessTypeLabel())
+            React.createElement('p', { style: { fontSize: '10px', color: PLZ_BODY, margin: '1px 0 0 0' } }, getBusinessTypeLabel())
           )
         ),
         React.createElement('button', { 
           onClick: () => setMobileMenuOpen(true), 
           style: { background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 } 
         },
-          React.createElement(Menu, { size: 22, color: '#0f172a' })
+          React.createElement(Menu, { size: 20, color: PLZ_INK })
         )
       ),
       
-      // Content Area
+      // Content area
       React.createElement('div', { 
         style: { 
-          padding: isDesktop ? '28px' : '16px',
+          padding: isDesktop ? '24px' : '16px',
           maxWidth: '1400px',
           margin: '0 auto'
         } 
