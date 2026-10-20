@@ -1,3 +1,9 @@
+// FILE: client/src/plazzaa/components/TopNav.jsx
+// UPDATED 20 Oct 2026 (Session 3 companion):
+//  - Added subtle "Admin" pill to the left of Login (team-only entry).
+//  - Fixed Login href: was pointing at /explore, now correctly at /login.
+//  - Mobile menu unchanged in this pass (still routes Log in → /login).
+
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
@@ -65,15 +71,22 @@ export default function TopNav({ tone = "light" }) {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-6 md:flex">
-          {/* <Link */}
-          {/*   to="/login" */}
-          {/*   className="text-[15px] font-medium text-plz-body hover:text-plz-ink" */}
-          {/* > */}
-          {/*   Log in */}
-          {/* </Link> */}
+        <div className="hidden items-center gap-3 md:flex">
+          {/* WHY: team-only entry. Hidden on mobile (md:flex on parent),
+              smaller padding than Login, muted zinc palette so it reads
+              as secondary chrome to customers but is easy to find for
+              the team. Hover lifts to a slightly darker grey. */}
+          <Link
+            to="/admin"
+            className="inline-flex h-[32px] items-center rounded-md px-3 text-[12px] font-medium text-zinc-400 bg-zinc-100 transition-colors hover:bg-zinc-200 hover:text-zinc-600"
+            aria-label="Admin dashboard"
+          >
+            Admin
+          </Link>
 
-          <Link to="/explore" className="plz-btn plz-btn-ink h-[44px] px-5">
+          {/* WHY: original Login pill. Fixed destination from /explore → /login
+              so the merchant sign-in page is actually reachable from desktop. */}
+          <Link to="/login" className="plz-btn plz-btn-ink h-[44px] px-5">
             Login
             <LogIn size={16} strokeWidth={2} />
           </Link>
