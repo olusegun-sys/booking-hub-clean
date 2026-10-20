@@ -918,7 +918,7 @@ app.post(
 
       const rawToken = await createResetToken(supabase, business.id);
 
-      const baseUrl = (process.env.APP_URL || "http://localhost:5173").replace(
+      const baseUrl = (process.env.APP_URL || "https://myplazzaa.com").replace(
         /\/$/,
         "",
       );
