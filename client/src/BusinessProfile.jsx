@@ -1,11 +1,38 @@
 ﻿// FILE: client/src/BusinessProfile.jsx
-// CLEANED: Removed Cover Image and Gallery sections
-// KEPT: Logo upload and all business details
+// RESTYLED 21 Oct 2026 (Session 4) — unified with PLZ tokens.
+// Preserved: form state, useEffect sync, save flow, logo upload,
+// refreshBusinessData, localStorage update — all logic byte-for-byte.
+// Note: this file still reads 'auth_token' (not fixed here — see
+// BusinessSettings note for the scoped-token conversation).
 
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Phone, Mail, Globe, Save, Camera, X, CheckCircle, AlertCircle, Edit3, ExternalLink, ArrowLeft, Layers, Image, Sparkles } from 'lucide-react';
 import ImageUpload from './components/forms/ImageUpload';
 import API_BASE from './config';
+
+// ============================================================
+// DESIGN TOKENS — matches Plazzaa marketing design
+// ============================================================
+const PLZ = {
+  blue: '#2D60EA',
+  blueDeep: '#1F47B4',
+  blueTint: '#E8F4FF',
+  ink: '#18181B',
+  body: '#52525B',
+  muted: '#A1A1AA',
+  line: '#E4E4E7',
+  surface: '#F4F4F5',
+  success: '#1B7F43',
+  successTint: '#E7F4EC',
+  danger: '#C0395A',
+  dangerTint: '#FCECEF',
+  radiusSm: '10px',
+  radiusMd: '14px',
+  radiusLg: '16px',
+  radiusXl: '20px',
+  font: "'Manrope', 'Inter', system-ui, -apple-system, sans-serif",
+  shadowSm: '0 1px 3px rgba(15, 23, 42, 0.04)'
+};
 
 function BusinessProfile({ business, onBack, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -25,7 +52,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  // Handle resize
   useEffect(function() {
     function handleResize() {
       setIsMobile(window.innerWidth < 768);
@@ -35,7 +61,6 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     return function() { window.removeEventListener('resize', handleResize); };
   }, []);
 
-  // Sync formData when business prop changes
   useEffect(function() {
     if (business) {
       setFormData({
@@ -72,16 +97,16 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       showMessage('error', 'Business data not available');
       return;
     }
-    
+
     setSaving(true);
     var token = localStorage.getItem('auth_token');
-    
+
     if (!token) {
       showMessage('error', 'Authentication required. Please log in again.');
       setSaving(false);
       return;
     }
-    
+
     var updateData = {
       name: formData.name,
       email: formData.email,
@@ -94,31 +119,30 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       website: formData.website,
       logo_url: formData.logo_url
     };
-    
+
     console.log('[BusinessProfile] Saving:', updateData);
-    
+
     fetch(API_BASE + '/api/businesses/' + business.id, {
       method: 'PUT',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
       },
       body: JSON.stringify(updateData)
     })
-      .then(function(r) { 
+      .then(function(r) {
         if (!r.ok) {
           return r.json().then(function(errData) {
             throw new Error(errData.error || 'Failed to update profile');
           });
         }
-        return r.json(); 
+        return r.json();
       })
       .then(function(data) {
         if (data.success) {
           showMessage('success', 'Profile updated successfully');
           setIsEditing(false);
-          
-          // Update localStorage
+
           var currentBusiness = localStorage.getItem('currentBusiness');
           if (currentBusiness) {
             try {
@@ -129,7 +153,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               console.error('Failed to update localStorage:', e);
             }
           }
-          
+
           if (onUpdate) {
             onUpdate(data.business);
           }
@@ -137,9 +161,9 @@ function BusinessProfile({ business, onBack, onUpdate }) {
           showMessage('error', data.error || 'Failed to update profile');
         }
       })
-      .catch(function(err) { 
+      .catch(function(err) {
         console.error('Save error:', err);
-        showMessage('error', err.message || 'Something went wrong. Please try again.'); 
+        showMessage('error', err.message || 'Something went wrong. Please try again.');
       })
       .finally(function() { setSaving(false); });
   }
@@ -154,7 +178,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   function refreshBusinessData() {
     var token = localStorage.getItem('auth_token');
     if (!token || !business || !business.id) return;
-    
+
     fetch(API_BASE + '/api/businesses/profile', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
@@ -174,21 +198,21 @@ function BusinessProfile({ business, onBack, onUpdate }) {
       .catch(function(err) { console.error('Refresh error:', err); });
   }
 
-  // Loading state
   if (!business || !business.id) {
     return React.createElement('div', { style: { textAlign: 'center', padding: '50px' } },
       React.createElement('div', { className: 'loading-spinner' }),
-      React.createElement('p', { style: { marginTop: '16px', color: '#64748b' } }, 'Loading business profile...')
+      React.createElement('p', { style: { marginTop: '16px', color: PLZ.muted } }, 'Loading business profile...')
     );
   }
 
-  // ========== RESPONSIVE STYLES ==========
+  // ========== RESPONSIVE STYLES (restyled to PLZ tokens) ==========
   var containerStyle = {
     maxWidth: '1200px',
     margin: '0 auto',
     padding: isMobile ? '12px' : '32px',
-    background: '#f8fafc',
-    minHeight: '100vh'
+    background: PLZ.surface,
+    minHeight: '100vh',
+    fontFamily: PLZ.font
   };
 
   var headerStyle = {
@@ -203,22 +227,24 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   var titleStyle = {
     fontSize: isMobile ? '22px' : '28px',
     fontWeight: '700',
-    color: '#0f172a',
+    color: PLZ.ink,
     margin: 0
   };
 
   var subtitleStyle = {
     fontSize: isMobile ? '13px' : '14px',
-    color: '#64748b',
+    color: PLZ.muted,
     marginTop: '2px'
   };
 
+  // WHY: back button now soft rectangle (radiusSm) instead of pill (40px),
+  // matching the button convention established in Sessions 1-3.
   var backButtonStyle = {
     padding: isMobile ? '8px 14px' : '10px 20px',
     backgroundColor: 'white',
-    color: '#475569',
-    border: '1px solid #e2e8f0',
-    borderRadius: '40px',
+    color: PLZ.body,
+    border: `1px solid ${PLZ.line}`,
+    borderRadius: PLZ.radiusSm,
     fontSize: isMobile ? '12px' : '14px',
     fontWeight: '500',
     cursor: 'pointer',
@@ -229,10 +255,10 @@ function BusinessProfile({ business, onBack, onUpdate }) {
 
   var editButtonStyle = {
     padding: isMobile ? '8px 14px' : '10px 20px',
-    background: '#4f46e5',
+    background: PLZ.blue,
     color: 'white',
     border: 'none',
-    borderRadius: '40px',
+    borderRadius: PLZ.radiusSm,
     fontSize: isMobile ? '12px' : '14px',
     fontWeight: '500',
     cursor: 'pointer',
@@ -243,10 +269,10 @@ function BusinessProfile({ business, onBack, onUpdate }) {
 
   var saveButtonStyle = {
     padding: isMobile ? '8px 14px' : '10px 20px',
-    background: '#10b981',
+    background: PLZ.success,
     color: 'white',
     border: 'none',
-    borderRadius: '40px',
+    borderRadius: PLZ.radiusSm,
     fontSize: isMobile ? '12px' : '14px',
     fontWeight: '500',
     cursor: saving ? 'not-allowed' : 'pointer',
@@ -258,10 +284,10 @@ function BusinessProfile({ business, onBack, onUpdate }) {
 
   var cancelButtonStyle = {
     padding: isMobile ? '8px 14px' : '10px 20px',
-    backgroundColor: '#f1f5f9',
-    color: '#475569',
+    backgroundColor: PLZ.surface,
+    color: PLZ.body,
     border: 'none',
-    borderRadius: '40px',
+    borderRadius: PLZ.radiusSm,
     fontSize: isMobile ? '12px' : '14px',
     fontWeight: '500',
     cursor: 'pointer',
@@ -270,23 +296,18 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     gap: '6px'
   };
 
-  var gridStyle = {
-    display: 'grid',
-    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-    gap: isMobile ? '16px' : '24px'
-  };
-
   var cardStyle = {
     backgroundColor: 'white',
-    borderRadius: isMobile ? '16px' : '20px',
-    border: '1px solid #e2e8f0',
-    overflow: 'hidden'
+    borderRadius: isMobile ? PLZ.radiusLg : PLZ.radiusXl,
+    border: `1px solid ${PLZ.line}`,
+    overflow: 'hidden',
+    boxShadow: PLZ.shadowSm
   };
 
   var cardHeaderStyle = {
     padding: isMobile ? '16px 18px' : '20px 24px',
-    borderBottom: '1px solid #f1f5f9',
-    backgroundColor: '#fafbff',
+    borderBottom: `1px solid ${PLZ.line}`,
+    backgroundColor: PLZ.surface,
     display: 'flex',
     alignItems: 'center',
     gap: '10px'
@@ -295,8 +316,8 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   var cardHeaderIconStyle = {
     width: isMobile ? '36px' : '40px',
     height: isMobile ? '36px' : '40px',
-    background: '#eef2ff',
-    borderRadius: '10px',
+    background: PLZ.blueTint,
+    borderRadius: PLZ.radiusSm,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'
@@ -305,7 +326,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   var cardTitleStyle = {
     fontSize: isMobile ? '16px' : '18px',
     fontWeight: '600',
-    color: '#0f172a',
+    color: PLZ.ink,
     margin: 0
   };
 
@@ -318,7 +339,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     padding: isMobile ? '10px 0' : '12px 0',
-    borderBottom: '1px solid #f1f5f9',
+    borderBottom: `1px solid ${PLZ.line}`,
     flexWrap: 'wrap',
     gap: '6px'
   };
@@ -326,13 +347,13 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   var labelStyle = {
     fontSize: isMobile ? '11px' : '12px',
     fontWeight: '600',
-    color: '#64748b',
+    color: PLZ.muted,
     minWidth: isMobile ? '80px' : '100px'
   };
 
   var valueStyle = {
     fontSize: isMobile ? '13px' : '14px',
-    color: '#1e293b',
+    color: PLZ.body,
     flex: 1,
     wordBreak: 'break-word'
   };
@@ -340,26 +361,29 @@ function BusinessProfile({ business, onBack, onUpdate }) {
   var inputStyle = {
     width: '100%',
     padding: isMobile ? '10px 12px' : '12px 14px',
-    border: '1.5px solid #e2e8f0',
-    borderRadius: '10px',
-    fontSize: isMobile ? '14px' : '14px',
+    border: `1.5px solid ${PLZ.line}`,
+    borderRadius: PLZ.radiusSm,
+    fontSize: '14px',
     fontFamily: 'inherit',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    color: PLZ.ink,
+    outline: 'none'
   };
 
   var textareaStyle = {
     width: '100%',
     padding: isMobile ? '10px 12px' : '12px 14px',
-    border: '1.5px solid #e2e8f0',
-    borderRadius: '10px',
-    fontSize: isMobile ? '14px' : '14px',
+    border: `1.5px solid ${PLZ.line}`,
+    borderRadius: PLZ.radiusSm,
+    fontSize: '14px',
     minHeight: isMobile ? '80px' : '100px',
     resize: 'vertical',
     fontFamily: 'inherit',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    color: PLZ.ink,
+    outline: 'none'
   };
 
-  // ========== RENDER ==========
   return React.createElement('div', { style: containerStyle },
     // Header
     React.createElement('div', { style: headerStyle },
@@ -384,24 +408,25 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     // Message Toast
     message.text && React.createElement('div', { style: {
       padding: '10px 14px',
-      borderRadius: '10px',
+      borderRadius: PLZ.radiusMd,
       marginBottom: '16px',
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      background: message.type === 'success' ? '#d1fae5' : '#fee2e2',
-      color: message.type === 'success' ? '#065f46' : '#991b1b',
-      fontSize: isMobile ? '13px' : '14px'
+      background: message.type === 'success' ? PLZ.successTint : PLZ.dangerTint,
+      color: message.type === 'success' ? PLZ.success : PLZ.danger,
+      fontSize: isMobile ? '13px' : '14px',
+      border: `1px solid ${message.type === 'success' ? PLZ.success : PLZ.danger}`
     } },
       message.type === 'success' ? React.createElement(CheckCircle, { size: isMobile ? 16 : 18 }) : React.createElement(AlertCircle, { size: isMobile ? 16 : 18 }),
       message.text
     ),
 
-    // Basic Information Card - ALL FIELDS EDITABLE
+    // Basic Information Card
     React.createElement('div', { style: cardStyle },
       React.createElement('div', { style: cardHeaderStyle },
         React.createElement('div', { style: cardHeaderIconStyle },
-          React.createElement(Building2, { size: isMobile ? 16 : 20, color: '#4f46e5' })
+          React.createElement(Building2, { size: isMobile ? 16 : 20, color: PLZ.blue })
         ),
         React.createElement('h3', { style: cardTitleStyle }, 'Basic Information')
       ),
@@ -429,7 +454,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               style: inputStyle
             }) :
             React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '4px' } },
-              React.createElement(Mail, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.email
+              React.createElement(Mail, { size: isMobile ? 12 : 14, color: PLZ.muted }), formData.email
             )
         ),
         // Phone
@@ -443,7 +468,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               style: inputStyle
             }) :
             React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '4px' } },
-              React.createElement(Phone, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.phone || 'Not set'
+              React.createElement(Phone, { size: isMobile ? 12 : 14, color: PLZ.muted }), formData.phone || 'Not set'
             )
         ),
         // Address
@@ -457,7 +482,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               style: inputStyle
             }) :
             React.createElement('span', { style: { ...valueStyle, display: 'flex', alignItems: 'center', gap: '4px' } },
-              React.createElement(MapPin, { size: isMobile ? 12 : 14, color: '#64748b' }), formData.address || 'Not set'
+              React.createElement(MapPin, { size: isMobile ? 12 : 14, color: PLZ.muted }), formData.address || 'Not set'
             )
         ),
         // City
@@ -496,7 +521,7 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               style: inputStyle
             }) :
             formData.website ?
-              React.createElement('a', { href: formData.website, target: '_blank', style: { ...valueStyle, color: '#4f46e5', textDecoration: 'none' } }, formData.website) :
+              React.createElement('a', { href: formData.website, target: '_blank', style: { ...valueStyle, color: PLZ.blue, textDecoration: 'none' } }, formData.website) :
               React.createElement('span', { style: valueStyle }, 'Not provided')
         )
       )
@@ -506,13 +531,13 @@ function BusinessProfile({ business, onBack, onUpdate }) {
     React.createElement('div', { style: { ...cardStyle, marginTop: '16px' } },
       React.createElement('div', { style: cardHeaderStyle },
         React.createElement('div', { style: cardHeaderIconStyle },
-          React.createElement(Globe, { size: isMobile ? 16 : 20, color: '#4f46e5' })
+          React.createElement(Globe, { size: isMobile ? 16 : 20, color: PLZ.blue })
         ),
         React.createElement('h3', { style: cardTitleStyle }, 'About Your Business')
       ),
       React.createElement('div', { style: cardBodyStyle },
         React.createElement('div', { style: { marginBottom: '16px' } },
-          React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: '#475569', marginBottom: '4px', display: 'block' } }, 'Short Description'),
+          React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px', display: 'block' } }, 'Short Description'),
           isEditing ?
             React.createElement('textarea', {
               value: formData.description,
@@ -521,10 +546,10 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               placeholder: 'Brief description of your business...',
               style: textareaStyle
             }) :
-            React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.description || 'No description provided')
+            React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: PLZ.body, lineHeight: '1.5' } }, formData.description || 'No description provided')
         ),
         React.createElement('div', null,
-          React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: '#475569', marginBottom: '4px', display: 'block' } }, 'Full Story'),
+          React.createElement('label', { style: { fontSize: isMobile ? '11px' : '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px', display: 'block' } }, 'Full Story'),
           isEditing ?
             React.createElement('textarea', {
               value: formData.about_text,
@@ -533,22 +558,22 @@ function BusinessProfile({ business, onBack, onUpdate }) {
               placeholder: 'Share your story, amenities, what makes you special...',
               style: { ...textareaStyle, minHeight: isMobile ? '120px' : '150px' }
             }) :
-            React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: '#1e293b', lineHeight: '1.5' } }, formData.about_text || 'No story provided')
+            React.createElement('p', { style: { fontSize: isMobile ? '13px' : '14px', color: PLZ.body, lineHeight: '1.5' } }, formData.about_text || 'No story provided')
         )
       )
     ),
 
-    // Logo Upload Section (ONLY - Cover and Gallery removed)
+    // Logo Upload Section
     React.createElement('div', { style: { ...cardStyle, marginTop: '16px', marginBottom: '24px' } },
       React.createElement('div', { style: cardHeaderStyle },
         React.createElement('div', { style: cardHeaderIconStyle },
-          React.createElement(Camera, { size: isMobile ? 16 : 20, color: '#4f46e5' })
+          React.createElement(Camera, { size: isMobile ? 16 : 20, color: PLZ.blue })
         ),
         React.createElement('h3', { style: cardTitleStyle }, 'Business Logo')
       ),
       React.createElement('div', { style: cardBodyStyle },
         React.createElement('div', { style: { maxWidth: isMobile ? '100%' : '400px', margin: '0 auto' } },
-          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', textAlign: 'center', marginBottom: '16px' } },
+          React.createElement('p', { style: { fontSize: '13px', color: PLZ.muted, textAlign: 'center', marginBottom: '16px' } },
             'Upload your business logo. Square format (1:1 ratio) recommended.'
           ),
           React.createElement(ImageUpload, {
