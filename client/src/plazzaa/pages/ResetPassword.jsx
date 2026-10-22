@@ -1,5 +1,4 @@
-﻿
-// FILE: client/src/plazzaa/pages/ResetPassword.jsx
+﻿// FILE: client/src/plazzaa/pages/ResetPassword.jsx
 // PURPOSE: "Choose a new password" screen. Reached by clicking the
 // link in the reset email. Reads ?token= from the URL and submits it
 // along with the new password to POST /api/businesses/reset-password.
@@ -9,6 +8,11 @@
 //   2. Token present → show password fields
 //   3. Submit success → show "password updated" and link to /login
 //   4. Submit failure → show the server's error message
+//
+// UPDATED 22 Oct 2026: eye-icon stability fix — replaced
+// 'top-1/2 -translate-y-1/2' with 'inset-y-0 my-auto' on the show/hide
+// password button. Same fix as Login.jsx, same root cause (sub-pixel
+// jitter during focus/blur/autofill).
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -202,11 +206,15 @@ export default function ResetPassword() {
                         className="plz-field pr-12"
                         aria-invalid={Boolean(error) || undefined}
                       />
+                      {/* WHY: pinned to inset-y-0 with my-auto — the icon
+                          can no longer drift on focus/blur/autofill. Same
+                          fix as Login.jsx. Previously top-1/2 + -translate-y-1/2
+                          caused sub-pixel jitter. */}
                       <button
                         type="button"
                         onClick={() => setShowPassword((v) => !v)}
                         aria-label={showPassword ? "Hide password" : "Show password"}
-                        className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-ctl text-plz-body transition-colors duration-micro ease-plz hover:text-plz-ink"
+                        className="absolute inset-y-0 right-1 my-auto flex h-10 w-10 items-center justify-center rounded-ctl text-plz-body transition-colors duration-micro ease-plz hover:text-plz-ink"
                       >
                         {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                       </button>
