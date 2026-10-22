@@ -1,3 +1,9 @@
+// FILE: client/src/plazzaa/pages/Login.jsx
+// UPDATED 22 Oct 2026: fixed jittering show/hide password button.
+//  - Replaced 'top-1/2 -translate-y-1/2' centering with top-0 bottom-0 + flex.
+//  - Icon can no longer drift during focus/blur/autofill.
+// Everything else unchanged.
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -138,11 +144,14 @@ export default function Login() {
                     className="plz-field pr-12"
                     aria-invalid={Boolean(error) || undefined}
                   />
+                  {/* WHY: pinned to top-0 bottom-0 with flex-center — the icon
+                      can no longer drift on focus/blur/autofill. Previously
+                      top-1/2 + -translate-y-1/2 caused sub-pixel jitter. */}
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-ctl text-plz-body transition-colors duration-micro ease-plz hover:text-plz-ink"
+                    className="absolute inset-y-0 right-1 my-auto flex h-10 w-10 items-center justify-center rounded-ctl text-plz-body transition-colors duration-micro ease-plz hover:text-plz-ink"
                   >
                     {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
