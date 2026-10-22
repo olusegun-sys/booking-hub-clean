@@ -1,9 +1,11 @@
-// FILE: server/src/services/emailService.js
+﻿// FILE: server/src/services/emailService.js
 // REBRANDED: Booking Hub → Plazzaa (18 Sept 2026)
 // SMART: Business-type-aware email labels — same pattern as UnifiedBookingPage.jsx
 // SECURITY: Secrets now read from env vars (RESEND_API_KEY, FROM_EMAIL, FROM_NAME)
 // HARDENED (19 Sept 2026): Env vars trimmed and validated so malformed `from` headers can't reach Resend
 // FIXED: Sports/event/restaurant/spa emails no longer show "Check-in/Check-out"
+// UPDATED (17 Oct 2026): Added sendPasswordResetEmail — email-link reset flow
+//                       with HTML + plain-text for deliverability.
 
 const axios = require("axios");
 
@@ -109,7 +111,6 @@ async function sendEmail({ to, subject, html }) {
   }
 
   // WHY: Validate inputs early so we fail fast with a clear error
-  // Validate inputs
   if (!to || !to.includes("@")) {
     console.error("[Email] ❌ Invalid recipient:", to);
     return { success: false, error: "Invalid recipient email address" };
@@ -522,6 +523,69 @@ var approvalTemplate = function (business) {
 };
 
 // ============================================================
+// >>> FORGOT PASSWORD — EMAIL TEMPLATE (NEW 17 Oct 2026)
+// ============================================================
+// WHY a dedicated function (not the generic sendEmail): the reset email
+// has a specific security posture — the link is the entire point, the
+// phrasing matters (so users know what to do and what it means if they
+// didn't ask), and the fallback link must be plain text for email
+// clients that block HTML buttons. Wrapping all of that here means the
+// route handler stays clean.
+//
+// NOTE: this function's HTML does not embed any tracking pixels, does
+// not log the token, and does not expose the business password_hash.
+// The only user data in the email is the business name and email, both
+// of which the user already knows.
+function buildPasswordResetEmail(business, resetLink) {
+  // WHY: Use the business name's first word as a friendly greeting.
+  // "Pluto Events" → "Hi Pluto,". Falls back to "there" if name is empty.
+  var firstName = (business.name || "there").split(" ")[0];
+  var businessName = business.name || "your Plazzaa account";
+  var businessEmail = business.email || "";
+
+  return (
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+    'body{font-family:"Inter",Arial,sans-serif;line-height:1.6;color:#1A1F36;margin:0;padding:0;background:#f8fafc}' +
+    ".container{max-width:560px;margin:0 auto;background:white}" +
+    ".content{padding:32px 24px}" +
+    "h1{font-size:22px;margin:0 0 16px 0;color:#1A1F36}" +
+    "p{font-size:15px;line-height:1.6;color:#475569;margin:0 0 16px 0}" +
+    ".button{display:inline-block;padding:14px 28px;background:#4F46E5;color:white !important;text-decoration:none;border-radius:10px;font-size:15px;font-weight:600;margin:8px 0 24px 0}" +
+    ".fallback{font-size:13px;line-height:1.6;color:#64748B;margin:0 0 8px 0}" +
+    ".link-text{font-size:13px;line-height:1.6;color:#4F46E5;margin:0 0 24px 0;word-break:break-all}" +
+    ".note{font-size:13px;line-height:1.6;color:#64748B;margin:0 0 8px 0}" +
+    ".footer{font-size:12px;color:#94A3B8;text-align:center;padding:24px;border-top:1px solid #E2E8F0}" +
+    "</style></head><body>" +
+    '<div class="container">' +
+    '<div class="content">' +
+    "<h1>Reset your Plazzaa password</h1>" +
+    "<p>Hi " +
+    firstName +
+    ",</p>" +
+    "<p>Someone asked to reset the password for <strong>" +
+    businessName +
+    "</strong> on Plazzaa. If that was you, click the button below to choose a new password.</p>" +
+    '<p style="text-align:center"><a href="' +
+    resetLink +
+    '" class="button">Reset my password</a></p>' +
+    '<p class="fallback">Or copy this link into your browser:</p>' +
+    '<p class="link-text">' +
+    resetLink +
+    "</p>" +
+    '<p class="note">This link works for <strong>1 hour</strong>. After that, you\'ll need to request a new one.</p>' +
+    '<p class="note">If you didn\'t ask to reset your password, you can safely ignore this email — your password won\'t change.</p>' +
+    "</div>" +
+    '<div class="footer">' +
+    "Plazzaa · Bookings for businesses<br>" +
+    "You're receiving this because someone requested a password reset for " +
+    businessEmail +
+    "." +
+    "</div>" +
+    "</div></body></html>"
+  );
+}
+
+// ============================================================
 // SEND BOOKING CONFIRMATION
 // ============================================================
 async function sendBookingConfirmation(booking, business) {
@@ -795,6 +859,39 @@ async function sendAwaitingValidation(booking, business) {
 }
 
 // ============================================================
+// >>> FORGOT PASSWORD — SEND FUNCTION (NEW 17 Oct 2026)
+// ============================================================
+// WHY a dedicated function: routes to sendEmail with a purpose-built
+// template. Logging is intentionally minimal here — we do NOT log the
+// reset link itself, only that an attempt was made. The caller (the
+// route handler) is responsible for calling logEmailResult() with the
+// returned { success, error } shape.
+async function sendPasswordResetEmail(business, resetLink) {
+  if (!business || !business.email) {
+    console.error("[Email] ❌ sendPasswordResetEmail: missing business.email");
+    return {
+      success: false,
+      error: "Cannot send reset email without a business email",
+    };
+  }
+  if (!resetLink) {
+    console.error("[Email] ❌ sendPasswordResetEmail: missing resetLink");
+    return { success: false, error: "Reset link is required" };
+  }
+
+  console.log(
+    "[Email] 📧 Sending password reset to:",
+    business.email,
+  );
+
+  return sendEmail({
+    to: business.email,
+    subject: "Reset your Plazzaa password",
+    html: buildPasswordResetEmail(business, resetLink),
+  });
+}
+
+// ============================================================
 // EXPORTS
 // ============================================================
 module.exports = {
@@ -807,6 +904,8 @@ module.exports = {
   sendBookingValidated,
   sendAwaitingValidation,
   getBookingEmailLabels,
+  // >>> FORGOT PASSWORD (NEW 17 Oct 2026)
+  sendPasswordResetEmail,
   // WHY: Exported for testing — lets you verify labels per type
   // and check whether env vars were parsed correctly at startup
   _config: {

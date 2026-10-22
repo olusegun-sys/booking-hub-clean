@@ -121,7 +121,7 @@ export default function Login() {
                     Password
                   </label>
                   <Link
-                    to="/login"
+                     to="/forgot-password"
                     className="text-[13px] font-medium text-plz-blue hover:underline"
                   >
                     Forgot password?

@@ -1,7 +1,14 @@
+// FILE: client/src/plazzaa/components/TopNav.jsx
+// UPDATED 22 Oct 2026 — merge conflict resolution.
+//  - Admin pill: kept Emmanuel's ShieldIcon treatment + aria-label for a11y
+//  - Import fix: 'ShieldIcon' is not a lucide-react export — aliased Shield as ShieldIcon
+//  - Login destination: '/login' (was '/explore' pre-merge)
+//  - gap-6 on parent (his layout) — ShieldIcon pill needs more breathing room
+
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, ArrowUpRight, LogIn, ShieldIcon } from "lucide-react";
+import { Menu, X, ArrowUpRight, LogIn, Shield as ShieldIcon } from "lucide-react";
 import { EASE } from "../lib/motion";
 
 import PlazzaaLogo from "./PlazzaaLogo";
@@ -69,6 +76,7 @@ export default function TopNav({ tone = "light" }) {
           <Link
             to="/admin"
             className="text-xs font-semibold bg-neutral-100 border border-neutral-200 rounded-md px-1.5 py-1 text-neutral-700 flex gap-0.5 items-center justify-center"
+            aria-label="Admin dashboard"
           >
             <ShieldIcon className="size-3.5" />
             Admin

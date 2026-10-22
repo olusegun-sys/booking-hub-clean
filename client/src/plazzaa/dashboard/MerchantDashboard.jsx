@@ -238,10 +238,11 @@ export default function MerchantDashboard() {
 
   const logout = () => {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('business_token');
     localStorage.removeItem('currentBusiness');
     window.location.href = '/login';
   };
-
+  
   /* ------------------------------------------------------------- gatekeeping */
 
   if (!businessId || !token()) {

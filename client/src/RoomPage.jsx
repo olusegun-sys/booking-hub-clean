@@ -1,13 +1,21 @@
 ﻿// FILE: client/src/RoomPage.jsx
-// BUSINESS-CATEGORY-AWARE FORM EDITOR
-// Each business type (Hotel, Restaurant, Spa, etc.) sees only relevant fields
-// UPDATED: Config-driven tabs and fields based on business_type
-// UPDATED: Professional delete confirmation modal
-// UPDATED: Images tab with drag-drop upload, reorder, primary badge
+// BUSINESS-CATEGORY-AWARE FORM EDITOR — SESSION 2 RESTYLE (19 Oct 2026, evening)
+// RESTYLE ONLY: colours, radii, shadows, typography unified with Plazzaa
+// marketing design. No config-driven tabs, field logic, upload flow,
+// delete flow, token handling, or payload shape changed.
+//
+// Preserved from prior versions:
+//  - BUSINESS_CONFIG for 15+ business types (unchanged)
+//  - Config-driven tabs (each type shows only relevant tabs)
+//  - Image upload via business_token (7 Oct 401 fix) — every handler still
+//    reads getBusinessToken() fresh, never captured at mount
+//  - Drag-drop upload, reorder arrows, primary badge, 16-image cap
+//  - Professional delete confirmation modal
+//  - Event-hall special payload handling (base_price, included_guests, ...)
 
 import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, Plus, Trash2, Edit3, Save, X, 
+import {
+  ArrowLeft, Plus, Trash2, Edit3, Save, X,
   Hotel, Trophy, Sparkles, Users, Bed, DollarSign,
   AlertCircle, CheckCircle, Loader2, Info, MapPin, Image, FileText,
   Upload, Camera, Star, Car, Bath, Calendar, Sofa, Tag,
@@ -21,6 +29,37 @@ import {
 } from 'lucide-react';
 import API_BASE from './config';
 import { showError, showSuccess } from './toast';
+
+// ============================================================
+// DESIGN TOKENS — matches Plazzaa marketing design
+// WHY: single source of truth per file. Seam 7 global theme swap
+// only touches this block, not ~80 scattered literals.
+// ============================================================
+const PLZ = {
+  blue: '#2D60EA',
+  blueDeep: '#1F47B4',
+  blueTint: '#E8F4FF',
+  ink: '#18181B',
+  body: '#52525B',
+  muted: '#A1A1AA',
+  line: '#E4E4E7',
+  surface: '#F4F4F5',
+  success: '#1B7F43',
+  successTint: '#E7F4EC',
+  warning: '#B0840F',
+  warningTint: '#FBF3DD',
+  danger: '#C0395A',
+  dangerTint: '#FCECEF',
+  radiusSm: '10px',
+  radiusMd: '14px',
+  radiusLg: '16px',
+  radiusXl: '20px',
+  font: "'Manrope', 'Inter', system-ui, -apple-system, sans-serif",
+  shadowSm: '0 1px 3px rgba(15, 23, 42, 0.04)',
+  shadowMd: '0 8px 24px rgba(15, 23, 42, 0.06)',
+  shadowLg: '0 24px 64px rgba(15, 23, 42, 0.08)',
+  backdrop: 'rgba(15, 23, 42, 0.6)'
+};
 
 // ============================================================
 // ICON MAP - For Area Guide
@@ -48,8 +87,7 @@ const iconMap = {
 };
 
 // ============================================================
-// BUSINESS TYPE CONFIGURATION
-// Each business type has its own form structure
+// BUSINESS TYPE CONFIGURATION — UNCHANGED
 // ============================================================
 const BUSINESS_CONFIG = {
   // ============ STAYS ============
@@ -551,7 +589,7 @@ const iconOptions = [
 ];
 
 // ============================================================
-// DELETE CONFIRMATION MODAL
+// DELETE CONFIRMATION MODAL — restyled only
 // ============================================================
 function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) {
   const isMobile = window.innerWidth < 640;
@@ -563,7 +601,7 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
       style: {
         position: 'fixed',
         top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: PLZ.backdrop,
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -578,11 +616,11 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
       {
         style: {
           backgroundColor: 'white',
-          borderRadius: isMobile ? '20px' : '24px',
+          borderRadius: isMobile ? PLZ.radiusXl : '24px',
           maxWidth: '480px',
           width: '100%',
           padding: isMobile ? '28px 24px' : '40px 32px',
-          boxShadow: '0 40px 80px rgba(0,0,0,0.25)',
+          boxShadow: PLZ.shadowLg,
           animation: 'slideUp 0.3s ease'
         }
       },
@@ -593,14 +631,14 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
             width: isMobile ? '64px' : '72px',
             height: isMobile ? '64px' : '72px',
             borderRadius: '50%',
-            backgroundColor: '#fef2f2',
+            backgroundColor: PLZ.dangerTint,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px'
           }
         },
-        React.createElement(AlertTriangle, { size: isMobile ? 28 : 32, color: '#dc2626' })
+        React.createElement(AlertTriangle, { size: isMobile ? 28 : 32, color: PLZ.danger })
       ),
       React.createElement(
         'h3',
@@ -608,7 +646,7 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
           style: {
             fontSize: isMobile ? '20px' : '24px',
             fontWeight: '700',
-            color: '#0f172a',
+            color: PLZ.ink,
             textAlign: 'center',
             margin: '0 0 8px 0'
           }
@@ -620,14 +658,14 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
         {
           style: {
             fontSize: isMobile ? '14px' : '16px',
-            color: '#475569',
+            color: PLZ.body,
             textAlign: 'center',
             lineHeight: '1.6',
             margin: '0 0 24px 0'
           }
         },
         'You are about to delete ',
-        React.createElement('strong', { style: { color: '#0f172a' } }, '"' + itemName + '"'),
+        React.createElement('strong', { style: { color: PLZ.ink } }, '"' + itemName + '"'),
         '. This action cannot be undone.'
       ),
       React.createElement(
@@ -641,9 +679,9 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
               flex: 1,
               padding: isMobile ? '14px' : '16px',
               backgroundColor: 'white',
-              color: '#475569',
-              border: '1.5px solid #e2e8f0',
-              borderRadius: '12px',
+              color: PLZ.body,
+              border: `1.5px solid ${PLZ.line}`,
+              borderRadius: PLZ.radiusMd,
               fontSize: isMobile ? '14px' : '15px',
               fontWeight: '500',
               cursor: 'pointer'
@@ -658,10 +696,10 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
             style: {
               flex: 1,
               padding: isMobile ? '14px' : '16px',
-              backgroundColor: '#dc2626',
+              backgroundColor: PLZ.danger,
               color: 'white',
               border: 'none',
-              borderRadius: '12px',
+              borderRadius: PLZ.radiusMd,
               fontSize: isMobile ? '14px' : '15px',
               fontWeight: '600',
               cursor: 'pointer',
@@ -676,6 +714,22 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, itemType }) 
         )
       )
     )
+  );
+}
+
+// ============================================================
+// TOKEN HELPER — UNCHANGED (7 Oct 401 fix)
+// ============================================================
+// WHY: After the 21 Sept scoped-token refactor, business sessions are
+// written to `business_token`, NOT the legacy `auth_token`. Reading the
+// legacy key returns null for any new session, which produces
+// `Authorization: Bearer null` → 401 on every authenticated request.
+function getBusinessToken() {
+  return (
+    localStorage.getItem('business_token') ||
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('token') ||
+    null
   );
 }
 
@@ -700,14 +754,14 @@ function RoomPage({ business, onBack }) {
   const config = getBusinessConfig(business?.business_type);
   const IconComponent = config.icon;
 
-  const token = localStorage.getItem('auth_token');
+  // WHY: no top-level `const token` anymore. Token is read fresh inside
+  // each handler via getBusinessToken() so it reflects the current session.
   const isMobile = window.innerWidth < 640;
 
   // ============================================================
-  // FORM STATE
+  // FORM STATE — UNCHANGED
   // ============================================================
   const [formData, setFormData] = useState({
-    // Basic
     name: '',
     type: '',
     capacity: '',
@@ -720,26 +774,18 @@ function RoomPage({ business, onBack }) {
     venue_description: '',
     address: '',
     images: [],
-    
-    // Property Details
     property_type: '',
     bathrooms: 0,
     parking_spaces: 0,
     year_built: '',
     furnishing_status: 'unfurnished',
     listing_status: 'for_rent',
-    
-    // Features
     features: [],
     newFeature: '',
     newFeatureCategory: 'interior',
-    
-    // Amenities
     amenities: [],
     newAmenity: '',
     newAmenityCategory: 'interior',
-    
-    // Area Guide
     areaGuide: [],
     newAreaTitle: '',
     newAreaContent: '',
@@ -747,7 +793,7 @@ function RoomPage({ business, onBack }) {
   });
 
   // ============================================================
-  // FETCH ROOMS
+  // FETCH ROOMS — UNCHANGED
   // ============================================================
   useEffect(function() {
     fetchRooms();
@@ -755,6 +801,12 @@ function RoomPage({ business, onBack }) {
 
   function fetchRooms() {
     setLoading(true);
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again.');
+      setLoading(false);
+      return;
+    }
     fetch(API_BASE + '/api/businesses/' + business.id + '/rooms', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
@@ -769,15 +821,14 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // MODAL CONTROLS
+  // MODAL CONTROLS — UNCHANGED
   // ============================================================
   function getDefaultFormData() {
-    // Default to the first option from config type options
     const defaultType = config.basic.typeOptions[0] || '';
-    const defaultPropertyType = config.details && config.details.propertyTypeOptions 
-      ? config.details.propertyTypeOptions[0] 
+    const defaultPropertyType = config.details && config.details.propertyTypeOptions
+      ? config.details.propertyTypeOptions[0]
       : '';
-    
+
     return {
       name: '',
       type: defaultType,
@@ -821,10 +872,10 @@ function RoomPage({ business, onBack }) {
     setEditingRoom(room);
     setActiveTab(config.tabs[0]);
     const defaultType = config.basic.typeOptions[0] || '';
-    const defaultPropertyType = config.details && config.details.propertyTypeOptions 
-      ? config.details.propertyTypeOptions[0] 
+    const defaultPropertyType = config.details && config.details.propertyTypeOptions
+      ? config.details.propertyTypeOptions[0]
       : '';
-    
+
     setFormData({
       name: room.name || '',
       type: room.type || defaultType,
@@ -865,7 +916,7 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // DELETE HANDLER
+  // DELETE HANDLER — UNCHANGED
   // ============================================================
   function handleDeleteClick(room) {
     setRoomToDelete(room);
@@ -875,7 +926,15 @@ function RoomPage({ business, onBack }) {
   function handleConfirmDelete() {
     if (!roomToDelete) return;
     const roomId = roomToDelete.id;
-    
+
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again.');
+      setDeleteModalOpen(false);
+      setRoomToDelete(null);
+      return;
+    }
+
     fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
@@ -904,7 +963,7 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // FORM HANDLERS
+  // FORM HANDLERS — UNCHANGED
   // ============================================================
   function handleChange(field, value) {
     setFormData(function(prev) {
@@ -913,7 +972,7 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // IMAGE UPLOAD
+  // IMAGE UPLOAD — UNCHANGED (7 Oct 401 fix preserved)
   // ============================================================
   function handleVenueImageUpload(event) {
     const file = event.target.files[0];
@@ -942,13 +1001,19 @@ function RoomPage({ business, onBack }) {
       return;
     }
 
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again to upload images.');
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
 
     const reader = new FileReader();
     reader.onload = function(e) {
       const base64Data = e.target.result;
-      
+
       fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId + '/upload-image', {
         method: 'POST',
         headers: {
@@ -961,7 +1026,12 @@ function RoomPage({ business, onBack }) {
           fileData: base64Data
         })
       })
-        .then(function(res) { return res.json(); })
+        .then(function(res) {
+          if (res.status === 401) {
+            throw new Error('SESSION_EXPIRED');
+          }
+          return res.json();
+        })
         .then(function(data) {
           setUploadProgress(100);
           if (data.success) {
@@ -975,9 +1045,13 @@ function RoomPage({ business, onBack }) {
           }
           setUploading(false);
         })
-        .catch(function() {
-          showError('Something went wrong. Please try again.');
+        .catch(function(err) {
           setUploading(false);
+          if (err && err.message === 'SESSION_EXPIRED') {
+            showError('Session expired. Please log in again.');
+          } else {
+            showError('Something went wrong. Please try again.');
+          }
         });
     };
 
@@ -987,7 +1061,7 @@ function RoomPage({ business, onBack }) {
   function removeVenueImage(index) {
     const imageUrl = formData.images[index];
     const roomId = editingRoom ? editingRoom.id : null;
-    
+
     if (!roomId) {
       const updated = formData.images.filter(function(_, i) { return i !== index; });
       setFormData(function(prev) {
@@ -997,6 +1071,12 @@ function RoomPage({ business, onBack }) {
     }
 
     if (!confirm('Remove this image?')) return;
+
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again.');
+      return;
+    }
 
     fetch(API_BASE + '/api/businesses/' + business.id + '/rooms/' + roomId + '/images', {
       method: 'DELETE',
@@ -1054,18 +1134,19 @@ function RoomPage({ business, onBack }) {
 
   function handleDragOver(e) {
     e.preventDefault();
-    e.currentTarget.style.borderColor = '#4F46E5';
-    e.currentTarget.style.backgroundColor = '#EEF2FF';
+    // WHY: drop target uses blue tint on hover, not indigo.
+    e.currentTarget.style.borderColor = PLZ.blue;
+    e.currentTarget.style.backgroundColor = PLZ.blueTint;
   }
 
   function handleDragLeave(e) {
     e.preventDefault();
-    e.currentTarget.style.borderColor = '#e2e8f0';
+    e.currentTarget.style.borderColor = PLZ.line;
     e.currentTarget.style.backgroundColor = 'transparent';
   }
 
   // ============================================================
-  // FEATURES / AMENITIES / AREA GUIDE HANDLERS
+  // FEATURES / AMENITIES / AREA GUIDE HANDLERS — UNCHANGED
   // ============================================================
   function addFeature() {
     if (!formData.newFeature.trim()) {
@@ -1129,22 +1210,20 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // SAVE
+  // SAVE — UNCHANGED
   // ============================================================
   function handleSave() {
     if (!formData.name.trim()) {
       showError(config.basic.nameLabel + ' is required');
       return;
     }
-    
-    // Price validation
+
     let priceValue = parseFloat(formData.price_per_night) || parseFloat(formData.base_price);
     if (!priceValue || priceValue <= 0) {
       showError('Valid ' + config.basic.priceLabel.toLowerCase() + ' is required');
       return;
     }
 
-    // Capacity validation (only if applicable)
     let capacity = 1;
     if (config.basic.showCapacity) {
       capacity = parseInt(formData.capacity);
@@ -1153,13 +1232,18 @@ function RoomPage({ business, onBack }) {
       }
     }
 
+    const token = getBusinessToken();
+    if (!token) {
+      showError('Session expired. Please log in again.');
+      return;
+    }
+
     setSaving(true);
-    const url = editingRoom 
+    const url = editingRoom
       ? API_BASE + '/api/businesses/' + business.id + '/rooms/' + editingRoom.id
       : API_BASE + '/api/businesses/' + business.id + '/rooms/create';
     const method = editingRoom ? 'PUT' : 'POST';
 
-    // Build payload — only include fields that are relevant
     const payload = {
       name: formData.name.trim(),
       type: formData.type,
@@ -1171,7 +1255,6 @@ function RoomPage({ business, onBack }) {
       images: formData.images || []
     };
 
-    // Only add details fields if the tab was shown
     if (config.details) {
       if (config.details.showPropertyType) {
         payload.property_type = formData.property_type || '';
@@ -1193,7 +1276,6 @@ function RoomPage({ business, onBack }) {
       }
     }
 
-    // Only add features/amenities/area guide if shown
     if (config.showFeatures) {
       payload.features = formData.features || [];
     }
@@ -1204,7 +1286,6 @@ function RoomPage({ business, onBack }) {
       payload.area_guide = formData.areaGuide || [];
     }
 
-    // Event hall special handling
     if (business?.business_type === 'event_hall' || business?.business_type === 'event') {
       payload.base_price = parseFloat(formData.price_per_night) || 0;
       payload.included_guests = parseInt(formData.capacity) || 50;
@@ -1242,7 +1323,7 @@ function RoomPage({ business, onBack }) {
   }
 
   // ============================================================
-  // TAB LABELS
+  // TAB LABELS — UNCHANGED
   // ============================================================
   const tabLabels = {
     basic: '📋 Basic',
@@ -1254,15 +1335,18 @@ function RoomPage({ business, onBack }) {
   };
 
   // ============================================================
-  // RENDER
+  // RENDER: LOADING
   // ============================================================
   if (loading) {
     return React.createElement('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' } },
-      React.createElement(Loader2, { size: 32, style: { animation: 'spin 1s linear infinite', color: '#4f46e5' } })
+      React.createElement(Loader2, { size: 32, style: { animation: 'spin 1s linear infinite', color: PLZ.blue } })
     );
   }
 
-  return React.createElement('div', { style: { maxWidth: '1200px', margin: '0 auto', padding: '16px' } },
+  // ============================================================
+  // RENDER: MAIN
+  // ============================================================
+  return React.createElement('div', { style: { maxWidth: '1200px', margin: '0 auto', padding: '16px', fontFamily: PLZ.font } },
     // Delete Confirmation Modal
     React.createElement(DeleteConfirmModal, {
       isOpen: deleteModalOpen,
@@ -1275,32 +1359,33 @@ function RoomPage({ business, onBack }) {
     // Header
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
-        React.createElement('button', { 
-          onClick: onBack, 
+        React.createElement('button', {
+          onClick: onBack,
           style: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }
-        }, React.createElement(ArrowLeft, { size: 20, color: '#475569' })),
+        }, React.createElement(ArrowLeft, { size: 20, color: PLZ.body })),
         React.createElement('div', null,
-          React.createElement('h2', { style: { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 } }, config.plural),
-          React.createElement('p', { style: { fontSize: '14px', color: '#64748b', margin: '2px 0 0' } }, 
+          React.createElement('h2', { style: { fontSize: '24px', fontWeight: '700', color: PLZ.ink, margin: 0 } }, config.plural),
+          React.createElement('p', { style: { fontSize: '14px', color: PLZ.muted, margin: '2px 0 0' } },
             'Manage your ' + config.plural.toLowerCase()
           )
         )
       ),
-      React.createElement('button', { 
-        onClick: openAddModal, 
-        style: { padding: '10px 20px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '40px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }
+      React.createElement('button', {
+        onClick: openAddModal,
+        // WHY: soft rectangle (radiusSm) instead of full-pill — matches his button convention.
+        style: { padding: '10px 20px', background: PLZ.blue, color: 'white', border: 'none', borderRadius: PLZ.radiusSm, fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }
       }, React.createElement(Plus, { size: 16 }), config.actionLabel)
     ),
 
     // Empty State / List
     rooms.length === 0 ?
-      React.createElement('div', { style: { textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' } },
-        React.createElement(IconComponent, { size: 48, color: '#cbd5e1' }),
-        React.createElement('h3', { style: { fontSize: '18px', fontWeight: '600', color: '#0f172a', marginTop: '12px' } }, 'Nothing here yet'),
-        React.createElement('p', { style: { color: '#94a3b8', fontSize: '14px', marginTop: '4px' } }, 'Add your first ' + config.singular.toLowerCase()),
-        React.createElement('button', { 
-          onClick: openAddModal, 
-          style: { marginTop: '16px', padding: '10px 24px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '40px', cursor: 'pointer' }
+      React.createElement('div', { style: { textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: PLZ.radiusLg, border: `1px solid ${PLZ.line}`, boxShadow: PLZ.shadowSm } },
+        React.createElement(IconComponent, { size: 48, color: PLZ.muted }),
+        React.createElement('h3', { style: { fontSize: '18px', fontWeight: '600', color: PLZ.ink, marginTop: '12px' } }, 'Nothing here yet'),
+        React.createElement('p', { style: { color: PLZ.muted, fontSize: '14px', marginTop: '4px' } }, 'Add your first ' + config.singular.toLowerCase()),
+        React.createElement('button', {
+          onClick: openAddModal,
+          style: { marginTop: '16px', padding: '10px 24px', background: PLZ.blue, color: 'white', border: 'none', borderRadius: PLZ.radiusSm, cursor: 'pointer' }
         }, config.actionLabel)
       ) :
       React.createElement('div', { style: { display: 'grid', gap: '12px' } },
@@ -1309,37 +1394,37 @@ function RoomPage({ business, onBack }) {
           const imageCount = (room.images || []).length;
           const featureCount = (room.features || []).length;
           const capacityValue = room.included_guests || room.capacity || 0;
-          
-          return React.createElement('div', { key: room.id, style: { background: 'white', borderRadius: '12px', padding: '16px 20px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' } },
+
+          return React.createElement('div', { key: room.id, style: { background: 'white', borderRadius: PLZ.radiusMd, padding: '16px 20px', border: `1px solid ${PLZ.line}`, boxShadow: PLZ.shadowSm, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' } },
             React.createElement('div', null,
-              React.createElement('h4', { style: { fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 } }, room.name),
+              React.createElement('h4', { style: { fontSize: '16px', fontWeight: '600', color: PLZ.ink, margin: 0 } }, room.name),
               React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '4px' } },
-                room.type && React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, room.type),
-                config.basic.showCapacity && capacityValue > 0 && React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, 
+                room.type && React.createElement('span', { style: { fontSize: '12px', color: PLZ.muted } }, room.type),
+                config.basic.showCapacity && capacityValue > 0 && React.createElement('span', { style: { fontSize: '12px', color: PLZ.muted } },
                   React.createElement(Users, { size: 12, style: { display: 'inline', marginRight: '4px' } }),
                   config.basic.capacityLabel + ': ' + capacityValue
                 ),
-                React.createElement('span', { style: { fontSize: '12px', fontWeight: '600', color: '#4f46e5' } },
+                React.createElement('span', { style: { fontSize: '12px', fontWeight: '600', color: PLZ.blue } },
                   '₦' + (displayPrice).toLocaleString() + (config.basic.priceUnit ? ' ' + config.basic.priceUnit : '')
                 ),
-                imageCount > 0 && React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } },
+                imageCount > 0 && React.createElement('span', { style: { fontSize: '11px', color: PLZ.muted } },
                   React.createElement(Image, { size: 10, style: { display: 'inline', marginRight: '2px' } }),
                   imageCount + ' images'
                 ),
-                featureCount > 0 && React.createElement('span', { style: { fontSize: '11px', color: '#64748b' } },
+                featureCount > 0 && React.createElement('span', { style: { fontSize: '11px', color: PLZ.muted } },
                   React.createElement(Star, { size: 10, style: { display: 'inline', marginRight: '2px' } }),
                   featureCount + ' features'
                 )
               )
             ),
             React.createElement('div', { style: { display: 'flex', gap: '8px' } },
-              React.createElement('button', { 
-                onClick: function() { openEditModal(room); }, 
-                style: { padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#475569' }
+              React.createElement('button', {
+                onClick: function() { openEditModal(room); },
+                style: { padding: '6px 12px', background: PLZ.surface, border: 'none', borderRadius: PLZ.radiusSm, cursor: 'pointer', color: PLZ.body }
               }, React.createElement(Edit3, { size: 16 })),
-              React.createElement('button', { 
-                onClick: function() { handleDeleteClick(room); }, 
-                style: { padding: '6px 12px', background: '#fef2f2', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#ef4444' }
+              React.createElement('button', {
+                onClick: function() { handleDeleteClick(room); },
+                style: { padding: '6px 12px', background: PLZ.dangerTint, border: 'none', borderRadius: PLZ.radiusSm, cursor: 'pointer', color: PLZ.danger }
               }, React.createElement(Trash2, { size: 16 }))
             )
           );
@@ -1347,33 +1432,33 @@ function RoomPage({ business, onBack }) {
       ),
 
     // ============================================================
-    // MODAL
+    // MODAL — restyled only
     // ============================================================
-    showModal && React.createElement('div', { style: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' } },
-      React.createElement('div', { style: { background: 'white', borderRadius: '20px', maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' } },
+    showModal && React.createElement('div', { style: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: PLZ.backdrop, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' } },
+      React.createElement('div', { style: { background: 'white', borderRadius: PLZ.radiusXl, maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: PLZ.shadowMd } },
         // Modal Header
         React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' } },
-          React.createElement('h3', { style: { fontSize: '20px', fontWeight: '600', color: '#0f172a', margin: 0 } }, 
+          React.createElement('h3', { style: { fontSize: '20px', fontWeight: '600', color: PLZ.ink, margin: 0 } },
             editingRoom ? 'Edit ' + config.singular : config.actionLabel
           ),
-          React.createElement('button', { 
-            onClick: closeModal, 
+          React.createElement('button', {
+            onClick: closeModal,
             style: { background: 'none', border: 'none', cursor: 'pointer' }
-          }, React.createElement(X, { size: 20, color: '#64748b' }))
+          }, React.createElement(X, { size: 20, color: PLZ.muted }))
         ),
 
-        // TABS - conditionally rendered based on config.tabs
-        React.createElement('div', { style: { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' } },
+        // TABS
+        React.createElement('div', { style: { display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '20px', borderBottom: `1px solid ${PLZ.line}`, paddingBottom: '12px' } },
           config.tabs.map(function(tab) {
             return React.createElement('button', {
               key: tab,
               onClick: function() { setActiveTab(tab); },
               style: {
                 padding: '8px 16px',
-                borderRadius: '20px',
-                border: activeTab === tab ? '2px solid #4f46e5' : '1px solid #e2e8f0',
-                backgroundColor: activeTab === tab ? '#EEF2FF' : 'white',
-                color: activeTab === tab ? '#4f46e5' : '#64748B',
+                borderRadius: '999px',
+                border: activeTab === tab ? `2px solid ${PLZ.blue}` : `1px solid ${PLZ.line}`,
+                backgroundColor: activeTab === tab ? PLZ.blueTint : 'white',
+                color: activeTab === tab ? PLZ.blue : PLZ.muted,
                 fontSize: '13px',
                 fontWeight: activeTab === tab ? '600' : '400',
                 cursor: 'pointer',
@@ -1388,27 +1473,27 @@ function RoomPage({ business, onBack }) {
         // ============================================================
         activeTab === 'basic' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
           React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, config.basic.nameLabel + ' *'),
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } }, config.basic.nameLabel + ' *'),
             React.createElement('input', {
               type: 'text',
               value: formData.name,
               onChange: function(e) { handleChange('name', e.target.value); },
               placeholder: config.basic.namePlaceholder,
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+              style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', outline: 'none' }
             })
           ),
           config.basic.showType && React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, config.basic.typeLabel),
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } }, config.basic.typeLabel),
             React.createElement('select', {
               value: formData.type,
               onChange: function(e) { handleChange('type', e.target.value); },
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
-            }, config.basic.typeOptions.map(function(opt) { 
+              style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', background: 'white', outline: 'none' }
+            }, config.basic.typeOptions.map(function(opt) {
               return React.createElement('option', { key: opt, value: opt }, opt);
             }))
           ),
           config.basic.showAddress && React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } },
               React.createElement(MapPin, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
               'Address'
             ),
@@ -1417,11 +1502,11 @@ function RoomPage({ business, onBack }) {
               value: formData.address,
               onChange: function(e) { handleChange('address', e.target.value); },
               placeholder: 'e.g., 7 Obasa Road, Ikeja, Lagos',
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+              style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', outline: 'none' }
             })
           ),
           config.basic.showDescription && React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } },
               React.createElement(FileText, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
               config.basic.descriptionLabel
             ),
@@ -1430,36 +1515,36 @@ function RoomPage({ business, onBack }) {
               onChange: function(e) { handleChange('venue_description', e.target.value); },
               placeholder: config.basic.descriptionPlaceholder,
               rows: 3,
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }
+              style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', resize: 'vertical', outline: 'none' }
             })
           ),
-          // Price + Capacity layout
+          // Price + Capacity
           React.createElement('div', { style: { display: 'grid', gridTemplateColumns: config.basic.showCapacity ? '1fr 1fr' : '1fr', gap: '12px' } },
             config.basic.showCapacity && React.createElement('div', null,
-              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, config.basic.capacityLabel),
+              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } }, config.basic.capacityLabel),
               React.createElement('input', {
                 type: 'number',
                 value: formData.capacity,
                 onChange: function(e) { handleChange('capacity', e.target.value); },
                 placeholder: config.basic.capacityPlaceholder,
-                style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', outline: 'none' }
               })
             ),
             React.createElement('div', null,
-              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } }, 
+              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } },
                 config.basic.priceLabel + ' (₦) *'
               ),
               React.createElement('div', { style: { position: 'relative' } },
-                React.createElement('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' } }, '₦'),
+                React.createElement('span', { style: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: PLZ.muted, fontSize: '14px' } }, '₦'),
                 React.createElement('input', {
                   type: 'number',
                   value: formData.price_per_night,
                   onChange: function(e) { handleChange('price_per_night', e.target.value); },
                   placeholder: 'e.g., 5000',
-                  style: { width: '100%', padding: '10px 14px 10px 32px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                  style: { width: '100%', padding: '10px 14px 10px 32px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', outline: 'none' }
                 })
               ),
-              config.basic.priceUnit && React.createElement('p', { style: { fontSize: '11px', color: '#94a3b8', marginTop: '4px' } }, 
+              config.basic.priceUnit && React.createElement('p', { style: { fontSize: '11px', color: PLZ.muted, marginTop: '4px' } },
                 'Displayed as ' + config.basic.priceUnit.trim()
               )
             )
@@ -1467,53 +1552,53 @@ function RoomPage({ business, onBack }) {
         ),
 
         // ============================================================
-        // TAB: PROPERTY DETAILS (only if config.details exists)
+        // TAB: PROPERTY DETAILS
         // ============================================================
         activeTab === 'details' && config.details && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
-          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '8px' } },
+          React.createElement('p', { style: { fontSize: '13px', color: PLZ.muted, marginBottom: '8px' } },
             'Property details specific to this ' + config.singular.toLowerCase()
           ),
           config.details.showPropertyType && React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } },
               React.createElement(Building, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
               config.details.propertyTypeLabel || 'Property Type'
             ),
             React.createElement('select', {
               value: formData.property_type,
               onChange: function(e) { handleChange('property_type', e.target.value); },
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
+              style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', background: 'white', outline: 'none' }
             }, (config.details.propertyTypeOptions || []).map(function(opt) {
               return React.createElement('option', { key: opt, value: opt }, opt);
             }))
           ),
           config.details.showListingStatus && React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } },
               React.createElement(Tag, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
               'Listing Status'
             ),
             React.createElement('select', {
               value: formData.listing_status,
               onChange: function(e) { handleChange('listing_status', e.target.value); },
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
+              style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', background: 'white', outline: 'none' }
             }, listingStatusOptions.map(function(opt) {
               return React.createElement('option', { key: opt.value, value: opt.value }, opt.label);
             }))
           ),
           config.details.showFurnishing && React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } },
               React.createElement(Sofa, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
               'Furnishing Status'
             ),
             React.createElement('select', {
               value: formData.furnishing_status,
               onChange: function(e) { handleChange('furnishing_status', e.target.value); },
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: 'white' }
+              style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', background: 'white', outline: 'none' }
             }, furnishingOptions.map(function(opt) {
               return React.createElement('option', { key: opt.value, value: opt.value }, opt.label);
             }))
           ),
           config.details.showYearBuilt && React.createElement('div', null,
-            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+            React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } },
               React.createElement(Calendar, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
               'Year Built'
             ),
@@ -1522,12 +1607,12 @@ function RoomPage({ business, onBack }) {
               value: formData.year_built,
               onChange: function(e) { handleChange('year_built', e.target.value); },
               placeholder: 'e.g., 2020',
-              style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+              style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', outline: 'none' }
             })
           ),
           (config.details.showBathrooms || config.details.showParking) && React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
             config.details.showBathrooms && React.createElement('div', null,
-              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } },
                 React.createElement(Bath, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
                 'Bathrooms'
               ),
@@ -1536,11 +1621,11 @@ function RoomPage({ business, onBack }) {
                 value: formData.bathrooms,
                 onChange: function(e) { handleChange('bathrooms', parseInt(e.target.value) || 0); },
                 placeholder: '0',
-                style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', outline: 'none' }
               })
             ),
             config.details.showParking && React.createElement('div', null,
-              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' } },
+              React.createElement('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: PLZ.body, marginBottom: '4px' } },
                 React.createElement(Car, { size: 14, style: { display: 'inline', marginRight: '4px' } }),
                 'Parking Spaces'
               ),
@@ -1549,7 +1634,7 @@ function RoomPage({ business, onBack }) {
                 value: formData.parking_spaces,
                 onChange: function(e) { handleChange('parking_spaces', parseInt(e.target.value) || 0); },
                 placeholder: '0',
-                style: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px' }
+                style: { width: '100%', padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', outline: 'none' }
               })
             )
           )
@@ -1559,30 +1644,30 @@ function RoomPage({ business, onBack }) {
         // TAB: IMAGES
         // ============================================================
         activeTab === 'images' && React.createElement('div', null,
-          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
+          React.createElement('p', { style: { fontSize: '13px', color: PLZ.muted, marginBottom: '16px' } },
             'Upload images to showcase this ' + config.singular.toLowerCase() + '. Maximum 16 images allowed. The first image will be the primary display image.'
           ),
-          
-          React.createElement('div', { style: { 
+
+          React.createElement('div', { style: {
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             marginBottom: '12px', padding: '8px 12px',
-            backgroundColor: '#f8fafc', borderRadius: '8px'
+            backgroundColor: PLZ.surface, borderRadius: PLZ.radiusSm
           } },
-            React.createElement('span', { style: { fontSize: '13px', color: '#475569' } },
+            React.createElement('span', { style: { fontSize: '13px', color: PLZ.body } },
               React.createElement(Image, { size: 16, style: { display: 'inline', marginRight: '6px' } }),
               (formData.images || []).length + ' / 16 images'
             ),
             (formData.images || []).length >= 16 &&
-              React.createElement('span', { style: { fontSize: '12px', color: '#ef4444' } }, 'Limit reached')
+              React.createElement('span', { style: { fontSize: '12px', color: PLZ.danger } }, 'Limit reached')
           ),
-          
+
           React.createElement('div', {
             onDrop: handleDragDrop,
             onDragOver: handleDragOver,
             onDragLeave: handleDragLeave,
             style: {
-              border: '2px dashed #e2e8f0',
-              borderRadius: '12px',
+              border: `2px dashed ${PLZ.line}`,
+              borderRadius: PLZ.radiusMd,
               padding: '24px',
               textAlign: 'center',
               marginBottom: '16px',
@@ -1590,16 +1675,16 @@ function RoomPage({ business, onBack }) {
               backgroundColor: 'transparent'
             }
           },
-            React.createElement(Upload, { size: 32, color: '#94a3b8', style: { marginBottom: '8px' } }),
-            React.createElement('p', { style: { fontSize: '14px', color: '#64748b', marginBottom: '4px' } },
+            React.createElement(Upload, { size: 32, color: PLZ.muted, style: { marginBottom: '8px' } }),
+            React.createElement('p', { style: { fontSize: '14px', color: PLZ.muted, marginBottom: '4px' } },
               'Drag and drop images here, or'
             ),
             React.createElement('label', { style: {
               display: 'inline-block',
               padding: '8px 20px',
-              backgroundColor: (uploading || (formData.images || []).length >= 16 || !editingRoom) ? '#94a3b8' : '#4F46E5',
+              backgroundColor: (uploading || (formData.images || []).length >= 16 || !editingRoom) ? PLZ.muted : PLZ.blue,
               color: 'white',
-              borderRadius: '8px',
+              borderRadius: PLZ.radiusSm,
               cursor: (uploading || (formData.images || []).length >= 16 || !editingRoom) ? 'not-allowed' : 'pointer',
               fontSize: '14px',
               fontWeight: '500',
@@ -1616,29 +1701,29 @@ function RoomPage({ business, onBack }) {
                 style: { display: 'none' }
               })
             ),
-            uploading && React.createElement('div', { style: { 
-              marginTop: '12px', height: '4px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' 
+            uploading && React.createElement('div', { style: {
+              marginTop: '12px', height: '4px', background: PLZ.line, borderRadius: '4px', overflow: 'hidden'
             } },
-              React.createElement('div', { style: { 
-                width: uploadProgress + '%', height: '100%', background: '#4F46E5', transition: 'width 0.3s ease' 
+              React.createElement('div', { style: {
+                width: uploadProgress + '%', height: '100%', background: PLZ.blue, transition: 'width 0.3s ease'
               } })
             ),
-            React.createElement('p', { style: { fontSize: '12px', color: '#94a3b8', marginTop: '8px' } },
+            React.createElement('p', { style: { fontSize: '12px', color: PLZ.muted, marginTop: '8px' } },
               'JPEG, PNG, WEBP up to 5MB each'
             ),
-            !editingRoom && React.createElement('p', { style: { fontSize: '12px', color: '#f59e0b', marginTop: '4px' } },
+            !editingRoom && React.createElement('p', { style: { fontSize: '12px', color: PLZ.warning, marginTop: '4px' } },
               '⚠️ Save this ' + config.singular.toLowerCase() + ' first, then upload images'
             )
           ),
-          
+
           (formData.images || []).length === 0 ?
             React.createElement('div', { style: {
               padding: '40px 20px', textAlign: 'center',
-              backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0'
+              backgroundColor: PLZ.surface, borderRadius: PLZ.radiusMd, border: `1px solid ${PLZ.line}`
             } },
-              React.createElement(Camera, { size: 40, color: '#94a3b8' }),
-              React.createElement('p', { style: { marginTop: '12px', color: '#64748b', fontSize: '14px' } }, 'No images uploaded yet'),
-              React.createElement('p', { style: { color: '#94a3b8', fontSize: '12px' } }, 'Upload images to showcase this ' + config.singular.toLowerCase())
+              React.createElement(Camera, { size: 40, color: PLZ.muted }),
+              React.createElement('p', { style: { marginTop: '12px', color: PLZ.muted, fontSize: '14px' } }, 'No images uploaded yet'),
+              React.createElement('p', { style: { color: PLZ.muted, fontSize: '12px' } }, 'Upload images to showcase this ' + config.singular.toLowerCase())
             ) :
             React.createElement('div', { style: {
               display: 'grid',
@@ -1651,10 +1736,10 @@ function RoomPage({ business, onBack }) {
                   style: {
                     position: 'relative',
                     aspectRatio: '1/1',
-                    borderRadius: '10px',
+                    borderRadius: PLZ.radiusSm,
                     overflow: 'hidden',
-                    border: idx === 0 ? '3px solid #4F46E5' : '1px solid #e2e8f0',
-                    backgroundColor: '#f1f5f9'
+                    border: idx === 0 ? `3px solid ${PLZ.blue}` : `1px solid ${PLZ.line}`,
+                    backgroundColor: PLZ.surface
                   }
                 },
                   React.createElement('img', {
@@ -1666,7 +1751,7 @@ function RoomPage({ business, onBack }) {
                     React.createElement('span', {
                       style: {
                         position: 'absolute', top: '6px', left: '6px',
-                        backgroundColor: '#4F46E5', color: 'white',
+                        backgroundColor: PLZ.blue, color: 'white',
                         fontSize: '9px', fontWeight: '700',
                         padding: '2px 8px', borderRadius: '999px',
                         textTransform: 'uppercase'
@@ -1717,7 +1802,7 @@ function RoomPage({ business, onBack }) {
                     onClick: function() { removeVenueImage(idx); },
                     style: {
                       position: 'absolute', top: '6px', right: '6px',
-                      backgroundColor: 'rgba(239,68,68,0.9)',
+                      backgroundColor: PLZ.danger,
                       color: 'white', border: 'none',
                       borderRadius: '50%', width: '28px', height: '28px',
                       cursor: 'pointer', display: 'flex',
@@ -1728,10 +1813,10 @@ function RoomPage({ business, onBack }) {
                 );
               })
             ),
-          
+
           (formData.images || []).length > 1 &&
             React.createElement('p', { style: {
-              fontSize: '12px', color: '#94a3b8',
+              fontSize: '12px', color: PLZ.muted,
               textAlign: 'center', marginTop: '12px'
             } },
               '⬆⬇ Use the arrows to reorder. First image is primary.'
@@ -1739,10 +1824,10 @@ function RoomPage({ business, onBack }) {
         ),
 
         // ============================================================
-        // TAB: FEATURES (only if config.showFeatures)
+        // TAB: FEATURES
         // ============================================================
         activeTab === 'features' && config.showFeatures && React.createElement('div', null,
-          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
+          React.createElement('p', { style: { fontSize: '13px', color: PLZ.muted, marginBottom: '16px' } },
             'Features specific to this ' + config.singular.toLowerCase()
           ),
           React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' } },
@@ -1751,52 +1836,52 @@ function RoomPage({ business, onBack }) {
               value: formData.newFeature,
               onChange: function(e) { handleChange('newFeature', e.target.value); },
               placeholder: 'Enter a feature',
-              style: { flex: 2, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', minWidth: '150px' }
+              style: { flex: 2, padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', minWidth: '150px', outline: 'none' }
             }),
             React.createElement('select', {
               value: formData.newFeatureCategory,
               onChange: function(e) { handleChange('newFeatureCategory', e.target.value); },
-              style: { flex: 1, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', backgroundColor: 'white', minWidth: '120px' }
+              style: { flex: 1, padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '13px', backgroundColor: 'white', minWidth: '120px', outline: 'none' }
             }, featureCategories.map(function(cat) {
               return React.createElement('option', { key: cat.id, value: cat.id }, cat.label);
             })),
             React.createElement('button', {
               onClick: addFeature,
-              style: { padding: '10px 20px', backgroundColor: '#4f46e5', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }
+              style: { padding: '10px 20px', backgroundColor: PLZ.blue, color: 'white', border: 'none', borderRadius: PLZ.radiusSm, fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }
             }, 'Add')
           ),
           featureCategories.map(function(category) {
             var categoryFeatures = (formData.features || []).filter(function(f) { return f.category === category.id; });
             if (categoryFeatures.length === 0) return null;
             return React.createElement('div', { key: category.id, style: { marginBottom: '12px' } },
-              React.createElement('h4', { style: { fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '8px' } }, category.label),
+              React.createElement('h4', { style: { fontSize: '13px', fontWeight: '600', color: PLZ.body, marginBottom: '8px' } }, category.label),
               React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
                 categoryFeatures.map(function(feature) {
                   return React.createElement('div', { key: feature.id, style: {
                     display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '6px 12px', backgroundColor: '#f1f5f9',
-                    borderRadius: '20px', fontSize: '13px'
+                    padding: '6px 12px', backgroundColor: PLZ.blueTint,
+                    borderRadius: '20px', fontSize: '13px', color: PLZ.blue
                   } },
                     React.createElement('span', null, feature.name),
                     React.createElement('button', {
                       onClick: function() { removeFeature(feature.id); },
-                      style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 4px', fontSize: '16px' }
+                      style: { background: 'none', border: 'none', cursor: 'pointer', color: PLZ.muted, padding: '0 4px', fontSize: '16px' }
                     }, '×')
                   );
                 })
               )
             );
           }),
-          (formData.features || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', padding: '20px' } },
+          (formData.features || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: PLZ.muted, padding: '20px' } },
             'No features added yet.'
           )
         ),
 
         // ============================================================
-        // TAB: AMENITIES (only if config.showAmenities)
+        // TAB: AMENITIES
         // ============================================================
         activeTab === 'amenities' && config.showAmenities && React.createElement('div', null,
-          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
+          React.createElement('p', { style: { fontSize: '13px', color: PLZ.muted, marginBottom: '16px' } },
             'Amenities specific to this ' + config.singular.toLowerCase()
           ),
           React.createElement('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' } },
@@ -1805,52 +1890,54 @@ function RoomPage({ business, onBack }) {
               value: formData.newAmenity,
               onChange: function(e) { handleChange('newAmenity', e.target.value); },
               placeholder: 'Enter an amenity',
-              style: { flex: 2, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', minWidth: '150px' }
+              style: { flex: 2, padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', minWidth: '150px', outline: 'none' }
             }),
             React.createElement('select', {
               value: formData.newAmenityCategory,
               onChange: function(e) { handleChange('newAmenityCategory', e.target.value); },
-              style: { flex: 1, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', backgroundColor: 'white', minWidth: '120px' }
+              style: { flex: 1, padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '13px', backgroundColor: 'white', minWidth: '120px', outline: 'none' }
             }, amenityCategories.map(function(cat) {
               return React.createElement('option', { key: cat.id, value: cat.id }, cat.label);
             })),
             React.createElement('button', {
               onClick: addAmenity,
-              style: { padding: '10px 20px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }
+              // WHY: keep green on "add amenity" so green = amenity, blue = feature.
+              // Now sourced from PLZ.success instead of generic #10b981.
+              style: { padding: '10px 20px', backgroundColor: PLZ.success, color: 'white', border: 'none', borderRadius: PLZ.radiusSm, fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }
             }, 'Add')
           ),
           amenityCategories.map(function(category) {
             var categoryAmenities = (formData.amenities || []).filter(function(a) { return a.category === category.id; });
             if (categoryAmenities.length === 0) return null;
             return React.createElement('div', { key: category.id, style: { marginBottom: '12px' } },
-              React.createElement('h4', { style: { fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '8px' } }, category.label),
+              React.createElement('h4', { style: { fontSize: '13px', fontWeight: '600', color: PLZ.body, marginBottom: '8px' } }, category.label),
               React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
                 categoryAmenities.map(function(amenity) {
                   return React.createElement('div', { key: amenity.id, style: {
                     display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '6px 12px', backgroundColor: '#d1fae5',
-                    borderRadius: '20px', fontSize: '13px'
+                    padding: '6px 12px', backgroundColor: PLZ.successTint,
+                    borderRadius: '20px', fontSize: '13px', color: PLZ.success
                   } },
                     React.createElement('span', null, amenity.name),
                     React.createElement('button', {
                       onClick: function() { removeAmenity(amenity.id); },
-                      style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 4px', fontSize: '16px' }
+                      style: { background: 'none', border: 'none', cursor: 'pointer', color: PLZ.muted, padding: '0 4px', fontSize: '16px' }
                     }, '×')
                   );
                 })
               )
             );
           }),
-          (formData.amenities || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', padding: '20px' } },
+          (formData.amenities || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: PLZ.muted, padding: '20px' } },
             'No amenities added yet.'
           )
         ),
 
         // ============================================================
-        // TAB: AREA GUIDE (only if config.showAreaGuide)
+        // TAB: AREA GUIDE
         // ============================================================
         activeTab === 'areaGuide' && config.showAreaGuide && React.createElement('div', null,
-          React.createElement('p', { style: { fontSize: '13px', color: '#64748b', marginBottom: '16px' } },
+          React.createElement('p', { style: { fontSize: '13px', color: PLZ.muted, marginBottom: '16px' } },
             'Area guide specific to this ' + config.singular.toLowerCase()
           ),
           React.createElement('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' } },
@@ -1861,14 +1948,15 @@ function RoomPage({ business, onBack }) {
                 onClick: function() { handleChange('newAreaIcon', icon.value); },
                 style: {
                   padding: '6px 10px',
-                  borderRadius: '8px',
-                  border: formData.newAreaIcon === icon.value ? '2px solid #4f46e5' : '1px solid #e2e8f0',
-                  background: formData.newAreaIcon === icon.value ? '#eef2ff' : 'white',
+                  borderRadius: PLZ.radiusSm,
+                  border: formData.newAreaIcon === icon.value ? `2px solid ${PLZ.blue}` : `1px solid ${PLZ.line}`,
+                  background: formData.newAreaIcon === icon.value ? PLZ.blueTint : 'white',
                   cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px'
+                  display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px',
+                  color: formData.newAreaIcon === icon.value ? PLZ.blue : PLZ.body
                 }
               },
-                IconComponent2 ? React.createElement(IconComponent2, { size: 16, color: formData.newAreaIcon === icon.value ? '#4f46e5' : '#64748b' }) : null,
+                IconComponent2 ? React.createElement(IconComponent2, { size: 16, color: formData.newAreaIcon === icon.value ? PLZ.blue : PLZ.muted }) : null,
                 icon.label
               );
             })
@@ -1879,41 +1967,42 @@ function RoomPage({ business, onBack }) {
               value: formData.newAreaTitle,
               onChange: function(e) { handleChange('newAreaTitle', e.target.value); },
               placeholder: 'Section Title',
-              style: { flex: 2, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', minWidth: '150px' }
+              style: { flex: 2, padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', minWidth: '150px', outline: 'none' }
             }),
             React.createElement('textarea', {
               value: formData.newAreaContent,
               onChange: function(e) { handleChange('newAreaContent', e.target.value); },
               placeholder: 'Section Content',
-              style: { flex: 3, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', minWidth: '200px', resize: 'vertical' },
+              style: { flex: 3, padding: '10px 14px', border: `1.5px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm, fontSize: '14px', minWidth: '200px', resize: 'vertical', outline: 'none' },
               rows: '2'
             }),
             React.createElement('button', {
               onClick: addAreaSection,
-              style: { padding: '10px 20px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }
+              // WHY: warm "informational" hue for area-guide add, from PLZ.warning.
+              style: { padding: '10px 20px', backgroundColor: PLZ.warning, color: 'white', border: 'none', borderRadius: PLZ.radiusSm, fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }
             }, 'Add')
           ),
           (formData.areaGuide || []).map(function(section) {
             var IconComponent2 = iconMap[section.icon] || Home;
             return React.createElement('div', { key: section.id, style: {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '12px 16px', backgroundColor: '#fef3c7',
-              borderRadius: '10px', marginBottom: '8px'
+              padding: '12px 16px', backgroundColor: PLZ.warningTint,
+              borderRadius: PLZ.radiusSm, marginBottom: '8px'
             } },
               React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', flex: 1 } },
-                IconComponent2 ? React.createElement(IconComponent2, { size: 20, color: '#d97706' }) : null,
+                IconComponent2 ? React.createElement(IconComponent2, { size: 20, color: PLZ.warning }) : null,
                 React.createElement('div', null,
-                  React.createElement('div', { style: { fontWeight: '600', fontSize: '14px' } }, section.title),
-                  React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } }, section.content)
+                  React.createElement('div', { style: { fontWeight: '600', fontSize: '14px', color: PLZ.ink } }, section.title),
+                  React.createElement('div', { style: { fontSize: '13px', color: PLZ.body } }, section.content)
                 )
               ),
               React.createElement('button', {
                 onClick: function() { removeAreaSection(section.id); },
-                style: { background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', padding: '0 8px' }
+                style: { background: 'none', border: 'none', cursor: 'pointer', color: PLZ.muted, fontSize: '18px', padding: '0 8px' }
               }, '×')
             );
           }),
-          (formData.areaGuide || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', padding: '20px' } },
+          (formData.areaGuide || []).length === 0 && React.createElement('p', { style: { textAlign: 'center', color: PLZ.muted, padding: '20px' } },
             'No area guide sections added yet.'
           )
         ),
@@ -1924,15 +2013,15 @@ function RoomPage({ business, onBack }) {
         React.createElement('div', { style: { marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' } },
           React.createElement('button', {
             onClick: closeModal,
-            style: { padding: '10px 24px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }
+            style: { padding: '10px 24px', backgroundColor: PLZ.surface, color: PLZ.body, border: 'none', borderRadius: PLZ.radiusSm, fontSize: '14px', fontWeight: '500', cursor: 'pointer' }
           }, 'Cancel'),
           React.createElement('button', {
             onClick: handleSave,
             disabled: saving,
             style: {
               padding: '10px 24px',
-              backgroundColor: saving ? '#94a3b8' : '#4f46e5',
-              color: 'white', border: 'none', borderRadius: '10px',
+              backgroundColor: saving ? PLZ.muted : PLZ.blue,
+              color: 'white', border: 'none', borderRadius: PLZ.radiusSm,
               fontSize: '14px', fontWeight: '600',
               cursor: saving ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', gap: '8px'

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { ArrowLeft, Calendar, Users, CreditCard, MapPin, Clock } from 'lucide-react';
 import { showError } from './toast';
 import BookingConfirmation from './BookingConfirmation';
-import API_BASE from './config';
 
 function BookingForm({ businessId, roomId, roomName, pricePerNight, checkIn, checkOut, guests, onBack, onSuccess }) {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
@@ -45,7 +44,7 @@ function BookingForm({ businessId, roomId, roomName, pricePerNight, checkIn, che
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/bookings`, {
+      const response = await fetch('http://localhost:5000/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
