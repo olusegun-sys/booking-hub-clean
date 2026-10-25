@@ -1,11 +1,13 @@
 ﻿// FILE: server.js
 // COMPLETE PRODUCTION-READY VERSION WITH SUBSCRIPTION SYSTEM
-// DEPLOY TO RENDER: Replace your server.js with this
-// UPDATED (19 Sept 2026): Email calls now surface { success: false } failures
-// UPDATED (19 Sept 2026): Search route supports comma-separated business types (group search)
-// UPDATED (22 Sept 2026): /api/businesses now returns rooms[] and filters is_active=true
-// UPDATED (17 Oct 2026): Forgot-password flow — request + confirm endpoints
-//                        (Email enumeration prevention, single-use tokens, session invalidation)
+// UPDATED 25 Oct 2026: /api/admin/businesses now returns per-business
+//   setup progress (Option A: derived flags — no schema change).
+//   Uses Promise.all of 3 aggregate queries — no N+1.
+// All prior history preserved:
+//   (19 Sept 2026) Email calls now surface { success: false } failures
+//   (19 Sept 2026) Search route supports comma-separated business types
+//   (22 Sept 2026) /api/businesses now returns rooms[] and filters is_active=true
+//   (17 Oct 2026)  Forgot-password flow — request + confirm endpoints
 
 // ============================================================
 // LOAD ENVIRONMENT VARIABLES FROM server/.env
@@ -1078,15 +1080,116 @@ app.post("/api/staff/login", async function (req, res) {
 // ADMIN ROUTES
 // ============================================================
 
+// WHY this endpoint is extended (25 Oct 2026):
+// The admin dashboard needs per-business "setup progress" to help
+// the team see which businesses are stalled without their login.
+// Approach: Option A — derive flags from existing data (no schema
+// change). Three aggregate queries fetch all rooms and bookings in
+// one round trip each, then aggregate in JS. This avoids N+1.
+//
+// Failure mode (safe): if ANY of the three queries errors, we still
+// return businesses with `setup: null`. The frontend handles null
+// by rendering no setup section. Admin dashboard never 500s due to
+// the setup feature.
 app.get("/api/admin/businesses", authenticateAdmin, async function (req, res) {
   try {
-    var { data, error } = await supabase
-      .from("businesses")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const aggregateResults = await Promise.all([
+      supabase.from("businesses").select("*").order("created_at", { ascending: false }),
+      supabase.from("rooms").select("business_id, images"),
+      supabase.from("bookings").select("business_id"),
+    ]).catch((err) => {
+      // Promise.all only rejects if the outer wrapper throws; supabase
+      // returns { data, error } rather than rejecting. This catch is
+      // belt-and-braces for unexpected runtime errors.
+      console.error("[Admin /businesses] Aggregate query threw:", err);
+      return null;
+    });
 
-    if (error) throw error;
-    res.json({ success: true, businesses: data });
+    // If Promise.all somehow rejects (unexpected), fall back to fetching
+    // businesses only — degraded but not broken.
+    if (!aggregateResults) {
+      const fallback = await supabase
+        .from("businesses")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (fallback.error) throw fallback.error;
+      const businessesWithoutSetup = (fallback.data || []).map(function (b) {
+        return { ...b, setup: null };
+      });
+      return res.json({ success: true, businesses: businessesWithoutSetup });
+    }
+
+    const [businessesRes, roomsRes, bookingsRes] = aggregateResults;
+
+    if (businessesRes.error) throw businessesRes.error;
+
+    const businesses = businessesRes.data || [];
+
+    // If rooms or bookings query failed, we can still return businesses
+    // — just without setup flags. This keeps the admin dashboard usable.
+    const roomsFailed = Boolean(roomsRes.error);
+    const bookingsFailed = Boolean(bookingsRes.error);
+
+    if (roomsFailed) {
+      console.error("[Admin /businesses] rooms aggregate failed:", roomsRes.error);
+    }
+    if (bookingsFailed) {
+      console.error("[Admin /businesses] bookings aggregate failed:", bookingsRes.error);
+    }
+
+    const rooms = roomsFailed ? [] : roomsRes.data || [];
+    const bookings = bookingsFailed ? [] : bookingsRes.data || [];
+
+    // Aggregate in JS — O(rooms + bookings), not O(n²).
+    const roomsByBiz = {};
+    rooms.forEach(function (r) {
+      if (!roomsByBiz[r.business_id]) {
+        roomsByBiz[r.business_id] = { count: 0, hasImages: false };
+      }
+      roomsByBiz[r.business_id].count += 1;
+      if (Array.isArray(r.images) && r.images.filter(Boolean).length > 0) {
+        roomsByBiz[r.business_id].hasImages = true;
+      }
+    });
+
+    const bookingsByBiz = {};
+    bookings.forEach(function (b) {
+      bookingsByBiz[b.business_id] = (bookingsByBiz[b.business_id] || 0) + 1;
+    });
+
+    // 5-step setup checklist. Operating hours dropped per product decision.
+    // Order matters — matches SETUP_STEPS in AdminDashboard.jsx.
+    const enriched = businesses.map(function (b) {
+      // If either underlying table failed to load, setup is null —
+      // the frontend handles it gracefully by not rendering the section.
+      if (roomsFailed || bookingsFailed) {
+        return { ...b, setup: null };
+      }
+
+      const roomInfo = roomsByBiz[b.id] || { count: 0, hasImages: false };
+      const bookingCount = bookingsByBiz[b.id] || 0;
+
+      const steps = {
+        has_logo: Boolean(b.logo_url),
+        has_address: Boolean(b.address && String(b.address).trim()),
+        has_items: roomInfo.count > 0,
+        has_item_images: roomInfo.hasImages,
+        has_first_booking: bookingCount > 0,
+      };
+
+      const completed = Object.values(steps).filter(Boolean).length;
+
+      return {
+        ...b,
+        setup: {
+          ...steps,
+          score: completed,
+          total: 5,
+        },
+      };
+    });
+
+    res.json({ success: true, businesses: enriched });
   } catch (error) {
     console.error("Fetch businesses error:", error);
     res
