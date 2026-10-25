@@ -1,9 +1,7 @@
 // FILE: client/src/plazzaa/components/TopNav.jsx
-// UPDATED 22 Oct 2026 — merge conflict resolution.
-//  - Admin pill: kept Emmanuel's ShieldIcon treatment + aria-label for a11y
-//  - Import fix: 'ShieldIcon' is not a lucide-react export — aliased Shield as ShieldIcon
-//  - Login destination: '/login' (was '/explore' pre-merge)
-//  - gap-6 on parent (his layout) — ShieldIcon pill needs more breathing room
+// UPDATED 25 Oct 2026:
+//  - Added Admin entry to mobile menu (was desktop-only, unreachable on phones)
+//  - Everything else unchanged since 22 Oct (ShieldIcon import, Login fix, gap-6)
 
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -126,6 +124,17 @@ export default function TopNav({ tone = "light" }) {
                 className="flex min-h-[48px] items-center text-[18px] font-medium text-plz-body"
               >
                 Log in
+              </Link>
+              {/* WHY: team-only Admin entry for mobile. Muted grey, slightly
+                  smaller than the main nav links, so it reads as utility chrome
+                  to customers but is easy for the team to find. */}
+              <Link
+                to="/admin"
+                className="flex min-h-[48px] items-center gap-2 text-[16px] font-medium text-plz-grey hover:text-plz-body"
+                aria-label="Admin dashboard"
+              >
+                <ShieldIcon className="size-4" />
+                Admin
               </Link>
               <Link to="/explore" className="plz-btn plz-btn-ink mt-2 w-full">
                 Explore Plazzaa
