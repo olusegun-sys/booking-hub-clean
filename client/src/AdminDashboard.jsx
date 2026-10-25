@@ -1,23 +1,24 @@
 ﻿// client/src/AdminDashboard.jsx
 // =============================================
-// ADMIN DASHBOARD — SESSION 3 RESTYLE (19 Oct 2026)
-// RESTYLE ONLY: Unified with Plazzaa marketing design tokens.
-// Preserved: Token auth (21 Sept fix), fetch logic, status updates,
-// delete flow, responsive resize listener, and search/filter logic.
+// ADMIN DASHBOARD — SESSION 3 RESTYLE + 25 Oct ADDITION
+// UPDATED 25 Oct 2026:
+//  - Added Setup progress pill per business (Option A: derived flags)
+//  - 5 steps: logo, address, items, item images, first booking
+//  - Click pill to expand checklist. Compact by default.
+// Preserved: Token auth, fetch, status update, delete, responsive,
+// search/filter — all untouched.
 // =============================================
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, Clock, CheckCircle2, XCircle, TrendingUp, Calendar, 
-  MapPin, Phone, Mail, Trash2, Search, Hotel, Dumbbell, CalendarDays, 
+import {
+  Building2, Clock, CheckCircle2, XCircle, TrendingUp, Calendar,
+  MapPin, Phone, Mail, Trash2, Search, Hotel, Dumbbell, CalendarDays,
   LogOut, TrendingDown, DollarSign, Sparkles, AlertTriangle, Check, X,
-  Loader2, Home
+  Loader2, Home, ChevronDown, ChevronUp, Circle, Image as ImageIcon,
+  Tag, Package
 } from 'lucide-react';
 import API_BASE from './config';
 
-// ============================================================
-// DESIGN TOKENS — matches Plazzaa marketing design
-// ============================================================
 const PLZ = {
   blue: '#2D60EA',
   blueDeep: '#1F47B4',
@@ -43,6 +44,16 @@ const PLZ = {
   backdrop: 'rgba(15, 23, 42, 0.6)'
 };
 
+// WHY: single source of truth for the checklist shape — labels and icons.
+// If we add a step in future, add it here AND in server.js. Order matters.
+const SETUP_STEPS = [
+  { key: 'has_logo', label: 'Logo uploaded', icon: ImageIcon },
+  { key: 'has_address', label: 'Address set', icon: MapPin },
+  { key: 'has_items', label: 'First item added', icon: Package },
+  { key: 'has_item_images', label: 'Item images uploaded', icon: ImageIcon },
+  { key: 'has_first_booking', label: 'First booking received', icon: Calendar }
+];
+
 function AdminDashboard({ admin, onLogout }) {
   const [businesses, setBusinesses] = useState([]);
   const [stats, setStats] = useState({ totalBusinesses: 0, pendingBusinesses: 0, totalBookings: 0, totalRevenue: 0 });
@@ -53,17 +64,17 @@ function AdminDashboard({ admin, onLogout }) {
   const [updating, setUpdating] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, business: null });
   const [error, setError] = useState(null);
-  
+  // WHY: Set of business IDs whose setup checklist is expanded. Set is
+  // O(1) lookup vs Array.indexOf which would be O(n) per card on render.
+  const [expandedSetupIds, setExpandedSetupIds] = useState(new Set());
+
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [isTablet, setIsTablet] = useState(window.innerWidth >= 640 && window.innerWidth < 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
-  // ============================================================
-  // HELPER: Get admin token (PRESERVED FROM 21 SEPT FIX)
-  // ============================================================
   const getToken = function() {
     return localStorage.getItem('admin_token') ||
-           localStorage.getItem('auth_token') || 
+           localStorage.getItem('auth_token') ||
            localStorage.getItem('token');
   };
 
@@ -88,26 +99,19 @@ function AdminDashboard({ admin, onLogout }) {
 
   const fetchBusinesses = () => {
     const token = getToken();
-    console.log('[AdminDashboard] Fetching businesses...');
-    console.log('[AdminDashboard] Token found:', token ? 'Yes' : 'No');
-    
     if (!token) {
-      console.error('[AdminDashboard] No token found - redirecting to login');
       setError('Session expired. Please login again.');
       setLoading(false);
-      setTimeout(() => {
-        window.location.href = '/admin';
-      }, 2000);
+      setTimeout(() => { window.location.href = '/admin'; }, 2000);
       return;
     }
-    
+
     setError(null);
-    
+
     fetch(API_BASE + '/api/admin/businesses', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(res => {
-        console.log('[AdminDashboard] Response status:', res.status);
         if (res.status === 401) {
           localStorage.removeItem('admin_token');
           localStorage.removeItem('auth_token');
@@ -117,7 +121,6 @@ function AdminDashboard({ admin, onLogout }) {
         return res.json();
       })
       .then(data => {
-        console.log('[AdminDashboard] Businesses data:', data);
         if (data.success) {
           setBusinesses(data.businesses || []);
         } else {
@@ -126,7 +129,6 @@ function AdminDashboard({ admin, onLogout }) {
         setLoading(false);
       })
       .catch(err => {
-        console.error('[AdminDashboard] Fetch error:', err);
         setError(err.message || 'Network error. Please refresh.');
         setLoading(false);
       });
@@ -134,24 +136,17 @@ function AdminDashboard({ admin, onLogout }) {
 
   const fetchStats = () => {
     const token = getToken();
-    console.log('[AdminDashboard] Fetching stats...');
-    
     if (!token) return;
-    
+
     fetch(API_BASE + '/api/admin/stats', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(res => {
-        if (res.status === 401) {
-          throw new Error('Session expired');
-        }
+        if (res.status === 401) throw new Error('Session expired');
         return res.json();
       })
       .then(data => {
-        console.log('[AdminDashboard] Stats received:', data);
-        if (data.success) {
-          setStats(data.stats);
-        }
+        if (data.success) setStats(data.stats);
       })
       .catch(err => console.error('[AdminDashboard] Stats error:', err));
   };
@@ -161,7 +156,7 @@ function AdminDashboard({ admin, onLogout }) {
     const token = getToken();
     fetch(API_BASE + '/api/admin/businesses/' + businessId + '/status', {
       method: 'PUT',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
       },
@@ -187,13 +182,13 @@ function AdminDashboard({ admin, onLogout }) {
   const handleConfirmDelete = () => {
     const business = deleteModal.business;
     if (!business) return;
-    
+
     setDeleting(business.id);
     const token = getToken();
-    
+
     fetch(API_BASE + '/api/admin/businesses/' + business.id, {
       method: 'DELETE',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
       }
@@ -218,6 +213,16 @@ function AdminDashboard({ admin, onLogout }) {
     setDeleteModal({ isOpen: false, business: null });
   };
 
+  // WHY: immutable Set update — React requires a new Set reference to re-render.
+  const toggleSetupExpanded = (businessId) => {
+    setExpandedSetupIds(prev => {
+      const next = new Set(prev);
+      if (next.has(businessId)) next.delete(businessId);
+      else next.add(businessId);
+      return next;
+    });
+  };
+
   const getBusinessIcon = (type) => {
     if (type === 'hotel') return React.createElement(Hotel, { size: 20 });
     if (type === 'sports') return React.createElement(Dumbbell, { size: 20 });
@@ -226,7 +231,6 @@ function AdminDashboard({ admin, onLogout }) {
   };
 
   const getBusinessGradient = (type) => {
-    // WHY: Swapped raw indigo/greens to Plazzaa brand blue and token colors
     if (type === 'hotel') return `linear-gradient(135deg, ${PLZ.blue}, ${PLZ.blueDeep})`;
     if (type === 'sports') return `linear-gradient(135deg, ${PLZ.success}, #0f5e30)`;
     if (type === 'event') return `linear-gradient(135deg, ${PLZ.warning}, #8a670b)`;
@@ -259,11 +263,11 @@ function AdminDashboard({ admin, onLogout }) {
   };
 
   const filteredBusinesses = businesses.filter(b => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.city.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     if (activeTab === 'all') return matchesSearch;
     if (activeTab === 'pending') return matchesSearch && b.status === 'pending';
     if (activeTab === 'approved') return matchesSearch && b.status === 'approved';
@@ -271,7 +275,6 @@ function AdminDashboard({ admin, onLogout }) {
     return matchesSearch;
   });
 
-  // WHY: Sourced stat card colors from PLZ tokens instead of ad-hoc purple/amber/green
   const statCards = [
     { icon: Building2, label: 'Total Businesses', value: stats.totalBusinesses, color: PLZ.blue, bg: PLZ.blueTint, change: '+12%', changeUp: true, subtitle: 'vs last month' },
     { icon: Clock, label: 'Pending', value: stats.pendingBusinesses, color: PLZ.warning, bg: PLZ.warningTint, change: '0%', changeUp: false, subtitle: 'awaiting review' },
@@ -285,81 +288,78 @@ function AdminDashboard({ admin, onLogout }) {
     );
   }
 
-  // ============================================================
-  // SIMPLE DELETE MODAL (Restyled)
-  // ============================================================
   const renderDeleteModal = function() {
     if (!deleteModal.isOpen) return null;
-    
+
     return React.createElement('div', {
-      style: { 
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-        backgroundColor: PLZ.backdrop, 
-        backdropFilter: 'blur(4px)', 
-        display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        zIndex: 9999, padding: '20px' 
+      style: {
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: PLZ.backdrop,
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 9999, padding: '20px'
       },
       onClick: function(e) { if (e.target === e.currentTarget) handleCancelDelete(); }
     },
-      React.createElement('div', { 
-        style: { 
-          backgroundColor: 'white', borderRadius: PLZ.radiusXl, maxWidth: '420px', width: '100%', 
+      React.createElement('div', {
+        style: {
+          backgroundColor: 'white', borderRadius: PLZ.radiusXl, maxWidth: '420px', width: '100%',
           overflow: 'hidden', boxShadow: PLZ.shadowMd
-        } 
+        }
       },
-        React.createElement('div', { 
-          style: { 
+        React.createElement('div', {
+          style: {
             padding: '20px 24px', backgroundColor: PLZ.dangerTint,
             borderBottom: `1px solid ${PLZ.line}`,
-            display: 'flex', alignItems: 'center', gap: '12px' 
-          } 
+            display: 'flex', alignItems: 'center', gap: '12px'
+          }
         },
-          React.createElement('div', { 
-            style: { 
+          React.createElement('div', {
+            style: {
               width: '40px', height: '40px', backgroundColor: '#FFFFFF',
-              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' 
-            } 
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }
           },
             React.createElement(AlertTriangle, { size: 20, color: PLZ.danger })
           ),
           React.createElement('div', null,
-            React.createElement('h3', { 
-              style: { fontSize: '18px', fontWeight: '700', color: PLZ.danger, margin: 0 } 
+            React.createElement('h3', {
+              style: { fontSize: '18px', fontWeight: '700', color: PLZ.danger, margin: 0 }
             }, 'Delete Business'),
-            React.createElement('p', { 
-              style: { fontSize: '12px', color: PLZ.danger, margin: 0, opacity: 0.8 } 
+            React.createElement('p', {
+              style: { fontSize: '12px', color: PLZ.danger, margin: 0, opacity: 0.8 }
             }, 'This action cannot be undone')
           )
         ),
         React.createElement('div', { style: { padding: '24px' } },
-          React.createElement('p', { 
-            style: { fontSize: '14px', color: PLZ.body, margin: 0, marginBottom: '16px' } 
+          React.createElement('p', {
+            style: { fontSize: '14px', color: PLZ.body, margin: 0, marginBottom: '16px' }
           },
             'Are you sure you want to permanently delete ',
             React.createElement('strong', { style: { color: PLZ.ink } }, deleteModal.business?.name),
             '?'
           ),
           React.createElement('div', { style: { display: 'flex', gap: '12px', marginTop: '16px' } },
-            React.createElement('button', { 
+            React.createElement('button', {
               key: 'cancel', onClick: handleCancelDelete,
-              style: { 
+              style: {
                 flex: 1, padding: '10px 24px', backgroundColor: 'white',
                 color: PLZ.body, border: `1px solid ${PLZ.line}`, borderRadius: PLZ.radiusSm,
-                fontSize: '13px', fontWeight: '500', cursor: 'pointer' 
-              } 
+                fontSize: '13px', fontWeight: '500', cursor: 'pointer'
+              }
             }, 'Cancel'),
-            React.createElement('button', { 
+            React.createElement('button', {
               key: 'delete', onClick: handleConfirmDelete,
               disabled: deleting === deleteModal.business?.id,
-              style: { 
+              style: {
                 flex: 1, padding: '10px 24px', backgroundColor: PLZ.danger,
                 color: 'white', border: 'none', borderRadius: PLZ.radiusSm,
                 fontSize: '13px', fontWeight: '600', cursor: deleting === deleteModal.business?.id ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 opacity: deleting === deleteModal.business?.id ? 0.7 : 1
-              } 
+              }
             },
-              deleting === deleteModal.business?.id 
+              deleting === deleteModal.business?.id
                 ? React.createElement(Loader2, { size: 16, style: { animation: 'spin 1s linear infinite' } })
                 : React.createElement(Trash2, { size: 16 }),
               'Delete'
@@ -370,10 +370,86 @@ function AdminDashboard({ admin, onLogout }) {
     );
   };
 
+  // WHY: sub-render for the setup checklist row inside each card.
+  // Splits concerns — keeps the main card render manageable.
+  const renderSetupSection = function(business) {
+    const setup = business.setup;
+    if (!setup) return null;
+
+    const isExpanded = expandedSetupIds.has(business.id);
+    const score = setup.score || 0;
+    const total = setup.total || SETUP_STEPS.length;
+    const isComplete = score === total;
+    const pillColor = isComplete ? PLZ.success : score === 0 ? PLZ.muted : PLZ.warning;
+    const pillBg = isComplete ? PLZ.successTint : score === 0 ? PLZ.surface : PLZ.warningTint;
+
+    return React.createElement(React.Fragment, null,
+      // PILL — always visible
+      React.createElement('div', { style: { marginBottom: '12px' } },
+        React.createElement('button', {
+          type: 'button',
+          onClick: function() { toggleSetupExpanded(business.id); },
+          'aria-expanded': isExpanded,
+          'aria-label': 'Setup progress: ' + score + ' of ' + total + ' steps — ' + (isExpanded ? 'collapse' : 'expand'),
+          style: {
+            width: '100%',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 12px',
+            backgroundColor: pillBg,
+            border: 'none',
+            borderRadius: PLZ.radiusSm,
+            cursor: 'pointer',
+            color: pillColor,
+            fontSize: '11px', fontWeight: '600',
+            fontFamily: PLZ.font,
+            textAlign: 'left'
+          }
+        },
+          React.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+            React.createElement(CheckCircle2, { size: 12 }),
+            'Setup: ' + score + '/' + total
+            ),
+          React.createElement(isExpanded ? ChevronUp : ChevronDown, { size: 14 })
+        )
+      ),
+      // CHECKLIST — conditional
+      isExpanded && React.createElement('div', {
+        style: {
+          marginBottom: '12px',
+          padding: '10px 12px',
+          backgroundColor: PLZ.surface,
+          borderRadius: PLZ.radiusSm,
+          border: `1px solid ${PLZ.line}`,
+          display: 'flex', flexDirection: 'column', gap: '6px'
+        }
+      },
+        SETUP_STEPS.map(function(step) {
+          var done = !!setup[step.key];
+          var StepIcon = step.icon;
+          return React.createElement('div', {
+            key: step.key,
+            style: {
+              display: 'flex', alignItems: 'center', gap: '8px',
+              fontSize: '11px',
+              color: done ? PLZ.body : PLZ.muted
+            }
+          },
+            React.createElement(done ? CheckCircle2 : Circle, {
+              size: 12,
+              color: done ? PLZ.success : PLZ.muted,
+              style: { flexShrink: 0 }
+            }),
+            React.createElement(StepIcon, { size: 11, color: done ? PLZ.body : PLZ.muted }),
+            React.createElement('span', null, step.label)
+          );
+        })
+      )
+    );
+  };
+
   return React.createElement('div', { style: { minHeight: '100vh', backgroundColor: PLZ.surface, fontFamily: PLZ.font } },
     renderDeleteModal(),
 
-    // HEADER
     React.createElement('header', { style: { backgroundColor: 'white', borderBottom: `1px solid ${PLZ.line}`, position: 'sticky', top: 0, zIndex: 100 } },
       React.createElement('div', { style: { maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
@@ -396,21 +472,17 @@ function AdminDashboard({ admin, onLogout }) {
       )
     ),
 
-    // MAIN
     React.createElement('main', { style: { maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '16px' : '24px' } },
-      
-      // ERROR BANNER
-      error && React.createElement('div', { 
-        style: { 
-          backgroundColor: PLZ.dangerTint, border: `1px solid ${PLZ.danger}`, borderRadius: PLZ.radiusMd, 
-          padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' 
-        } 
+      error && React.createElement('div', {
+        style: {
+          backgroundColor: PLZ.dangerTint, border: `1px solid ${PLZ.danger}`, borderRadius: PLZ.radiusMd,
+          padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px'
+        }
       },
         React.createElement(AlertTriangle, { size: 16, color: PLZ.danger }),
         React.createElement('span', { style: { color: PLZ.danger, fontSize: '13px' } }, error)
       ),
 
-      // STAT CARDS
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? '12px' : '16px', marginBottom: '24px' } },
         statCards.map(function(card, i) {
           var ChangeIcon = card.changeUp ? TrendingUp : TrendingDown;
@@ -431,7 +503,6 @@ function AdminDashboard({ admin, onLogout }) {
         })
       ),
 
-      // FILTERS & SEARCH
       React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' } },
         React.createElement('div', { style: { display: 'flex', gap: '6px', overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', flexWrap: isDesktop ? 'wrap' : 'nowrap', paddingBottom: '4px' } },
           [
@@ -455,7 +526,6 @@ function AdminDashboard({ admin, onLogout }) {
         )
       ),
 
-      // BUSINESS LIST
       filteredBusinesses.length === 0 ?
         React.createElement('div', { style: { textAlign: 'center', padding: '60px 20px', backgroundColor: 'white', borderRadius: PLZ.radiusXl, border: `1px solid ${PLZ.line}` } },
           React.createElement(Building2, { size: 48, color: PLZ.muted, style: { marginBottom: '16px' } }),
@@ -475,7 +545,7 @@ function AdminDashboard({ admin, onLogout }) {
             var usagePercent = getUsagePercentage(business.current_booking_count || 0);
             var isUpdating = updating === business.id;
             var isDeleting = deleting === business.id;
-            
+
             return React.createElement('div', { key: business.id, style: { backgroundColor: 'white', borderRadius: PLZ.radiusLg, overflow: 'hidden', border: `1px solid ${PLZ.line}`, boxShadow: PLZ.shadowSm } },
               React.createElement('div', { style: { background: iconGradient, padding: isMobile ? '12px' : '16px', position: 'relative', color: 'white' } },
                 React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' } },
@@ -506,6 +576,8 @@ function AdminDashboard({ admin, onLogout }) {
                     React.createElement('span', { style: { fontSize: '11px', fontWeight: '600', color: PLZ.ink } }, business.current_booking_count || 0, '/', business.booking_limit || 50)
                   )
                 ),
+                // SETUP SECTION (new)
+                renderSetupSection(business),
                 React.createElement('div', { style: { marginBottom: '12px' } },
                   React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: '4px' } },
                     React.createElement('span', { style: { fontSize: '10px', fontWeight: '500', color: PLZ.muted } }, 'Usage'),
@@ -534,8 +606,8 @@ function AdminDashboard({ admin, onLogout }) {
             );
           })
         )
-      )
     )
+  );
 }
 
 export default AdminDashboard;
